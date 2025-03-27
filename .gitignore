@@ -1,0 +1,64 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Composer
+/vendor/
+composer.lock
+
+# Node
+/node_modules/
+package-lock.json
+yarn.lock
+
+# Build Files
+*.zip
+*.tar.gz
+/build/
+/dist/
+
+# Environment Files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+/logs/
+/debug.log
+
+# Cache
+*.cache
+.cache/
+.phpunit.result.cache
+
+# WordPress Specific
+wp-config.php
+wp-content/uploads/
+wp-content/upgrade/
+wp-content/backup-db/
+wp-content/cache/
+wp-content/backups/
+
+# Testing
+/coverage/
+.phpunit.cache/
+.phpunit.result.cache
+
+# Temporary Files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Local Development
+*.local
+*.local.* 

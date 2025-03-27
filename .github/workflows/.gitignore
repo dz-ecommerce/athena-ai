@@ -1,0 +1,60 @@
+# Release Artifacts
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Build Output
+/build/
+/dist/
+/release/
+/artifacts/
+
+# Temporary Release Files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Release Logs
+release-*.log
+build-*.log
+deploy-*.log
+
+# Release Cache
+.cache/
+.github/cache/
+.github/actions/cache/
+
+# Release Environment
+.env
+.env.*
+!.env.example
+
+# Release Configurations
+config.local.json
+config.*.local.json
+!config.example.json
+
+# Release Scripts
+*.sh
+*.bat
+*.cmd
+!build.sh
+!deploy.sh
+
+# Release Documentation
+CHANGELOG.md
+!CHANGELOG.md.example
+
+# Release Testing
+/coverage/
+/test-results/
+/phpunit-results/
+
+# Release Dependencies
+/vendor/
+/node_modules/
+package-lock.json
+yarn.lock
+composer.lock 
