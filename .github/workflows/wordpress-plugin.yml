@@ -25,15 +25,25 @@ jobs:
       - name: Get current version
         id: get_version
         run: |
-          VERSION=$(grep "Version:" athena-ai/athena-ai.php | cut -d' ' -f2)
+          echo "Reading version from athena-ai.php..."
+          cat athena-ai/athena-ai.php | grep "Version:"
+          VERSION=$(grep "Version:" athena-ai/athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+          echo "Extracted version: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "Error: Could not extract version"
+            exit 1
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Check if tag exists
         id: check_tag
         run: |
+          echo "Checking if tag v${{ steps.get_version.outputs.version }} exists..."
           if git tag -l | grep -q "^v${{ steps.get_version.outputs.version }}$"; then
+            echo "Tag exists"
             echo "tag_exists=true" >> $GITHUB_OUTPUT
           else
+            echo "Tag does not exist"
             echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
 
@@ -45,5 +55,6 @@ jobs:
           GIT_COMMITTER_NAME: dz-ecommerce
           GIT_COMMITTER_EMAIL: info@dz-ecom.de
         run: |
+          echo "Creating tag v${{ steps.get_version.outputs.version }}..."
           git tag -a "v${{ steps.get_version.outputs.version }}" -m "Release version ${{ steps.get_version.outputs.version }}"
           git push origin "v${{ steps.get_version.outputs.version }}"
