@@ -35,8 +35,8 @@ jobs:
         id: get_version
         run: |
           echo "Reading version from athena-ai.php..."
-          cat athena-ai/athena-ai.php | grep "Version:"
-          VERSION=$(grep "Version:" athena-ai/athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+          cat athena-ai.php | grep "Version:"
+          VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
           echo "Extracted version: $VERSION"
           if [ -z "$VERSION" ]; then
             echo "Error: Could not extract version"
