@@ -1,0 +1,136 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Athena AI 1.0.0\n"
+"POT-Creation-Date: 2024-03-27 12:00+0000\n"
+"PO-Revision-Date: 2024-03-27 12:00+0000\n"
+"Last-Translator: Your Name <your@email.com>\n"
+"Language-Team: German\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
+"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
+"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: node_modules\n"
+"X-Poedit-SearchPathExcluded-1: vendor\n"
+"X-Poedit-SearchPathExcluded-2: .git\n"
+
+#: includes/Admin/Admin.php:12
+msgid "Athena AI Overview"
+msgstr "Athena AI Übersicht"
+
+#: includes/Admin/Admin.php:13
+msgid "Welcome to Athena AI. Here you can manage your AI integration settings and view important information."
+msgstr "Willkommen bei Athena AI. Hier können Sie Ihre AI-Integrationseinstellungen verwalten und wichtige Informationen einsehen."
+
+#: includes/Admin/Admin.php:20
+msgid "Quick Stats"
+msgstr "Schnellstatistiken"
+
+#: includes/Admin/Admin.php:21
+msgid "Total Interactions"
+msgstr "Gesamtinteraktionen"
+
+#: includes/Admin/Admin.php:22
+msgid "Active Features"
+msgstr "Aktive Funktionen"
+
+#: includes/Admin/Admin.php:23
+msgid "Recent Activity"
+msgstr "Aktuelle Aktivitäten"
+
+#: includes/Admin/Admin.php:24
+msgid "No recent activity to display."
+msgstr "Keine aktuellen Aktivitäten anzuzeigen."
+
+#: includes/Admin/Settings.php:12
+msgid "Athena AI Settings"
+msgstr "Athena AI Einstellungen"
+
+#: includes/Admin/Settings.php:13
+msgid "Settings Saved"
+msgstr "Einstellungen gespeichert"
+
+#: includes/Admin/Settings.php:14
+msgid "API Key"
+msgstr "API-Schlüssel"
+
+#: includes/Admin/Settings.php:15
+msgid "Enter your Athena AI API key."
+msgstr "Geben Sie Ihren Athena AI API-Schlüssel ein."
+
+#: includes/Admin/Settings.php:16
+msgid "Enable Plugin"
+msgstr "Plugin aktivieren"
+
+#: includes/Admin/Settings.php:17
+msgid "Enable Athena AI features"
+msgstr "Athena AI Funktionen aktivieren"
+
+#: includes/Admin/Settings.php:18
+msgid "Save Settings"
+msgstr "Einstellungen speichern"
+
+#: includes/Admin/Feed.php:12
+msgid "Athena AI Feed"
+msgstr "Athena AI Feed"
+
+#: includes/Admin/Feed.php:13
+msgid "No feed items available."
+msgstr "Keine Feed-Einträge verfügbar."
+
+#: includes/Admin/FeedManager.php:15
+msgid "Feeds"
+msgstr "Feeds"
+
+#: includes/Admin/FeedManager.php:16
+msgid "Feed"
+msgstr "Feed"
+
+#: includes/Admin/FeedManager.php:17
+msgid "Add New"
+msgstr "Neu hinzufügen"
+
+#: includes/Admin/FeedManager.php:18
+msgid "Add New Feed"
+msgstr "Neuen Feed hinzufügen"
+
+#: includes/Admin/FeedManager.php:19
+msgid "Edit Feed"
+msgstr "Feed bearbeiten"
+
+#: includes/Admin/FeedManager.php:20
+msgid "New Feed"
+msgstr "Neuer Feed"
+
+#: includes/Admin/FeedManager.php:21
+msgid "View Feed"
+msgstr "Feed anzeigen"
+
+#: includes/Admin/FeedManager.php:22
+msgid "Search Feeds"
+msgstr "Feeds durchsuchen"
+
+#: includes/Admin/FeedManager.php:23
+msgid "No feeds found"
+msgstr "Keine Feeds gefunden"
+
+#: includes/Admin/FeedManager.php:24
+msgid "No feeds found in Trash"
+msgstr "Keine Feeds im Papierkorb gefunden"
+
+#: includes/Admin/FeedManager.php:35
+msgid "Feed URL"
+msgstr "Feed-URL"
+
+#: includes/Admin/FeedManager.php:45
+msgid "Feed URL:"
+msgstr "Feed-URL:"
+
+#: includes/Core/Plugin.php:65
+msgid "Feed Management"
+msgstr "Feed-Verwaltung" 
