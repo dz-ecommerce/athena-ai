@@ -1,0 +1,9 @@
+parameters:
+    level: 5
+    paths:
+        - includes
+    excludePaths:
+        - includes/Core/Plugin.php
+    ignoreErrors:
+        - '#Call to an undefined method [a-zA-Z0-9\\]+::__\(\)#'
+        - '#Call to an undefined method [a-zA-Z0-9\\]+::_x\(\)#' 
