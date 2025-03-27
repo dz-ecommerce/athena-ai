@@ -1,0 +1,44 @@
+name: WordPress Plugin CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Git configuration
+        run: |
+          git config user.email "info@dz-ecom.de"
+          git config user.name "dz-ecommerce"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, json, mbstring, pdo, pdo_mysql, pgsql, pdo_pgsql, session, tokenizer, xml, zip
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPCS
+        run: composer run-script phpcs
+
+      - name: Run PHPStan
+        run: composer run-script phpstan
+
+      - name: Create and push tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git tag -a v1.0.0 -m "Release v1.0.0"
+          git push origin v1.0.0
