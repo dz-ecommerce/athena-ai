@@ -3,7 +3,7 @@
  * Plugin Name: Athena AI
  * Plugin URI: https://your-domain.com/athena-ai
  * Description: A powerful AI integration plugin for WordPress
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Your Name
  * Author URI: https://your-domain.com
  * Text Domain: athena-ai
