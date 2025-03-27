@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Configure Git
+        run: |
+          git config --global user.email "info@dz-ecom.de"
+          git config --global user.name "dz-ecommerce"
+          git config --global core.autocrlf false
+
       - uses: actions/checkout@v3
 
       - name: Set up PHP
@@ -40,8 +46,5 @@ jobs:
           GIT_COMMITTER_NAME: dz-ecommerce
           GIT_COMMITTER_EMAIL: info@dz-ecom.de
         run: |
-          git config --global user.email "info@dz-ecom.de"
-          git config --global user.name "dz-ecommerce"
-          git config --global core.autocrlf false
           git tag -a v1.0.0 -m "Release version 1.0.0"
           git push origin v1.0.0
