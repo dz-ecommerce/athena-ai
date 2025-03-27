@@ -23,7 +23,7 @@
     }
   },
   "scripts": {
-    "phpcs": "phpcs --standard=WordPress",
+    "phpcs": "phpcs --standard=WordPress includes/",
     "phpstan": "phpstan analyse",
     "check": [
       "@phpcs",
