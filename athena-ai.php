@@ -3,7 +3,7 @@
  * Plugin Name: Athena AI
  * Plugin URI: https://your-domain.com/athena-ai
  * Description: A powerful AI integration plugin for WordPress
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Your Name
  * Author URI: https://your-domain.com
  * Text Domain: athena-ai
@@ -18,7 +18,7 @@ if (!defined('WPINC')) {
 }
 
 // Define plugin constants
-define('ATHENA_AI_VERSION', '1.0.4');
+define('ATHENA_AI_VERSION', '1.0.5');
 define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('ATHENA_AI_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -49,6 +49,15 @@ function athena_ai_init() {
     // Initialize main plugin class
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
+
+    // Initialize GitHub updater
+    // Replace these values with your actual GitHub repository details
+    $updater = new \AthenaAI\Core\UpdateChecker(
+        'dz-ecommerce',           // GitHub username/organization
+        'athena-ai',              // Repository name
+        get_option('athena_ai_github_token')  // GitHub access token from WordPress options
+    );
+    $updater->init();
 }
 add_action('plugins_loaded', 'athena_ai_init');
 
