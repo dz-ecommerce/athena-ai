@@ -44,6 +44,22 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Create plugin archives
+        run: |
+          # Create temporary directories
+          mkdir -p build/athena-ai
+          mkdir -p build/athena-ai-${{ steps.get_version.outputs.version }}
+
+          # Copy plugin files to both directories
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai/
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai-${{ steps.get_version.outputs.version }}/
+
+          # Create ZIP archives
+          cd build
+          zip -r athena-ai.zip athena-ai
+          zip -r athena-ai-${{ steps.get_version.outputs.version }}.zip athena-ai-${{ steps.get_version.outputs.version }}
+          cd ..
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         env:
@@ -51,6 +67,9 @@ jobs:
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
+          files: |
+            build/athena-ai.zip
+            build/athena-ai-${{ steps.get_version.outputs.version }}.zip
           body: |
             Automated release for v${{ steps.get_version.outputs.version }}
 

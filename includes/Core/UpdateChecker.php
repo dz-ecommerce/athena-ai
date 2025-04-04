@@ -40,10 +40,22 @@ class UpdateChecker {
      * Initialize the update checker functionality
      */
     public function init() {
-        // Check if plugin-update-checker is already loaded
-        if (!class_exists('Puc_v4_Factory')) {
-            require_once ATHENA_AI_PLUGIN_DIR . 'vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
+        // Define the path to the update checker
+        $updateCheckerPath = ATHENA_AI_PLUGIN_DIR . 'includes/Libraries/plugin-update-checker/plugin-update-checker.php';
+        
+        // Check if update checker exists
+        if (!file_exists($updateCheckerPath)) {
+            // Log error or notify admin that the library is missing
+            add_action('admin_notices', function() {
+                echo '<div class="error"><p>';
+                echo esc_html__('Athena AI Plugin: Update checker library is missing. Please reinstall the plugin.', 'athena-ai');
+                echo '</p></div>';
+            });
+            return;
         }
+
+        // Include the update checker
+        require_once $updateCheckerPath;
 
         // Create the update checker instance
         $updateChecker = \Puc_v4_Factory::buildUpdateChecker(
