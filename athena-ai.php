@@ -51,7 +51,6 @@ function athena_ai_init() {
     $plugin->init();
 
     // Initialize GitHub updater
-    // Replace these values with your actual GitHub repository details
     $updater = new \AthenaAI\Core\UpdateChecker(
         'dz-ecommerce',           // GitHub username/organization
         'athena-ai',              // Repository name
