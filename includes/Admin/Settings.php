@@ -26,6 +26,7 @@ class Settings extends BaseAdmin {
         $settings = [
             'athena_ai_api_key' => sanitize_text_field($_POST['athena_ai_api_key'] ?? ''),
             'athena_ai_enabled' => isset($_POST['athena_ai_enabled']),
+            'athena_ai_github_token' => sanitize_text_field($_POST['athena_ai_github_token'] ?? ''),
         ];
 
         foreach ($settings as $key => $value) {
@@ -49,6 +50,7 @@ class Settings extends BaseAdmin {
         return [
             'api_key' => get_option('athena_ai_api_key', ''),
             'enabled' => get_option('athena_ai_enabled', true),
+            'github_token' => get_option('athena_ai_github_token', ''),
         ];
     }
 } 
