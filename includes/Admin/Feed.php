@@ -31,12 +31,25 @@ class Feed extends BaseAdmin {
             'not_found_in_trash'   => __('No feeds found in Trash.', 'athena-ai'),
         ];
 
+        $capabilities = [
+            'edit_post'          => 'manage_options',
+            'read_post'          => 'manage_options',
+            'delete_post'        => 'manage_options',
+            'edit_posts'         => 'manage_options',
+            'edit_others_posts'  => 'manage_options',
+            'delete_posts'       => 'manage_options',
+            'publish_posts'      => 'manage_options',
+            'read_private_posts' => 'manage_options'
+        ];
+
         $args = [
             'labels'              => $labels,
             'public'              => false,
             'show_ui'             => true,
             'show_in_menu'        => false, // Don't show in main menu
             'capability_type'     => 'post',
+            'capabilities'        => $capabilities,
+            'map_meta_cap'       => true,
             'hierarchical'        => false,
             'supports'            => ['title', 'editor'],
             'has_archive'         => false,

@@ -68,7 +68,7 @@ class Plugin {
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
             'manage_options',
-            'edit.php?post_type=athena-feed', // Link to feed post type
+            'edit.php?post_type=athena-feed',
             null,
             'dashicons-admin-generic',
             30
@@ -89,7 +89,15 @@ class Plugin {
      * Enqueue admin assets
      */
     public function enqueue_admin_assets($hook) {
-        if (strpos($hook, 'athena-ai') === false && strpos($hook, 'post.php') === false && strpos($hook, 'post-new.php') === false && strpos($hook, 'edit.php') === false) {
+        // Check if we're on an Athena AI admin page
+        $is_athena_page = (
+            strpos($hook, 'athena-ai') !== false ||
+            (strpos($hook, 'post.php') !== false && get_post_type() === 'athena-feed') ||
+            (strpos($hook, 'post-new.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
+            (strpos($hook, 'edit.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed')
+        );
+
+        if (!$is_athena_page) {
             return;
         }
 
