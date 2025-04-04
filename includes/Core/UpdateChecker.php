@@ -1,6 +1,8 @@
 <?php
 namespace AthenaAI\Core;
 
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
 /**
  * Handles automatic updates from GitHub using plugin-update-checker
  */
@@ -57,18 +59,9 @@ class UpdateChecker {
         // Include the update checker
         require_once $updateCheckerPath;
 
-        if (!class_exists('Puc_v4_Factory')) {
-            add_action('admin_notices', function() {
-                echo '<div class="error"><p>';
-                echo esc_html__('Athena AI Plugin: Update checker library loaded but Puc_v4_Factory class not found.', 'athena-ai');
-                echo '</p></div>';
-            });
-            return;
-        }
-
         try {
             // Create the update checker instance
-            $updateChecker = \Puc_v4_Factory::buildUpdateChecker(
+            $updateChecker = PucFactory::buildUpdateChecker(
                 "https://github.com/{$this->owner}/{$this->repo}/",
                 ATHENA_AI_PLUGIN_DIR . 'athena-ai.php',
                 'athena-ai'
@@ -86,20 +79,18 @@ class UpdateChecker {
             }
 
             // Enable release assets support
-            $updateChecker->getVcsApi()->enableReleaseAssets();
+            if (method_exists($updateChecker->getVcsApi(), 'enableReleaseAssets')) {
+                $updateChecker->getVcsApi()->enableReleaseAssets();
+            }
 
             // Add debug information
             add_action('admin_notices', function() use ($updateChecker) {
                 if (current_user_can('manage_options')) {
-                    $state = $updateChecker->getUpdateState();
-                    $lastCheck = $state->getLastCheck();
-                    $checkedVersion = $state->getLastRequestApiVersion();
-                    
                     echo '<div class="notice notice-info is-dismissible"><p>';
                     echo sprintf(
-                        esc_html__('Athena AI Update Checker Status: Last check: %s, Checked version: %s', 'athena-ai'),
-                        $lastCheck ? date('Y-m-d H:i:s', $lastCheck) : 'Never',
-                        $checkedVersion ?: 'Unknown'
+                        esc_html__('Athena AI Update Checker Status: Checking for updates from %s/%s', 'athena-ai'),
+                        esc_html($this->owner),
+                        esc_html($this->repo)
                     );
                     echo '</p></div>';
                 }
