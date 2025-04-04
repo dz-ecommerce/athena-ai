@@ -9,6 +9,7 @@ class Feed extends BaseAdmin {
         add_action('init', [$this, 'register_post_type']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_athena-feed', [$this, 'save_meta_boxes'], 10, 2);
+        add_filter('map_meta_cap', [$this, 'map_feed_capabilities'], 10, 4);
     }
 
     /**
@@ -31,24 +32,12 @@ class Feed extends BaseAdmin {
             'not_found_in_trash'   => __('No feeds found in Trash.', 'athena-ai'),
         ];
 
-        $capabilities = [
-            'edit_post'          => 'manage_options',
-            'read_post'          => 'manage_options',
-            'delete_post'        => 'manage_options',
-            'edit_posts'         => 'manage_options',
-            'edit_others_posts'  => 'manage_options',
-            'delete_posts'       => 'manage_options',
-            'publish_posts'      => 'manage_options',
-            'read_private_posts' => 'manage_options'
-        ];
-
         $args = [
             'labels'              => $labels,
             'public'              => false,
             'show_ui'             => true,
             'show_in_menu'        => false, // Don't show in main menu
-            'capability_type'     => 'post',
-            'capabilities'        => $capabilities,
+            'capability_type'     => ['athena_feed', 'athena_feeds'],
             'map_meta_cap'       => true,
             'hierarchical'        => false,
             'supports'            => ['title', 'editor'],
@@ -58,6 +47,26 @@ class Feed extends BaseAdmin {
         ];
 
         register_post_type('athena-feed', $args);
+    }
+
+    /**
+     * Map feed capabilities to WordPress core capabilities
+     */
+    public function map_feed_capabilities($caps, $cap, $user_id, $args) {
+        if (!in_array($cap, [
+            'edit_athena_feed',
+            'read_athena_feed',
+            'delete_athena_feed',
+            'edit_athena_feeds',
+            'edit_others_athena_feeds',
+            'publish_athena_feeds',
+            'read_private_athena_feeds'
+        ])) {
+            return $caps;
+        }
+
+        // Map all feed capabilities to manage_options
+        return ['manage_options'];
     }
 
     /**
