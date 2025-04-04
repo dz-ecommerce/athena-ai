@@ -68,38 +68,32 @@ class Plugin {
             __('Athena AI', 'athena-ai'),
             'manage_options',
             'athena-ai',
-            [$this->admin, 'render_overview_page'],
+            [$this->feed, 'render_feeds_page'],
             'dashicons-admin-generic',
             30
         );
 
+        // Main page - All Feeds
         add_submenu_page(
             'athena-ai',
-            __('Overview', 'athena-ai'),
-            __('Overview', 'athena-ai'),
+            __('All Feeds', 'athena-ai'),
+            __('All Feeds', 'athena-ai'),
             'manage_options',
             'athena-ai',
-            [$this->admin, 'render_overview_page']
+            [$this->feed, 'render_feeds_page']
         );
 
+        // Add New Feed
         add_submenu_page(
             'athena-ai',
-            __('Feed', 'athena-ai'),
-            __('Feed', 'athena-ai'),
+            __('Add New Feed', 'athena-ai'),
+            __('Add New Feed', 'athena-ai'),
             'manage_options',
-            'athena-ai-feed',
-            [$this->feed, 'render_page']
+            'athena-ai-add-feed',
+            [$this->feed, 'render_add_feed_page']
         );
 
-        // Add Feed Management submenu
-        add_submenu_page(
-            'athena-ai',
-            __('Feed Management', 'athena-ai'),
-            __('Feed Management', 'athena-ai'),
-            'manage_options',
-            'edit.php?post_type=athena-feed'
-        );
-
+        // Settings
         add_submenu_page(
             'athena-ai',
             __('Settings', 'athena-ai'),

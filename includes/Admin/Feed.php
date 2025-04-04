@@ -16,6 +16,29 @@ class Feed extends BaseAdmin {
     }
 
     /**
+     * Render the feeds list page
+     */
+    public function render_feeds_page() {
+        $feeds = $this->get_feeds();
+        
+        $this->render_template('feeds', [
+            'title' => $this->__('All Feeds', 'athena-ai'),
+            'feeds' => $feeds,
+            'nonce_field' => $this->get_nonce_field('athena_ai_feeds'),
+        ]);
+    }
+
+    /**
+     * Render the add new feed page
+     */
+    public function render_add_feed_page() {
+        $this->render_template('add-feed', [
+            'title' => $this->__('Add New Feed', 'athena-ai'),
+            'nonce_field' => $this->get_nonce_field('athena_ai_add_feed'),
+        ]);
+    }
+
+    /**
      * Get feed items
      *
      * @return array
@@ -30,5 +53,29 @@ class Feed extends BaseAdmin {
                 'date' => current_time('mysql'),
             ],
         ];
+    }
+
+    /**
+     * Get all feeds
+     *
+     * @return array
+     */
+    private function get_feeds() {
+        $args = [
+            'post_type' => 'athena-feed',
+            'posts_per_page' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC',
+        ];
+
+        $feeds = get_posts($args);
+        return array_map(function($feed) {
+            return [
+                'id' => $feed->ID,
+                'title' => $feed->post_title,
+                'url' => get_post_meta($feed->ID, '_feed_url', true),
+                'last_updated' => get_post_meta($feed->ID, '_last_updated', true),
+            ];
+        }, $feeds);
     }
 } 
