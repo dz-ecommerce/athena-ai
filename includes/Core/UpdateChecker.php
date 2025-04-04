@@ -61,14 +61,11 @@ class UpdateChecker {
         try {
             // Create the update checker instance
             $updateChecker = PucFactory::buildUpdateChecker(
-                sprintf('https://api.github.com/repos/%s/%s/', urlencode($this->owner), urlencode($this->repo)),
+                sprintf('https://github.com/%s/%s/', urlencode($this->owner), urlencode($this->repo)),
                 ATHENA_AI_PLUGIN_DIR . 'athena-ai.php',
                 'athena-ai'
             );
 
-            // Configure the update checker
-            $updateChecker->getVcsApi()->enableReleaseAssets();
-            
             // Set the branch that contains the stable release
             $updateChecker->setBranch('main');
 
@@ -80,13 +77,11 @@ class UpdateChecker {
             // Add debug information
             add_action('admin_notices', function() use ($updateChecker) {
                 if (current_user_can('manage_options')) {
-                    $api = $updateChecker->getVcsApi();
-                    $repoUrl = $api ? $api->getRepositoryUrl() : 'unknown';
-                    
                     echo '<div class="notice notice-info is-dismissible"><p>';
                     echo sprintf(
-                        esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at %s. Updates will be checked automatically.', 'athena-ai'),
-                        esc_html($repoUrl)
+                        esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.', 'athena-ai'),
+                        esc_html($this->owner),
+                        esc_html($this->repo)
                     );
                     echo '</p></div>';
                 }
@@ -95,7 +90,7 @@ class UpdateChecker {
             // Force an immediate update check
             add_action('admin_init', function() use ($updateChecker) {
                 if (current_user_can('update_plugins')) {
-                    $updateChecker->checkForUpdates();
+                    $updateChecker->requestUpdate();
                 }
             });
 
