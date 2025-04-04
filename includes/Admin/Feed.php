@@ -3,6 +3,256 @@ namespace AthenaAI\Admin;
 
 class Feed extends BaseAdmin {
     /**
+     * Constructor
+     */
+    public function __construct() {
+        add_action('init', [$this, 'register_post_type']);
+        add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
+        add_action('save_post_athena-feed', [$this, 'save_meta_boxes'], 10, 2);
+    }
+
+    /**
+     * Register the feed post type
+     */
+    public function register_post_type() {
+        $labels = [
+            'name'                  => _x('Feeds', 'Post type general name', 'athena-ai'),
+            'singular_name'         => _x('Feed', 'Post type singular name', 'athena-ai'),
+            'menu_name'            => _x('Feeds', 'Admin Menu text', 'athena-ai'),
+            'name_admin_bar'       => _x('Feed', 'Add New on Toolbar', 'athena-ai'),
+            'add_new'              => __('Add New', 'athena-ai'),
+            'add_new_item'         => __('Add New Feed', 'athena-ai'),
+            'new_item'             => __('New Feed', 'athena-ai'),
+            'edit_item'            => __('Edit Feed', 'athena-ai'),
+            'view_item'            => __('View Feed', 'athena-ai'),
+            'all_items'            => __('All Feeds', 'athena-ai'),
+            'search_items'         => __('Search Feeds', 'athena-ai'),
+            'not_found'            => __('No feeds found.', 'athena-ai'),
+            'not_found_in_trash'   => __('No feeds found in Trash.', 'athena-ai'),
+        ];
+
+        $args = [
+            'labels'              => $labels,
+            'public'              => false,
+            'show_ui'             => true,
+            'show_in_menu'        => false, // Don't show in main menu
+            'capability_type'     => 'post',
+            'hierarchical'        => false,
+            'supports'            => ['title', 'editor'],
+            'has_archive'         => false,
+            'rewrite'            => false,
+            'show_in_rest'       => true,
+        ];
+
+        register_post_type('athena-feed', $args);
+    }
+
+    /**
+     * Add meta boxes
+     */
+    public function add_meta_boxes() {
+        add_meta_box(
+            'athena-feed-settings',
+            __('Feed Settings', 'athena-ai'),
+            [$this, 'render_settings_meta_box'],
+            'athena-feed',
+            'normal',
+            'high'
+        );
+
+        add_meta_box(
+            'athena-feed-ai-settings',
+            __('AI Settings', 'athena-ai'),
+            [$this, 'render_ai_settings_meta_box'],
+            'athena-feed',
+            'normal',
+            'high'
+        );
+    }
+
+    /**
+     * Render settings meta box
+     */
+    public function render_settings_meta_box($post) {
+        wp_nonce_field('athena_feed_settings', 'athena_feed_settings_nonce');
+        
+        $feed_url = get_post_meta($post->ID, '_feed_url', true);
+        $feed_type = get_post_meta($post->ID, '_feed_type', true);
+        $update_interval = get_post_meta($post->ID, '_update_interval', true) ?: 'hourly';
+        
+        ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row">
+                    <label for="feed_url"><?php esc_html_e('Feed URL', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <input type="url" 
+                           id="feed_url" 
+                           name="feed_url" 
+                           value="<?php echo esc_attr($feed_url); ?>" 
+                           class="regular-text">
+                    <p class="description">
+                        <?php esc_html_e('Enter the URL of the RSS feed or webpage to monitor', 'athena-ai'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="feed_type"><?php esc_html_e('Feed Type', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <select id="feed_type" name="feed_type">
+                        <option value="rss" <?php selected($feed_type, 'rss'); ?>>
+                            <?php esc_html_e('RSS Feed', 'athena-ai'); ?>
+                        </option>
+                        <option value="webpage" <?php selected($feed_type, 'webpage'); ?>>
+                            <?php esc_html_e('Webpage', 'athena-ai'); ?>
+                        </option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="update_interval"><?php esc_html_e('Update Interval', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <select id="update_interval" name="update_interval">
+                        <option value="hourly" <?php selected($update_interval, 'hourly'); ?>>
+                            <?php esc_html_e('Hourly', 'athena-ai'); ?>
+                        </option>
+                        <option value="twicedaily" <?php selected($update_interval, 'twicedaily'); ?>>
+                            <?php esc_html_e('Twice Daily', 'athena-ai'); ?>
+                        </option>
+                        <option value="daily" <?php selected($update_interval, 'daily'); ?>>
+                            <?php esc_html_e('Daily', 'athena-ai'); ?>
+                        </option>
+                        <option value="weekly" <?php selected($update_interval, 'weekly'); ?>>
+                            <?php esc_html_e('Weekly', 'athena-ai'); ?>
+                        </option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+        <?php
+    }
+
+    /**
+     * Render AI settings meta box
+     */
+    public function render_ai_settings_meta_box($post) {
+        wp_nonce_field('athena_feed_ai_settings', 'athena_feed_ai_settings_nonce');
+        
+        $ai_provider = get_post_meta($post->ID, '_ai_provider', true) ?: 'openai';
+        $summarize = get_post_meta($post->ID, '_summarize', true) ?: 'yes';
+        $max_tokens = get_post_meta($post->ID, '_max_tokens', true) ?: '150';
+        
+        ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row">
+                    <label for="ai_provider"><?php esc_html_e('AI Provider', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <select id="ai_provider" name="ai_provider">
+                        <option value="openai" <?php selected($ai_provider, 'openai'); ?>>
+                            <?php esc_html_e('OpenAI', 'athena-ai'); ?>
+                        </option>
+                        <option value="anthropic" <?php selected($ai_provider, 'anthropic'); ?>>
+                            <?php esc_html_e('Anthropic Claude', 'athena-ai'); ?>
+                        </option>
+                        <option value="google" <?php selected($ai_provider, 'google'); ?>>
+                            <?php esc_html_e('Google Gemini', 'athena-ai'); ?>
+                        </option>
+                        <option value="mistral" <?php selected($ai_provider, 'mistral'); ?>>
+                            <?php esc_html_e('Mistral AI', 'athena-ai'); ?>
+                        </option>
+                    </select>
+                    <p class="description">
+                        <?php esc_html_e('Select which AI provider to use for processing this feed', 'athena-ai'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="summarize"><?php esc_html_e('Auto-Summarize', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <select id="summarize" name="summarize">
+                        <option value="yes" <?php selected($summarize, 'yes'); ?>>
+                            <?php esc_html_e('Yes', 'athena-ai'); ?>
+                        </option>
+                        <option value="no" <?php selected($summarize, 'no'); ?>>
+                            <?php esc_html_e('No', 'athena-ai'); ?>
+                        </option>
+                    </select>
+                    <p class="description">
+                        <?php esc_html_e('Automatically generate summaries for new feed items', 'athena-ai'); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="max_tokens"><?php esc_html_e('Max Summary Length', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <input type="number" 
+                           id="max_tokens" 
+                           name="max_tokens" 
+                           value="<?php echo esc_attr($max_tokens); ?>" 
+                           class="small-text"
+                           min="50"
+                           max="500"
+                           step="10">
+                    <p class="description">
+                        <?php esc_html_e('Maximum length of generated summaries (in tokens)', 'athena-ai'); ?>
+                    </p>
+                </td>
+            </tr>
+        </table>
+        <?php
+    }
+
+    /**
+     * Save meta box data
+     */
+    public function save_meta_boxes($post_id, $post) {
+        // Verify settings nonce
+        if (!isset($_POST['athena_feed_settings_nonce']) || 
+            !wp_verify_nonce($_POST['athena_feed_settings_nonce'], 'athena_feed_settings')) {
+            return;
+        }
+
+        // Verify AI settings nonce
+        if (!isset($_POST['athena_feed_ai_settings_nonce']) || 
+            !wp_verify_nonce($_POST['athena_feed_ai_settings_nonce'], 'athena_feed_ai_settings')) {
+            return;
+        }
+
+        // Save settings
+        if (isset($_POST['feed_url'])) {
+            update_post_meta($post_id, '_feed_url', sanitize_url($_POST['feed_url']));
+        }
+        if (isset($_POST['feed_type'])) {
+            update_post_meta($post_id, '_feed_type', sanitize_text_field($_POST['feed_type']));
+        }
+        if (isset($_POST['update_interval'])) {
+            update_post_meta($post_id, '_update_interval', sanitize_text_field($_POST['update_interval']));
+        }
+
+        // Save AI settings
+        if (isset($_POST['ai_provider'])) {
+            update_post_meta($post_id, '_ai_provider', sanitize_text_field($_POST['ai_provider']));
+        }
+        if (isset($_POST['summarize'])) {
+            update_post_meta($post_id, '_summarize', sanitize_text_field($_POST['summarize']));
+        }
+        if (isset($_POST['max_tokens'])) {
+            update_post_meta($post_id, '_max_tokens', absint($_POST['max_tokens']));
+        }
+    }
+
+    /**
      * Render the feed page
      */
     public function render_page() {

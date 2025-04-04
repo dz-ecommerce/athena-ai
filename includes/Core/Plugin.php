@@ -63,39 +63,20 @@ class Plugin {
      * Add admin menu items
      */
     public function add_admin_menu() {
+        // Main menu - Feeds
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
             'manage_options',
-            'athena-ai',
-            [$this->feed, 'render_feeds_page'],
+            'edit.php?post_type=athena-feed', // Link to feed post type
+            null,
             'dashicons-admin-generic',
             30
         );
 
-        // Main page - All Feeds
-        add_submenu_page(
-            'athena-ai',
-            __('All Feeds', 'athena-ai'),
-            __('All Feeds', 'athena-ai'),
-            'manage_options',
-            'athena-ai',
-            [$this->feed, 'render_feeds_page']
-        );
-
-        // Add New Feed
-        add_submenu_page(
-            'athena-ai',
-            __('Add New Feed', 'athena-ai'),
-            __('Add New Feed', 'athena-ai'),
-            'manage_options',
-            'athena-ai-add-feed',
-            [$this->feed, 'render_add_feed_page']
-        );
-
         // Settings
         add_submenu_page(
-            'athena-ai',
+            'edit.php?post_type=athena-feed',
             __('Settings', 'athena-ai'),
             __('Settings', 'athena-ai'),
             'manage_options',
@@ -108,7 +89,7 @@ class Plugin {
      * Enqueue admin assets
      */
     public function enqueue_admin_assets($hook) {
-        if (strpos($hook, 'athena-ai') === false) {
+        if (strpos($hook, 'athena-ai') === false && strpos($hook, 'post.php') === false && strpos($hook, 'post-new.php') === false && strpos($hook, 'edit.php') === false) {
             return;
         }
 
