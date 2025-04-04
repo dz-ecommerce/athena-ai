@@ -1,6 +1,9 @@
 <?php
 namespace AthenaAI\Core;
 
+use AthenaAI\Admin\Feed;
+use AthenaAI\Admin\Settings;
+
 class Plugin {
     /**
      * @var Plugin
@@ -28,6 +31,44 @@ class Plugin {
     private $feed_manager;
 
     /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->feed = new \AthenaAI\Admin\Feed();
+        $this->settings = new \AthenaAI\Admin\Settings();
+
+        // Register activation hook
+        register_activation_hook(ATHENA_AI_PLUGIN_FILE, [$this, 'activate']);
+
+        // Admin hooks
+        add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+    }
+
+    /**
+     * Plugin activation
+     */
+    public function activate() {
+        // Register post type to ensure capabilities are available
+        $this->feed->register_post_type();
+
+        // Add capabilities to administrator role
+        $admin = get_role('administrator');
+        if ($admin) {
+            $admin->add_cap('edit_athena_feed');
+            $admin->add_cap('read_athena_feed');
+            $admin->add_cap('delete_athena_feed');
+            $admin->add_cap('edit_athena_feeds');
+            $admin->add_cap('edit_others_athena_feeds');
+            $admin->add_cap('publish_athena_feeds');
+            $admin->add_cap('read_private_athena_feeds');
+        }
+
+        // Clear permalinks
+        flush_rewrite_rules();
+    }
+
+    /**
      * Initialize the plugin
      */
     public function init() {
@@ -45,8 +86,6 @@ class Plugin {
      */
     private function init_admin() {
         $this->admin = new \AthenaAI\Admin\Admin();
-        $this->settings = new \AthenaAI\Admin\Settings();
-        $this->feed = new \AthenaAI\Admin\Feed();
         $this->feed_manager = new \AthenaAI\Admin\FeedManager();
         $this->feed_manager->init();
     }
@@ -55,8 +94,6 @@ class Plugin {
      * Initialize WordPress hooks
      */
     private function init_hooks() {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     }
 
     /**
@@ -67,7 +104,7 @@ class Plugin {
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
-            'manage_options',
+            'edit_athena_feeds', // Use our custom capability
             'edit.php?post_type=athena-feed',
             null,
             'dashicons-admin-generic',
@@ -79,7 +116,7 @@ class Plugin {
             'edit.php?post_type=athena-feed',
             __('Settings', 'athena-ai'),
             __('Settings', 'athena-ai'),
-            'manage_options',
+            'edit_athena_feeds', // Use our custom capability
             'athena-ai-settings',
             [$this->settings, 'render_page']
         );
