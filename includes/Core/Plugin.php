@@ -6,11 +6,6 @@ use AthenaAI\Admin\Settings;
 
 class Plugin {
     /**
-     * @var Plugin
-     */
-    private static $instance = null;
-
-    /**
      * @var \AthenaAI\Admin\Feed
      */
     private $feed;
@@ -26,25 +21,39 @@ class Plugin {
     private $feed_manager;
 
     /**
+     * @var Plugin
+     */
+    private static $instance = null;
+
+    /**
      * Constructor
      */
     public function __construct() {
+        // Initialize components
         $this->feed = new \AthenaAI\Admin\Feed();
         $this->settings = new \AthenaAI\Admin\Settings();
+        $this->feed_manager = new \AthenaAI\Admin\FeedManager();
 
-        // Admin hooks
+        // Admin hooks - register these on init to ensure proper loading order
+        add_action('init', [$this, 'register_hooks']);
+    }
+
+    /**
+     * Register hooks
+     */
+    public function register_hooks() {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        
+        // Initialize feed manager
+        $this->feed_manager->init();
     }
 
     /**
      * Initialize the plugin
      */
     public function init() {
-        // Initialize admin functionality
-        $this->init_admin();
-
-        // Add capabilities to administrator role
+        // Add capabilities to administrator role if needed
         $this->setup_capabilities();
     }
 
@@ -66,14 +75,6 @@ class Plugin {
             $admin->add_cap('publish_athena_feeds');
             $admin->add_cap('read_private_athena_feeds');
         }
-    }
-
-    /**
-     * Initialize admin functionality
-     */
-    private function init_admin() {
-        $this->feed_manager = new \AthenaAI\Admin\FeedManager();
-        $this->feed_manager->init();
     }
 
     /**

@@ -42,12 +42,17 @@ spl_autoload_register(function ($class) {
 });
 
 /**
+ * Load plugin text domain
+ */
+function athena_ai_load_textdomain() {
+    load_plugin_textdomain('athena-ai', false, dirname(ATHENA_AI_PLUGIN_BASENAME) . '/languages');
+}
+add_action('init', 'athena_ai_load_textdomain');
+
+/**
  * Initialize the plugin
  */
 function athena_ai_init() {
-    // Load text domain for translations
-    load_plugin_textdomain('athena-ai', false, dirname(ATHENA_AI_PLUGIN_BASENAME) . '/languages');
-    
     // Initialize main plugin class
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
