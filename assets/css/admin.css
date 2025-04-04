@@ -71,3 +71,51 @@
 .feed-date {
   display: inline-block;
 }
+
+/* Settings Page Styles */
+.tab-content {
+  display: none;
+  padding: 20px 0;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.form-table th {
+  width: 200px;
+}
+
+.nav-tab-wrapper {
+  margin-bottom: 20px;
+}
+
+h3 {
+  margin: 2em 0 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid #ccc;
+}
+
+.temperature-value {
+  margin-left: 10px;
+  font-weight: bold;
+  vertical-align: middle;
+}
+
+input[type="range"] {
+  vertical-align: middle;
+  width: 200px;
+}
+
+.description {
+  margin-top: 5px;
+  color: #646970;
+}
+
+.regular-text {
+  width: 25em;
+}
+
+.small-text {
+  width: 5em;
+}

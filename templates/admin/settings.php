@@ -8,20 +8,20 @@
     
     <?php settings_errors('athena_ai_messages'); ?>
 
+    <h2 class="nav-tab-wrapper">
+        <a href="#" class="nav-tab nav-tab-active" data-tab="github-settings">
+            <?php esc_html_e('GitHub Settings', 'athena-ai'); ?>
+        </a>
+        <a href="#" class="nav-tab" data-tab="text-ai-settings">
+            <?php esc_html_e('Text AI Settings', 'athena-ai'); ?>
+        </a>
+        <a href="#" class="nav-tab" data-tab="image-ai-settings">
+            <?php esc_html_e('Image AI Settings', 'athena-ai'); ?>
+        </a>
+    </h2>
+
     <form method="post" action="">
         <?php echo $nonce_field; ?>
-
-        <div class="nav-tab-wrapper">
-            <a href="#github-settings" class="nav-tab nav-tab-active" data-tab="github-settings">
-                <?php esc_html_e('GitHub Settings', 'athena-ai'); ?>
-            </a>
-            <a href="#text-ai-settings" class="nav-tab" data-tab="text-ai-settings">
-                <?php esc_html_e('Text AI Settings', 'athena-ai'); ?>
-            </a>
-            <a href="#image-ai-settings" class="nav-tab" data-tab="image-ai-settings">
-                <?php esc_html_e('Image AI Settings', 'athena-ai'); ?>
-            </a>
-        </div>
 
         <div id="github-settings" class="tab-content active">
             <h2><?php esc_html_e('GitHub Repository Settings', 'athena-ai'); ?></h2>
