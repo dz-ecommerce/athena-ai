@@ -11,19 +11,14 @@ class Plugin {
     private static $instance = null;
 
     /**
-     * @var \AthenaAI\Admin\Admin
+     * @var \AthenaAI\Admin\Feed
      */
-    private $admin;
+    private $feed;
 
     /**
      * @var \AthenaAI\Admin\Settings
      */
     private $settings;
-
-    /**
-     * @var \AthenaAI\Admin\Feed
-     */
-    private $feed;
 
     /**
      * @var \AthenaAI\Admin\FeedManager
@@ -37,18 +32,26 @@ class Plugin {
         $this->feed = new \AthenaAI\Admin\Feed();
         $this->settings = new \AthenaAI\Admin\Settings();
 
-        // Register activation hook
-        register_activation_hook(ATHENA_AI_PLUGIN_FILE, [$this, 'activate']);
-
         // Admin hooks
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     }
 
     /**
-     * Plugin activation
+     * Initialize the plugin
      */
-    public function activate() {
+    public function init() {
+        // Initialize admin functionality
+        $this->init_admin();
+
+        // Add capabilities to administrator role
+        $this->setup_capabilities();
+    }
+
+    /**
+     * Setup plugin capabilities
+     */
+    public function setup_capabilities() {
         // Register post type to ensure capabilities are available
         $this->feed->register_post_type();
 
@@ -63,41 +66,18 @@ class Plugin {
             $admin->add_cap('publish_athena_feeds');
             $admin->add_cap('read_private_athena_feeds');
         }
-
-        // Clear permalinks
-        flush_rewrite_rules();
     }
 
     /**
-     * Initialize the plugin
-     */
-    public function init() {
-        // Initialize admin components
-        if (is_admin()) {
-            $this->init_admin();
-        }
-
-        // Initialize hooks
-        $this->init_hooks();
-    }
-
-    /**
-     * Initialize admin components
+     * Initialize admin functionality
      */
     private function init_admin() {
-        $this->admin = new \AthenaAI\Admin\Admin();
         $this->feed_manager = new \AthenaAI\Admin\FeedManager();
         $this->feed_manager->init();
     }
 
     /**
-     * Initialize WordPress hooks
-     */
-    private function init_hooks() {
-    }
-
-    /**
-     * Add admin menu items
+     * Add admin menu
      */
     public function add_admin_menu() {
         // Main menu - Feeds
@@ -168,4 +148,4 @@ class Plugin {
         }
         return self::$instance;
     }
-} 
+}

@@ -41,10 +41,9 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Initialize the plugin
-
-
-
+/**
+ * Initialize the plugin
+ */
 function athena_ai_init() {
     // Load text domain for translations
     load_plugin_textdomain('athena-ai', false, dirname(ATHENA_AI_PLUGIN_BASENAME) . '/languages');
@@ -63,14 +62,26 @@ function athena_ai_init() {
 }
 add_action('plugins_loaded', 'athena_ai_init');
 
-// Activation hook
-register_activation_hook(__FILE__, function() {
-    require_once ATHENA_AI_PLUGIN_DIR . 'includes/Core/Activator.php';
-    \AthenaAI\Core\Activator::activate();
-});
+/**
+ * Activation callback
+ */
+function athena_ai_activate() {
+    // Create an instance of the Plugin class
+    $plugin = new \AthenaAI\Core\Plugin();
+    
+    // Setup capabilities
+    $plugin->setup_capabilities();
+    
+    // Flush rewrite rules
+    flush_rewrite_rules();
+}
+register_activation_hook(__FILE__, 'athena_ai_activate');
 
-// Deactivation hook
-register_deactivation_hook(__FILE__, function() {
-    require_once ATHENA_AI_PLUGIN_DIR . 'includes/Core/Deactivator.php';
-    \AthenaAI\Core\Deactivator::deactivate();
-}); 
+/**
+ * Deactivation callback
+ */
+function athena_ai_deactivate() {
+    // Flush rewrite rules
+    flush_rewrite_rules();
+}
+register_deactivation_hook(__FILE__, 'athena_ai_deactivate');
