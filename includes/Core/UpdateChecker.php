@@ -67,9 +67,9 @@ class UpdateChecker {
                 'athena-ai'
             );
 
-            // Set to check updates more frequently during testing (every 60 seconds)
-            $updateChecker->setCheckPeriod(60);
-
+            // Configure the update checker
+            $updateChecker->getVcsApi()->enableReleaseAssets();
+            
             // Set the branch that contains the stable release
             $updateChecker->setBranch('main');
 
@@ -78,21 +78,23 @@ class UpdateChecker {
                 $updateChecker->setAuthentication($this->access_token);
             }
 
-            // Enable release assets support
-            if (method_exists($updateChecker->getVcsApi(), 'enableReleaseAssets')) {
-                $updateChecker->getVcsApi()->enableReleaseAssets();
-            }
-
             // Add debug information
             add_action('admin_notices', function() use ($updateChecker) {
                 if (current_user_can('manage_options')) {
                     echo '<div class="notice notice-info is-dismissible"><p>';
                     echo sprintf(
-                        esc_html__('Athena AI Update Checker Status: Checking for updates from %s/%s', 'athena-ai'),
+                        esc_html__('Athena AI Update Checker Status: Checking for updates from %s/%s. Updates will be checked automatically.', 'athena-ai'),
                         esc_html($this->owner),
                         esc_html($this->repo)
                     );
                     echo '</p></div>';
+                }
+            });
+
+            // Force an immediate update check
+            add_action('admin_init', function() use ($updateChecker) {
+                if (current_user_can('update_plugins')) {
+                    $updateChecker->checkForUpdates();
                 }
             });
 
