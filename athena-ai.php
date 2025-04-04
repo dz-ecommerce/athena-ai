@@ -55,7 +55,7 @@ function athena_ai_init() {
     $updater = new \AthenaAI\Core\UpdateChecker(
         'dz-ecommerce',           // GitHub username/organization
         'athena-ai',              // Repository name
-        get_option('athena_ai_github_token')  // GitHub access token from WordPress options
+        null                      // No token needed for public repositories
     );
     $updater->init();
 }
