@@ -47,7 +47,6 @@ class UpdateChecker {
         
         // Check if update checker exists
         if (!file_exists($updateCheckerPath)) {
-            // Log error or notify admin that the library is missing
             add_action('admin_notices', function() {
                 echo '<div class="error"><p>';
                 echo esc_html__('Athena AI Plugin: Update checker library is missing. Please download plugin-update-checker from GitHub and place it in includes/Libraries/plugin-update-checker/', 'athena-ai');
@@ -62,7 +61,7 @@ class UpdateChecker {
         try {
             // Create the update checker instance
             $updateChecker = PucFactory::buildUpdateChecker(
-                "https://github.com/{$this->owner}/{$this->repo}/",
+                sprintf('https://api.github.com/repos/%s/%s/', urlencode($this->owner), urlencode($this->repo)),
                 ATHENA_AI_PLUGIN_DIR . 'athena-ai.php',
                 'athena-ai'
             );
@@ -81,11 +80,13 @@ class UpdateChecker {
             // Add debug information
             add_action('admin_notices', function() use ($updateChecker) {
                 if (current_user_can('manage_options')) {
+                    $api = $updateChecker->getVcsApi();
+                    $repoUrl = $api ? $api->getRepositoryUrl() : 'unknown';
+                    
                     echo '<div class="notice notice-info is-dismissible"><p>';
                     echo sprintf(
-                        esc_html__('Athena AI Update Checker Status: Checking for updates from %s/%s. Updates will be checked automatically.', 'athena-ai'),
-                        esc_html($this->owner),
-                        esc_html($this->repo)
+                        esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at %s. Updates will be checked automatically.', 'athena-ai'),
+                        esc_html($repoUrl)
                     );
                     echo '</p></div>';
                 }
