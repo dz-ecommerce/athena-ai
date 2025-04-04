@@ -7,8 +7,40 @@ class FeedManager extends BaseAdmin {
      */
     public function init() {
         add_action('init', [$this, 'register_post_type']);
+        add_action('init', [$this, 'register_taxonomy']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_athena-feed', [$this, 'save_meta_box_data']);
+    }
+
+    /**
+     * Register the feed categories taxonomy
+     */
+    public function register_taxonomy() {
+        $labels = [
+            'name'              => $this->__('Feed Categories', 'athena-ai'),
+            'singular_name'     => $this->__('Feed Category', 'athena-ai'),
+            'search_items'      => $this->__('Search Feed Categories', 'athena-ai'),
+            'all_items'         => $this->__('All Feed Categories', 'athena-ai'),
+            'parent_item'       => $this->__('Parent Feed Category', 'athena-ai'),
+            'parent_item_colon' => $this->__('Parent Feed Category:', 'athena-ai'),
+            'edit_item'         => $this->__('Edit Feed Category', 'athena-ai'),
+            'update_item'       => $this->__('Update Feed Category', 'athena-ai'),
+            'add_new_item'      => $this->__('Add New Feed Category', 'athena-ai'),
+            'new_item_name'     => $this->__('New Feed Category Name', 'athena-ai'),
+            'menu_name'         => $this->__('Categories', 'athena-ai'),
+        ];
+
+        $args = [
+            'hierarchical'      => true,
+            'labels'           => $labels,
+            'show_ui'          => true,
+            'show_admin_column' => true,
+            'query_var'        => true,
+            'rewrite'          => ['slug' => 'feed-category'],
+            'show_in_rest'     => true,
+        ];
+
+        register_taxonomy('feed-category', ['athena-feed'], $args);
     }
 
     /**
@@ -36,10 +68,11 @@ class FeedManager extends BaseAdmin {
             'show_in_menu'        => 'athena-ai',
             'capability_type'     => 'post',
             'hierarchical'        => false,
-            'supports'            => ['title'],
+            'supports'            => ['title', 'taxonomies'],
             'menu_position'       => 30,
             'rewrite'            => ['slug' => 'athena-feed'],
             'show_in_rest'       => true,
+            'taxonomies'         => ['feed-category'],
         ];
 
         register_post_type('athena-feed', $args);
