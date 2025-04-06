@@ -62,7 +62,7 @@ class UpdateChecker {
             // Create the update checker instance
             $updateChecker = PucFactory::buildUpdateChecker(
                 sprintf('https://github.com/%s/%s/', urlencode($this->owner), urlencode($this->repo)),
-                ATHENA_AI_PLUGIN_DIR . 'athena-ai.php',
+                ATHENA_AI_PLUGIN_FILE,
                 'athena-ai'
             );
 
@@ -78,20 +78,21 @@ class UpdateChecker {
             }
 
             // Add filters for update checking
-            add_filter('puc_pre_inject_update_' . $updateChecker->getUniqueName(), function($update) {
-                // Ensure the update ZIP is from a release
-                if (!empty($update) && isset($update->download_url)) {
-                    // Verify this is a release download URL
-                    if (strpos($update->download_url, '/releases/download/') === false) {
-                        return null; // Not a release, skip update
+            $pluginFile = plugin_basename(ATHENA_AI_PLUGIN_FILE);
+            add_filter('pre_set_site_transient_update_plugins', function($transient) use ($updateChecker, $pluginFile) {
+                if (!empty($transient) && isset($transient->response[$pluginFile])) {
+                    $update = $transient->response[$pluginFile];
+                    // Ensure the update ZIP is from a release
+                    if (isset($update->package) && strpos($update->package, '/releases/download/') === false) {
+                        unset($transient->response[$pluginFile]);
                     }
                 }
-                return $update;
+                return $transient;
             });
 
             // Add debug information in WP_DEBUG mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                add_action('admin_notices', function() use ($updateChecker) {
+                add_action('admin_notices', function() {
                     if (current_user_can('manage_options')) {
                         echo '<div class="notice notice-info is-dismissible"><p>';
                         echo sprintf(
