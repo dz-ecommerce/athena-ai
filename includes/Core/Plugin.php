@@ -42,7 +42,7 @@ class Plugin {
      * Register hooks
      */
     public function register_hooks() {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_menu', [$this, 'add_admin_menu'], 9); // Run before post type registration
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         
         // Initialize feed manager
@@ -74,6 +74,7 @@ class Plugin {
             $admin->add_cap('edit_others_athena_feeds');
             $admin->add_cap('publish_athena_feeds');
             $admin->add_cap('read_private_athena_feeds');
+            $admin->add_cap('manage_athena_ai');
         }
     }
 
@@ -81,25 +82,34 @@ class Plugin {
      * Add admin menu
      */
     public function add_admin_menu() {
-        // Main menu - Feeds
+        // Main menu - Athena AI
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
-            'edit_athena_feeds',
-            'edit.php?post_type=athena-feed',
+            'manage_athena_ai',
+            'athena-ai',
             null,
             'dashicons-rss',
             30
         );
 
-        // Add Settings as submenu of Feeds
+        // Add Settings as submenu
         add_submenu_page(
-            'edit.php?post_type=athena-feed',
+            'athena-ai',
             __('Settings', 'athena-ai'),
             __('Settings', 'athena-ai'),
-            'edit_athena_feeds',
+            'manage_athena_ai',
             'athena-ai-settings',
             [$this->settings, 'render_page']
+        );
+
+        // Add Feeds submenu
+        add_submenu_page(
+            'athena-ai',
+            __('Feeds', 'athena-ai'),
+            __('Feeds', 'athena-ai'),
+            'edit_athena_feeds',
+            'edit.php?post_type=athena-feed'
         );
     }
 

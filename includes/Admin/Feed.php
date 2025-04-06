@@ -50,17 +50,28 @@ class Feed extends BaseAdmin {
             'labels'              => $labels,
             'public'              => false,
             'show_ui'             => true,
-            'show_in_menu'        => 'edit.php?post_type=athena-feed', // Show under its own top level menu
+            'show_in_menu'        => true,
             'show_in_admin_bar'   => true,
             'menu_position'       => 30,
             'menu_icon'           => 'dashicons-rss',
-            'capability_type'     => ['athena_feed', 'athena_feeds'],
+            'capability_type'     => 'post',
+            'capabilities'        => [
+                'edit_post'          => 'edit_athena_feed',
+                'read_post'          => 'read_athena_feed',
+                'delete_post'        => 'delete_athena_feed',
+                'edit_posts'         => 'edit_athena_feeds',
+                'edit_others_posts'  => 'edit_others_athena_feeds',
+                'publish_posts'      => 'publish_athena_feeds',
+                'read_private_posts' => 'read_private_athena_feeds',
+                'create_posts'       => 'edit_athena_feeds',
+            ],
             'map_meta_cap'        => true,
             'hierarchical'        => false,
             'supports'            => ['title', 'editor'],
             'has_archive'         => false,
             'rewrite'            => false,
             'show_in_rest'       => true,
+            'register_meta_box_cb' => [$this, 'add_meta_boxes'],
         ];
 
         register_post_type('athena-feed', $args);
@@ -83,6 +94,10 @@ class Feed extends BaseAdmin {
         }
 
         // Map all feed capabilities to manage_options
+        if (!user_can($user_id, 'manage_options')) {
+            return ['do_not_allow'];
+        }
+
         return ['manage_options'];
     }
 
