@@ -148,9 +148,9 @@ class Feed extends BaseAdmin {
      */
     public function add_meta_boxes() {
         add_meta_box(
-            'athena-feed-content',
-            __('Feed Content', 'athena-ai'),
-            [$this, 'render_content_meta_box'],
+            'athena-feed-url',
+            __('Feed URL', 'athena-ai'),
+            [$this, 'render_url_meta_box'],
             'athena-feed',
             'normal',
             'high'
@@ -158,17 +158,11 @@ class Feed extends BaseAdmin {
     }
 
     /**
-     * Render content meta box
+     * Render URL meta box
      */
-    public function render_content_meta_box($post) {
-        wp_nonce_field('athena_feed_content', 'athena_feed_content_nonce');
-
+    public function render_url_meta_box($post) {
+        wp_nonce_field('athena_feed_url', 'athena_feed_url_nonce');
         $feed_url = get_post_meta($post->ID, '_feed_url', true);
-        $feed_type = get_post_meta($post->ID, '_feed_type', true);
-        $update_interval = get_post_meta($post->ID, '_update_interval', true);
-        $ai_provider = get_post_meta($post->ID, '_ai_provider', true);
-        $summarize = get_post_meta($post->ID, '_summarize', true);
-        $max_tokens = get_post_meta($post->ID, '_max_tokens', true) ?: 100;
         ?>
         <table class="form-table">
             <tr>
@@ -187,69 +181,6 @@ class Feed extends BaseAdmin {
                     </p>
                 </td>
             </tr>
-            <tr>
-                <th scope="row">
-                    <label for="feed_type"><?php esc_html_e('Feed Type', 'athena-ai'); ?></label>
-                </th>
-                <td>
-                    <select id="feed_type" name="feed_type">
-                        <option value="rss" <?php selected($feed_type, 'rss'); ?>><?php esc_html_e('RSS', 'athena-ai'); ?></option>
-                        <option value="atom" <?php selected($feed_type, 'atom'); ?>><?php esc_html_e('Atom', 'athena-ai'); ?></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">
-                    <label for="update_interval"><?php esc_html_e('Update Interval', 'athena-ai'); ?></label>
-                </th>
-                <td>
-                    <select id="update_interval" name="update_interval">
-                        <option value="hourly" <?php selected($update_interval, 'hourly'); ?>><?php esc_html_e('Hourly', 'athena-ai'); ?></option>
-                        <option value="twicedaily" <?php selected($update_interval, 'twicedaily'); ?>><?php esc_html_e('Twice Daily', 'athena-ai'); ?></option>
-                        <option value="daily" <?php selected($update_interval, 'daily'); ?>><?php esc_html_e('Daily', 'athena-ai'); ?></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">
-                    <label for="ai_provider"><?php esc_html_e('AI Provider', 'athena-ai'); ?></label>
-                </th>
-                <td>
-                    <select id="ai_provider" name="ai_provider">
-                        <option value="openai" <?php selected($ai_provider, 'openai'); ?>><?php esc_html_e('OpenAI', 'athena-ai'); ?></option>
-                        <option value="anthropic" <?php selected($ai_provider, 'anthropic'); ?>><?php esc_html_e('Anthropic', 'athena-ai'); ?></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">
-                    <label for="summarize"><?php esc_html_e('Summarize Content', 'athena-ai'); ?></label>
-                </th>
-                <td>
-                    <select id="summarize" name="summarize">
-                        <option value="yes" <?php selected($summarize, 'yes'); ?>><?php esc_html_e('Yes', 'athena-ai'); ?></option>
-                        <option value="no" <?php selected($summarize, 'no'); ?>><?php esc_html_e('No', 'athena-ai'); ?></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row">
-                    <label for="max_tokens"><?php esc_html_e('Max Tokens', 'athena-ai'); ?></label>
-                </th>
-                <td>
-                    <input type="number"
-                           id="max_tokens"
-                           name="max_tokens"
-                           value="<?php echo esc_attr($max_tokens); ?>"
-                           class="small-text"
-                           min="50"
-                           max="500"
-                           step="10">
-                    <p class="description">
-                        <?php esc_html_e('Maximum length of generated summaries (in tokens)', 'athena-ai'); ?>
-                    </p>
-                </td>
-            </tr>
         </table>
         <?php
     }
@@ -258,107 +189,15 @@ class Feed extends BaseAdmin {
      * Save meta box data
      */
     public function save_meta_boxes($post_id, $post) {
-        // Verify content nonce
-        if (!isset($_POST['athena_feed_content_nonce']) || 
-            !wp_verify_nonce($_POST['athena_feed_content_nonce'], 'athena_feed_content')) {
+        // Verify URL nonce
+        if (!isset($_POST['athena_feed_url_nonce']) || 
+            !wp_verify_nonce($_POST['athena_feed_url_nonce'], 'athena_feed_url')) {
             return;
         }
 
-        // Save feed settings
+        // Save feed URL
         if (isset($_POST['feed_url'])) {
             update_post_meta($post_id, '_feed_url', sanitize_url($_POST['feed_url']));
         }
-        if (isset($_POST['feed_type'])) {
-            update_post_meta($post_id, '_feed_type', sanitize_text_field($_POST['feed_type']));
-        }
-        if (isset($_POST['update_interval'])) {
-            update_post_meta($post_id, '_update_interval', sanitize_text_field($_POST['update_interval']));
-        }
-        if (isset($_POST['ai_provider'])) {
-            update_post_meta($post_id, '_ai_provider', sanitize_text_field($_POST['ai_provider']));
-        }
-        if (isset($_POST['summarize'])) {
-            update_post_meta($post_id, '_summarize', sanitize_text_field($_POST['summarize']));
-        }
-        if (isset($_POST['max_tokens'])) {
-            update_post_meta($post_id, '_max_tokens', absint($_POST['max_tokens']));
-        }
-    }
-
-    /**
-     * Render the feed page
-     */
-    public function render_page() {
-        $items = $this->get_feed_items();
-        
-        $this->render_template('feed', [
-            'title' => $this->__('Athena AI Feed', 'athena-ai'),
-            'items' => $items,
-            'nonce_field' => $this->get_nonce_field('athena_ai_feed'),
-        ]);
-    }
-
-    /**
-     * Render the feeds list page
-     */
-    public function render_feeds_page() {
-        $feeds = $this->get_feeds();
-        
-        $this->render_template('feeds', [
-            'title' => $this->__('All Feeds', 'athena-ai'),
-            'feeds' => $feeds,
-            'nonce_field' => $this->get_nonce_field('athena_ai_feeds'),
-        ]);
-    }
-
-    /**
-     * Render the add new feed page
-     */
-    public function render_add_feed_page() {
-        $this->render_template('add-feed', [
-            'title' => $this->__('Add New Feed', 'athena-ai'),
-            'nonce_field' => $this->get_nonce_field('athena_ai_add_feed'),
-        ]);
-    }
-
-    /**
-     * Get feed items
-     *
-     * @return array
-     */
-    private function get_feed_items() {
-        // This is a placeholder. In a real implementation, you would fetch actual feed items
-        return [
-            [
-                'id' => 1,
-                'title' => $this->__('Sample Feed Item', 'athena-ai'),
-                'content' => $this->__('This is a sample feed item.', 'athena-ai'),
-                'date' => current_time('mysql'),
-            ],
-        ];
-    }
-
-    /**
-     * Get all feeds
-     *
-     * @return array
-     */
-    private function get_feeds() {
-        $args = [
-            'post_type' => 'athena-feed',
-            'posts_per_page' => -1,
-            'orderby' => 'title',
-            'order' => 'ASC',
-        ];
-
-        $feeds = get_posts($args);
-        return array_map(function($feed) {
-            return [
-                'id' => $feed->ID,
-                'title' => $feed->post_title,
-                'url' => get_post_meta($feed->ID, '_feed_url', true),
-                'last_updated' => get_post_meta($feed->ID, '_last_updated', true),
-            ];
-        }, $feeds);
     }
 } 
