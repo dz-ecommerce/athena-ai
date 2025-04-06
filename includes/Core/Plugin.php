@@ -1,24 +1,19 @@
 <?php
 namespace AthenaAI\Core;
 
-use AthenaAI\Admin\Feed;
+use AthenaAI\Admin\FeedManager;
 use AthenaAI\Admin\Settings;
 
 class Plugin {
     /**
-     * @var \AthenaAI\Admin\Feed
+     * @var \AthenaAI\Admin\FeedManager
      */
-    private $feed;
+    private $feed_manager;
 
     /**
      * @var \AthenaAI\Admin\Settings
      */
     private $settings;
-
-    /**
-     * @var \AthenaAI\Admin\FeedManager
-     */
-    private $feed_manager;
 
     /**
      * @var Plugin
@@ -30,23 +25,20 @@ class Plugin {
      */
     public function __construct() {
         // Initialize components
-        $this->feed = new \AthenaAI\Admin\Feed();
-        $this->settings = new \AthenaAI\Admin\Settings();
-        $this->feed_manager = new \AthenaAI\Admin\FeedManager();
+        $this->feed_manager = new FeedManager();
+        $this->settings = new Settings();
 
-        // Admin hooks - register these on init to ensure proper loading order
-        add_action('init', [$this, 'register_hooks']);
+        // Register hooks
+        $this->register_hooks();
     }
 
     /**
      * Register hooks
      */
     public function register_hooks() {
+        add_action('init', [$this, 'init']);
         add_action('admin_menu', [$this, 'add_admin_menu'], 99); // Run after post type registration
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-        
-        // Initialize feed manager
-        $this->feed_manager->init();
     }
 
     /**
@@ -61,9 +53,6 @@ class Plugin {
      * Setup plugin capabilities
      */
     public function setup_capabilities() {
-        // Register post type to ensure capabilities are available
-        $this->feed->register_post_type();
-
         // Add capabilities to administrator role
         $admin = get_role('administrator');
         if ($admin) {
