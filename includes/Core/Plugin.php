@@ -42,7 +42,7 @@ class Plugin {
      * Register hooks
      */
     public function register_hooks() {
-        add_action('admin_menu', [$this, 'add_admin_menu'], 9); // Run before post type registration
+        add_action('admin_menu', [$this, 'add_admin_menu'], 99); // Run after post type registration
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         
         // Initialize feed manager
@@ -82,20 +82,9 @@ class Plugin {
      * Add admin menu
      */
     public function add_admin_menu() {
-        // Main menu - Athena AI
-        add_menu_page(
-            __('Athena AI', 'athena-ai'),
-            __('Athena AI', 'athena-ai'),
-            'manage_athena_ai',
-            'athena-ai',
-            null,
-            'dashicons-rss',
-            30
-        );
-
-        // Add Settings as submenu
+        // Add Settings as submenu of Feeds
         add_submenu_page(
-            'athena-ai',
+            'edit.php?post_type=athena-feed',
             __('Settings', 'athena-ai'),
             __('Settings', 'athena-ai'),
             'manage_athena_ai',
@@ -103,14 +92,44 @@ class Plugin {
             [$this->settings, 'render_page']
         );
 
-        // Add Feeds submenu
-        add_submenu_page(
-            'athena-ai',
-            __('Feeds', 'athena-ai'),
-            __('Feeds', 'athena-ai'),
-            'edit_athena_feeds',
-            'edit.php?post_type=athena-feed'
-        );
+        // Ensure proper menu order
+        global $submenu;
+        if (isset($submenu['edit.php?post_type=athena-feed'])) {
+            // Store the current menu items
+            $menu_items = $submenu['edit.php?post_type=athena-feed'];
+            
+            // Reset the menu
+            $submenu['edit.php?post_type=athena-feed'] = [];
+            
+            // Add items in the desired order
+            foreach ($menu_items as $item) {
+                if ($item[2] === 'edit.php?post_type=athena-feed') {
+                    // All Feeds
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
+            
+            foreach ($menu_items as $item) {
+                if ($item[2] === 'post-new.php?post_type=athena-feed') {
+                    // Add New
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
+            
+            foreach ($menu_items as $item) {
+                if ($item[2] === 'edit-tags.php?taxonomy=athena-feed-category&amp;post_type=athena-feed') {
+                    // Categories
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
+            
+            foreach ($menu_items as $item) {
+                if ($item[2] === 'athena-ai-settings') {
+                    // Settings
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
+        }
     }
 
     /**
