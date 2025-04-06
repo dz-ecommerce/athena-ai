@@ -10,6 +10,20 @@ class Feed extends BaseAdmin {
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_athena-feed', [$this, 'save_meta_boxes'], 10, 2);
         add_filter('map_meta_cap', [$this, 'map_feed_capabilities'], 10, 4);
+        add_filter('parent_file', [$this, 'set_current_menu']);
+    }
+
+    /**
+     * Set current menu for add/edit pages
+     */
+    public function set_current_menu($parent_file) {
+        global $current_screen;
+        
+        if ($current_screen && 'athena-feed' === $current_screen->post_type) {
+            $parent_file = 'edit.php?post_type=athena-feed';
+        }
+        
+        return $parent_file;
     }
 
     /**
@@ -36,9 +50,12 @@ class Feed extends BaseAdmin {
             'labels'              => $labels,
             'public'              => false,
             'show_ui'             => true,
-            'show_in_menu'        => false, // Don't show in main menu
+            'show_in_menu'        => 'edit.php?post_type=athena-feed', // Show under its own top level menu
+            'show_in_admin_bar'   => true,
+            'menu_position'       => 30,
+            'menu_icon'           => 'dashicons-rss',
             'capability_type'     => ['athena_feed', 'athena_feeds'],
-            'map_meta_cap'       => true,
+            'map_meta_cap'        => true,
             'hierarchical'        => false,
             'supports'            => ['title', 'editor'],
             'has_archive'         => false,

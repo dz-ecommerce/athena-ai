@@ -85,19 +85,19 @@ class Plugin {
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
-            'edit_athena_feeds', // Use our custom capability
+            'edit_athena_feeds',
             'edit.php?post_type=athena-feed',
             null,
-            'dashicons-admin-generic',
+            'dashicons-rss',
             30
         );
 
-        // Settings
+        // Add Settings as submenu of Feeds
         add_submenu_page(
             'edit.php?post_type=athena-feed',
             __('Settings', 'athena-ai'),
             __('Settings', 'athena-ai'),
-            'edit_athena_feeds', // Use our custom capability
+            'edit_athena_feeds',
             'athena-ai-settings',
             [$this->settings, 'render_page']
         );
