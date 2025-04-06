@@ -49,7 +49,7 @@ class UpdateChecker {
         if (!file_exists($updateCheckerPath)) {
             add_action('admin_notices', function() {
                 echo '<div class="error"><p>';
-                echo esc_html__('Athena AI Plugin: Update checker library is missing. Please download plugin-update-checker from GitHub and place it in includes/Libraries/plugin-update-checker/', 'athena-ai');
+                echo esc_html__('Athena AI Plugin: Update checker library is missing. Please reinstall the plugin.', 'athena-ai');
                 echo '</p></div>';
             });
             return;
@@ -66,6 +66,9 @@ class UpdateChecker {
                 'athena-ai'
             );
 
+            // Set to use releases instead of tags
+            $updateChecker->getVcsApi()->enableReleaseAssets();
+            
             // Set the branch that contains the stable release
             $updateChecker->setBranch('main');
 
@@ -74,35 +77,44 @@ class UpdateChecker {
                 $updateChecker->setAuthentication($this->access_token);
             }
 
-            // Add debug information
-            add_action('admin_notices', function() use ($updateChecker) {
-                if (current_user_can('manage_options')) {
-                    echo '<div class="notice notice-info is-dismissible"><p>';
-                    echo sprintf(
-                        esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.', 'athena-ai'),
-                        esc_html($this->owner),
-                        esc_html($this->repo)
-                    );
-                    echo '</p></div>';
+            // Add filters for update checking
+            add_filter('puc_pre_inject_update_' . $updateChecker->getUniqueName(), function($update) {
+                // Ensure the update ZIP is from a release
+                if (!empty($update) && isset($update->download_url)) {
+                    // Verify this is a release download URL
+                    if (strpos($update->download_url, '/releases/download/') === false) {
+                        return null; // Not a release, skip update
+                    }
                 }
+                return $update;
             });
 
-            // Force an immediate update check
-            add_action('admin_init', function() use ($updateChecker) {
-                if (current_user_can('update_plugins')) {
-                    $updateChecker->requestUpdate();
-                }
-            });
+            // Add debug information in WP_DEBUG mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                add_action('admin_notices', function() use ($updateChecker) {
+                    if (current_user_can('manage_options')) {
+                        echo '<div class="notice notice-info is-dismissible"><p>';
+                        echo sprintf(
+                            esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.', 'athena-ai'),
+                            esc_html($this->owner),
+                            esc_html($this->repo)
+                        );
+                        echo '</p></div>';
+                    }
+                });
+            }
 
         } catch (\Exception $e) {
-            add_action('admin_notices', function() use ($e) {
-                echo '<div class="error"><p>';
-                echo esc_html(sprintf(
-                    __('Athena AI Plugin: Error initializing update checker: %s', 'athena-ai'),
-                    $e->getMessage()
-                ));
-                echo '</p></div>';
-            });
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                add_action('admin_notices', function() use ($e) {
+                    echo '<div class="error"><p>';
+                    echo esc_html(sprintf(
+                        __('Athena AI Plugin: Error initializing update checker: %s', 'athena-ai'),
+                        $e->getMessage()
+                    ));
+                    echo '</p></div>';
+                });
+            }
         }
     }
 

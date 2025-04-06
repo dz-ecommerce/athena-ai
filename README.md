@@ -4,11 +4,13 @@ A powerful AI integration plugin for WordPress that provides advanced AI feature
 
 ## Features
 
+- Feed management system with categories
 - Overview dashboard with quick stats and recent activity
 - Feed page for displaying AI-generated content
 - Settings page for managing API keys and plugin options
 - Fully translatable (includes German translation)
 - Modern and responsive admin interface
+- Automatic updates via GitHub
 
 ## Requirements
 
@@ -25,14 +27,13 @@ A powerful AI integration plugin for WordPress that provides advanced AI feature
 
 ## Usage
 
-### Overview Page
+### Feed Management
 
-The overview page provides quick access to important statistics and recent activity.
-testtt 
-
-### Feed Page
-
-The feed page displays AI-generated content and updates.
+Access the feed management system through the 'Athena AI' menu in WordPress admin:
+- View all feeds
+- Add new feeds
+- Organize feeds into categories
+- Configure feed settings
 
 ### Settings Page
 
@@ -60,12 +61,60 @@ athena-ai/
 └── athena-ai.php
 ```
 
+### Release Process
+
+The plugin uses GitHub releases for updates. To create a new release:
+
+1. Update version numbers:
+   - In `athena-ai.php`: Update both the version comment and `ATHENA_AI_VERSION` constant
+   - Add new section in `CHANGELOG.md` with the changes
+
+2. Commit changes:
+   ```bash
+   git add athena-ai.php CHANGELOG.md
+   git commit -m "Bump version to X.Y.Z"
+   ```
+
+3. Create and push a new tag:
+   ```bash
+   git tag -a vX.Y.Z -m "Version X.Y.Z"
+   git push origin main vX.Y.Z
+   ```
+
+4. On GitHub:
+   - Go to Releases
+   - Click "Draft a new release"
+   - Choose the tag you just created
+   - Title: "Version X.Y.Z"
+   - Description: Copy the changelog entry
+   - Click "Publish release"
+
+The plugin's update checker will automatically detect the new release and notify WordPress admins.
+
+### Version Numbering
+
+We use [Semantic Versioning](https://semver.org/):
+- MAJOR version for incompatible API changes (X.0.0)
+- MINOR version for added functionality (X.Y.0)
+- PATCH version for bug fixes (X.Y.Z)
+
 ### Adding New Features
 
 1. Create new classes in the appropriate directory under `includes/`
 2. Add templates in the `templates/` directory
 3. Add translations to the language files
 4. Update the main plugin class to initialize new features
+
+## Updates
+
+The plugin supports automatic updates through GitHub releases. When a new version is released:
+1. You'll see the update notification in WordPress admin
+2. Review the changelog
+3. Click "Update Now" to install the latest version
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes.
 
 ## License
 

@@ -1,0 +1,15 @@
+# Exclude development files from releases
+.git export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+.windsurfrules export-ignore
+README.md export-ignore
+CHANGELOG.md export-ignore
+composer.json export-ignore
+composer.lock export-ignore
+package.json export-ignore
+package-lock.json export-ignore
+phpunit.xml export-ignore
+tests/ export-ignore
+.github/ export-ignore
+.wordpress-org/ export-ignore
