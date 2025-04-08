@@ -57,13 +57,6 @@ function athena_ai_init() {
     // Initialize main plugin class
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
-    
-    // Register proxy action
-    add_action('wp_ajax_athena_proxy_image', function() use ($plugin) {
-        if (isset($plugin->feed_manager)) {
-            $plugin->feed_manager->proxy_external_image();
-        }
-    });
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(

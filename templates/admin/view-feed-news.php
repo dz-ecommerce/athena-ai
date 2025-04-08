@@ -49,7 +49,6 @@ function get_cached_feed_items($feed_url, $feed_id) {
 
 // Helper function to get and validate thumbnail
 function get_feed_item_thumbnail($item, $feed_link) {
-    global $feed_manager;
     $thumbnail = '';
     
     // 1. Try to get image from enclosure
@@ -121,13 +120,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
         }
         
         // Validate URL
-        $thumbnail = esc_url_raw($thumbnail);
-        if (empty($thumbnail)) {
-            return '';
-        }
-
-        // Get proxied URL
-        return $feed_manager->get_proxy_url($thumbnail);
+        return esc_url($thumbnail);
     }
     
     return '';
