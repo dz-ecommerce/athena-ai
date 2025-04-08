@@ -141,13 +141,13 @@ class FeedManager extends BaseAdmin {
     }
 
     /**
-     * Add meta boxes
+     * Add meta boxes to the feed edit screen
      */
     public function add_meta_boxes() {
         add_meta_box(
-            'athena_feed_url',
-            __('Feed URL', 'athena-ai'),
-            [$this, 'render_url_meta_box'],
+            'athena-feed-settings',
+            __('Feed Settings', 'athena-ai'),
+            [$this, 'render_meta_box'],
             'athena-feed',
             'normal',
             'high'
@@ -155,48 +155,61 @@ class FeedManager extends BaseAdmin {
     }
 
     /**
-     * Render the URL meta box
-     *
-     * @param \WP_Post $post
+     * Render the feed settings meta box
      */
-    public function render_url_meta_box($post) {
-        wp_nonce_field('athena_feed_url', 'athena_feed_url_nonce');
-        $url = get_post_meta($post->ID, '_athena_feed_url', true);
+    public function render_meta_box($post) {
+        // Add nonce for security
+        wp_nonce_field('athena_feed_meta_box', 'athena_feed_meta_box_nonce');
+
+        // Get the current feed URL
+        $feed_url = get_post_meta($post->ID, '_athena_feed_url', true);
         ?>
-        <p>
-            <label for="athena_feed_url"><?php echo esc_html($this->__('Feed URL:', 'athena-ai')); ?></label>
-            <input type="url" 
-                   id="athena_feed_url" 
-                   name="athena_feed_url" 
-                   value="<?php echo esc_url($url); ?>" 
-                   class="widefat"
-                   required>
-        </p>
+        <table class="form-table">
+            <tr>
+                <th scope="row">
+                    <label for="athena_feed_url"><?php _e('Feed URL', 'athena-ai'); ?></label>
+                </th>
+                <td>
+                    <input type="url" 
+                           id="athena_feed_url" 
+                           name="athena_feed_url" 
+                           value="<?php echo esc_attr($feed_url); ?>" 
+                           class="regular-text"
+                           required />
+                    <p class="description">
+                        <?php _e('Enter the RSS feed URL', 'athena-ai'); ?>
+                    </p>
+                </td>
+            </tr>
+        </table>
         <?php
     }
 
     /**
      * Save meta box data
-     *
-     * @param int $post_id
      */
     public function save_meta_box_data($post_id) {
-        if (!isset($_POST['athena_feed_url_nonce'])) {
+        // Check if our nonce is set
+        if (!isset($_POST['athena_feed_meta_box_nonce'])) {
             return;
         }
 
-        if (!wp_verify_nonce($_POST['athena_feed_url_nonce'], 'athena_feed_url')) {
+        // Verify that the nonce is valid
+        if (!wp_verify_nonce($_POST['athena_feed_meta_box_nonce'], 'athena_feed_meta_box')) {
             return;
         }
 
+        // If this is an autosave, our form has not been submitted, so we don't want to do anything
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
 
-        if (!current_user_can('edit_post', $post_id)) {
+        // Check the user's permissions
+        if (!current_user_can('edit_athena_feed', $post_id)) {
             return;
         }
 
+        // Save the feed URL
         if (isset($_POST['athena_feed_url'])) {
             update_post_meta(
                 $post_id,
@@ -204,6 +217,19 @@ class FeedManager extends BaseAdmin {
                 sanitize_url($_POST['athena_feed_url'])
             );
         }
+    }
+
+    /**
+     * Set the current menu parent for feed management screens
+     */
+    public function set_current_menu($parent_file) {
+        global $current_screen;
+        
+        if ($current_screen && 'athena-feed' === $current_screen->post_type) {
+            $parent_file = 'edit.php?post_type=athena-feed';
+        }
+        
+        return $parent_file;
     }
 
     /**
