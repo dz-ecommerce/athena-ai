@@ -9,46 +9,38 @@ $feeds = get_posts([
     'order' => 'ASC'
 ]);
 
-// Helper function to get feed items with caching
-function get_cached_feed_items($feed_url, $feed_id) {
-    $cache_key = 'athena_feed_' . md5($feed_url);
-    $cached_items = get_transient($cache_key);
-    
-    if ($cached_items !== false) {
-        return $cached_items;
-    }
-    
+// Helper function to safely fetch feed items
+function fetch_feed_items($feed_url) {
     try {
+        // Use WordPress's built-in feed fetching
         $rss = fetch_feed($feed_url);
         
         if (is_wp_error($rss)) {
-            error_log(sprintf(
-                '[Athena AI] Error fetching feed %s: %s', 
-                $feed_url, 
-                $rss->get_error_message()
-            ));
-            return false;
+            return [
+                'error' => $rss->get_error_message(),
+                'items' => []
+            ];
         }
-        
+
         $maxitems = $rss->get_item_quantity(10);
         $items = $rss->get_items(0, $maxitems);
-        
-        // Cache for 15 minutes
-        set_transient($cache_key, $items, 15 * MINUTE_IN_SECONDS);
-        
-        return $items;
-    } catch (Exception $e) {
-        error_log(sprintf(
-            '[Athena AI] Exception fetching feed %s: %s', 
-            $feed_url, 
-            $e->getMessage()
-        ));
-        return false;
+
+        return [
+            'error' => null,
+            'items' => $items
+        ];
+    } catch (\Exception $e) {
+        return [
+            'error' => $e->getMessage(),
+            'items' => []
+        ];
     }
 }
 
 // Helper function to get and validate thumbnail
 function get_feed_item_thumbnail($item, $feed_link) {
+    if (!$item) return '';
+    
     $thumbnail = '';
     
     // 1. Try to get image from enclosure
@@ -119,7 +111,6 @@ function get_feed_item_thumbnail($item, $feed_link) {
             }
         }
         
-        // Validate URL
         return esc_url($thumbnail);
     }
     
@@ -128,7 +119,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
 
 ?>
 <div class="wrap athena-feed-news">
-    <h1 class="wp-heading-inline"><?php echo esc_html__('ViewFeed News', 'athena-ai'); ?></h1>
+    <h1 class="wp-heading-inline"><?php echo esc_html__('View Feed News', 'athena-ai'); ?></h1>
     
     <?php if (empty($feeds)): ?>
         <div class="notice notice-warning">
@@ -145,9 +136,9 @@ function get_feed_item_thumbnail($item, $feed_link) {
                             $feed_categories = get_the_terms($feed->ID, 'athena-feed-category');
                             
                             // Get cached feed items
-                            $rss_items = get_cached_feed_items($feed_url, $feed->ID);
+                            $result = fetch_feed_items($feed_url);
                             
-                            if ($rss_items === false): ?>
+                            if ($result['error']): ?>
                                 <div class="notice notice-error notice-alt">
                                     <p><?php printf(
                                         esc_html__('Error loading feed: %s. Please check the feed URL and try again.', 'athena-ai'),
@@ -180,14 +171,14 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                     </h2>
                                 </div>
                                 <div class="inside">
-                                    <?php if (empty($rss_items)): ?>
+                                    <?php if (empty($result['items'])): ?>
                                         <div class="notice notice-info notice-alt">
                                             <p><?php echo esc_html__('No items found in this feed.', 'athena-ai'); ?></p>
                                         </div>
                                     <?php else: ?>
                                         <table class="wp-list-table widefat fixed striped">
                                             <tbody>
-                                                <?php foreach ($rss_items as $item): 
+                                                <?php foreach ($result['items'] as $item): 
                                                     $pub_date = $item->get_date('Y-m-d H:i:s');
                                                     $human_date = human_time_diff(strtotime($pub_date), current_time('timestamp'));
                                                     $thumbnail = get_feed_item_thumbnail($item, $item->get_permalink());
