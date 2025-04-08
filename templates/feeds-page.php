@@ -5,11 +5,22 @@
  * @package AthenaAI
  */
 
-get_header();
+// Exit if accessed directly
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 // Get category from query var if available
 $category = get_query_var('athena_feed_category', '');
 $category_term = !empty($category) ? get_term_by('slug', $category, 'athena-feed-category') : null;
+
+// Check if we're in admin or frontend
+$is_admin = is_admin();
+
+// Only include header if not in admin
+if (!$is_admin) {
+    get_header();
+}
 ?>
 
 <div id="primary" class="content-area">
@@ -66,5 +77,8 @@ $category_term = !empty($category) ? get_term_by('slug', $category, 'athena-feed
 </div><!-- #primary -->
 
 <?php
-get_sidebar();
-get_footer();
+// Only include sidebar and footer if not in admin
+if (!$is_admin) {
+    get_sidebar();
+    get_footer();
+}

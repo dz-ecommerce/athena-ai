@@ -25,6 +25,54 @@ class FeedDisplay {
         
         // Handle template for feeds page
         add_filter('template_include', [$this, 'feeds_page_template']);
+        
+        // Create cache directory on plugin activation
+        add_action('init', [$this, 'create_cache_directory']);
+    }
+    
+    /**
+     * Create cache directory for SimplePie
+     */
+    public function create_cache_directory() {
+        $cache_dir = $this->get_cache_directory();
+        
+        // Create the directory if it doesn't exist
+        if (!file_exists($cache_dir)) {
+            wp_mkdir_p($cache_dir);
+        }
+        
+        // Create an index.php file to prevent directory listing
+        $index_file = $cache_dir . '/index.php';
+        if (!file_exists($index_file)) {
+            $file_handle = @fopen($index_file, 'w');
+            if ($file_handle) {
+                fwrite($file_handle, "<?php\n// Silence is golden.");
+                fclose($file_handle);
+            }
+        }
+        
+        // Create .htaccess to protect the directory
+        $htaccess_file = $cache_dir . '/.htaccess';
+        if (!file_exists($htaccess_file)) {
+            $file_handle = @fopen($htaccess_file, 'w');
+            if ($file_handle) {
+                fwrite($file_handle, "Deny from all");
+                fclose($file_handle);
+            }
+        }
+        
+        // Try to set permissions
+        @chmod($cache_dir, 0755);
+    }
+    
+    /**
+     * Get the cache directory path
+     *
+     * @return string Cache directory path
+     */
+    private function get_cache_directory() {
+        $upload_dir = wp_upload_dir();
+        return trailingslashit($upload_dir['basedir']) . 'athena-ai-cache';
     }
     
     /**
@@ -210,6 +258,11 @@ class FeedDisplay {
         $feed = new \SimplePie();
         $feed->set_feed_url($url);
         $feed->set_cache_duration(3600); // Cache for 1 hour
+        
+        // Set custom cache location
+        $cache_dir = $this->get_cache_directory();
+        $feed->set_cache_location($cache_dir);
+        
         $feed->init();
         $feed->handle_content_type();
 
