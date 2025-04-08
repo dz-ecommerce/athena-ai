@@ -92,15 +92,25 @@ class FeedManager extends BaseAdmin {
             'labels'              => $labels,
             'public'             => false,
             'show_ui'            => true,
-            'show_in_menu'       => 'edit.php?post_type=athena-feed', 
+            'show_in_menu'       => false, 
             'capability_type'     => ['athena_feed', 'athena_feeds'],
+            'capabilities'        => [
+                'edit_post'          => 'edit_athena_feed',
+                'read_post'          => 'read_athena_feed',
+                'delete_post'        => 'delete_athena_feed',
+                'edit_posts'         => 'edit_athena_feeds',
+                'edit_others_posts'  => 'edit_others_athena_feeds',
+                'publish_posts'      => 'publish_athena_feeds',
+                'read_private_posts' => 'read_private_athena_feeds',
+                'create_posts'       => 'edit_athena_feeds',
+            ],
             'map_meta_cap'       => true,
             'hierarchical'        => false,
             'supports'            => ['title'],
             'has_archive'         => false,
             'rewrite'            => false,
             'show_in_rest'       => true,
-            'taxonomies'          => ['athena-feed-category'],
+            'taxonomies'         => ['athena-feed-category'],
         ];
 
         register_post_type('athena-feed', $args);
@@ -200,6 +210,7 @@ class FeedManager extends BaseAdmin {
      * Register admin menu
      */
     public function register_admin_menu() {
+        // Add main menu
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
@@ -208,6 +219,24 @@ class FeedManager extends BaseAdmin {
             null,
             'dashicons-rss',
             30
+        );
+
+        // Add submenu items
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('Add New Feed', 'athena-ai'),
+            __('Add New', 'athena-ai'),
+            'edit_athena_feeds',
+            'post-new.php?post_type=athena-feed'
+        );
+
+        // Add categories submenu
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('Feed Categories', 'athena-ai'),
+            __('Categories', 'athena-ai'),
+            'manage_options',
+            'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
         );
     }
 }
