@@ -124,6 +124,14 @@ function get_feed_item_thumbnail($item, $feed_link) {
         if (empty($thumbnail)) {
             return '';
         }
+
+        // Create proxied URL
+        $nonce = wp_create_nonce('athena_proxy_image');
+        $thumbnail = add_query_arg([
+            'action' => 'athena_proxy_image',
+            'url' => urlencode($thumbnail),
+            'nonce' => $nonce
+        ], admin_url('admin.php'));
     }
     
     return $thumbnail;

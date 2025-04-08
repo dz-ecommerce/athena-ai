@@ -12,6 +12,7 @@ class FeedManager extends BaseAdmin {
         add_action('save_post_athena-feed', [$this, 'save_meta_box_data']);
         add_filter('map_meta_cap', [$this, 'map_feed_capabilities'], 10, 4);
         add_filter('parent_file', [$this, 'set_current_menu']);
+        add_action('init', [$this, 'proxy_external_image_init']);
     }
 
     /**
@@ -206,5 +207,51 @@ class FeedManager extends BaseAdmin {
                 sanitize_url($_POST['athena_feed_url'])
             );
         }
+    }
+
+    /**
+     * Initialize proxy function for handling external images
+     */
+    public function proxy_external_image_init() {
+        add_action('admin_init', [$this, 'proxy_external_image']);
+    }
+
+    /**
+     * Proxy function for handling external images
+     */
+    public function proxy_external_image() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        if (!isset($_GET['url']) || empty($_GET['url'])) {
+            wp_die('No image URL provided');
+        }
+
+        $image_url = esc_url_raw($_GET['url']);
+        
+        // Verify nonce
+        if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'athena_proxy_image')) {
+            wp_die('Invalid nonce');
+        }
+
+        // Get image content
+        $response = wp_remote_get($image_url);
+        
+        if (is_wp_error($response)) {
+            wp_die('Error fetching image');
+        }
+
+        $content_type = wp_remote_retrieve_header($response, 'content-type');
+        
+        // Verify it's an image
+        if (!str_starts_with($content_type, 'image/')) {
+            wp_die('Invalid image type');
+        }
+
+        // Output image with proper headers
+        header('Content-Type: ' . $content_type);
+        echo wp_remote_retrieve_body($response);
+        exit;
     }
 }

@@ -58,6 +58,16 @@ function athena_ai_init() {
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
 
+    // Register admin menu
+    add_action('admin_menu', [$plugin, 'register_admin_menu']);
+    
+    // Register proxy action
+    add_action('admin_init', function() use ($plugin) {
+        if (isset($_GET['action']) && $_GET['action'] === 'athena_proxy_image') {
+            $plugin->feed_manager->proxy_external_image();
+        }
+    });
+
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(
         'dz-ecommerce',           // GitHub username/organization
