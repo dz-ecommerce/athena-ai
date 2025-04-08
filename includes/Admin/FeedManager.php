@@ -14,6 +14,7 @@ class FeedManager extends BaseAdmin {
         add_filter('parent_file', [$this, 'set_current_menu']);
         add_action('init', [$this, 'proxy_external_image_init']);
         add_action('admin_menu', [$this, 'register_admin_menu']);
+        add_action('wp_ajax_athena_proxy_image', [$this, 'proxy_external_image']);
     }
 
     /**
@@ -214,7 +215,6 @@ class FeedManager extends BaseAdmin {
      * Initialize proxy function for handling external images
      */
     public function proxy_external_image_init() {
-        add_action('admin_init', [$this, 'proxy_external_image']);
     }
 
     /**
@@ -229,7 +229,10 @@ class FeedManager extends BaseAdmin {
             wp_die('No image URL provided');
         }
 
-        $image_url = esc_url_raw($_GET['url']);
+        $image_url = urldecode($_GET['url']);
+        if (!filter_var($image_url, FILTER_VALIDATE_URL)) {
+            wp_die('Invalid image URL');
+        }
         
         // Verify nonce
         if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'athena_proxy_image')) {
@@ -254,6 +257,25 @@ class FeedManager extends BaseAdmin {
         header('Content-Type: ' . $content_type);
         echo wp_remote_retrieve_body($response);
         exit;
+    }
+
+    /**
+     * Get proxy URL for an image
+     * 
+     * @param string $image_url Original image URL
+     * @return string Proxied image URL
+     */
+    public function get_proxy_url($image_url) {
+        if (empty($image_url)) {
+            return '';
+        }
+
+        $nonce = wp_create_nonce('athena_proxy_image');
+        return admin_url('admin-ajax.php') . '?' . http_build_query([
+            'action' => 'athena_proxy_image',
+            'url' => $image_url,
+            'nonce' => $nonce
+        ]);
     }
 
     /**

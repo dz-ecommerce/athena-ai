@@ -59,8 +59,8 @@ function athena_ai_init() {
     $plugin->init();
     
     // Register proxy action
-    add_action('admin_init', function() use ($plugin) {
-        if (isset($_GET['action']) && $_GET['action'] === 'athena_proxy_image') {
+    add_action('wp_ajax_athena_proxy_image', function() use ($plugin) {
+        if (isset($plugin->feed_manager)) {
             $plugin->feed_manager->proxy_external_image();
         }
     });

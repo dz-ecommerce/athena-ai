@@ -49,6 +49,7 @@ function get_cached_feed_items($feed_url, $feed_id) {
 
 // Helper function to get and validate thumbnail
 function get_feed_item_thumbnail($item, $feed_link) {
+    global $feed_manager;
     $thumbnail = '';
     
     // 1. Try to get image from enclosure
@@ -125,16 +126,11 @@ function get_feed_item_thumbnail($item, $feed_link) {
             return '';
         }
 
-        // Create proxied URL
-        $nonce = wp_create_nonce('athena_proxy_image');
-        $thumbnail = add_query_arg([
-            'action' => 'athena_proxy_image',
-            'url' => urlencode($thumbnail),
-            'nonce' => $nonce
-        ], admin_url('admin.php'));
+        // Get proxied URL
+        return $feed_manager->get_proxy_url($thumbnail);
     }
     
-    return $thumbnail;
+    return '';
 }
 
 ?>
