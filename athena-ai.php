@@ -57,9 +57,6 @@ function athena_ai_init() {
     // Initialize main plugin class
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
-
-    // Register admin menu
-    add_action('admin_menu', [$plugin, 'register_admin_menu']);
     
     // Register proxy action
     add_action('admin_init', function() use ($plugin) {

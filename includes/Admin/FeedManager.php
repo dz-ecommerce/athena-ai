@@ -13,6 +13,7 @@ class FeedManager extends BaseAdmin {
         add_filter('map_meta_cap', [$this, 'map_feed_capabilities'], 10, 4);
         add_filter('parent_file', [$this, 'set_current_menu']);
         add_action('init', [$this, 'proxy_external_image_init']);
+        add_action('admin_menu', [$this, 'register_admin_menu']);
     }
 
     /**
@@ -253,5 +254,20 @@ class FeedManager extends BaseAdmin {
         header('Content-Type: ' . $content_type);
         echo wp_remote_retrieve_body($response);
         exit;
+    }
+
+    /**
+     * Register admin menu
+     */
+    public function register_admin_menu() {
+        add_menu_page(
+            __('Athena AI', 'athena-ai'),
+            __('Athena AI', 'athena-ai'),
+            'manage_options',
+            'edit.php?post_type=athena-feed',
+            null,
+            'dashicons-rss',
+            30
+        );
     }
 }
