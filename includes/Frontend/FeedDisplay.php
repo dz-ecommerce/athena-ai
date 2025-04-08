@@ -14,11 +14,77 @@ class FeedDisplay {
         add_action('wp_ajax_athena_load_more_feeds', [$this, 'ajax_load_more_feeds']);
         add_action('wp_ajax_nopriv_athena_load_more_feeds', [$this, 'ajax_load_more_feeds']);
         
-        // Hook to display feeds below categories
-        add_action('loop_end', [$this, 'maybe_display_feeds_after_categories']);
+        // Register the feeds page
+        add_action('init', [$this, 'register_feeds_page']);
+        
+        // Add rewrite rules for the feeds page
+        add_action('init', [$this, 'add_rewrite_rules']);
         
         // Add query var for category filtering
         add_filter('query_vars', [$this, 'add_query_vars']);
+        
+        // Handle template for feeds page
+        add_filter('template_include', [$this, 'feeds_page_template']);
+    }
+    
+    /**
+     * Register the feeds page
+     */
+    public function register_feeds_page() {
+        // Check if the page already exists
+        $page = get_page_by_path('athena-feeds');
+        
+        if (!$page) {
+            // Create the page
+            wp_insert_post([
+                'post_title'    => __('Feeds', 'athena-ai'),
+                'post_name'     => 'athena-feeds',
+                'post_status'   => 'publish',
+                'post_type'     => 'page',
+                'post_content'  => '<!-- wp:shortcode -->[athena_feeds]<!-- /wp:shortcode -->',
+                'comment_status' => 'closed',
+                'ping_status'    => 'closed',
+            ]);
+        }
+    }
+    
+    /**
+     * Add rewrite rules for the feeds page
+     */
+    public function add_rewrite_rules() {
+        add_rewrite_rule(
+            '^athena-feeds/category/([^/]+)/?$',
+            'index.php?pagename=athena-feeds&athena_feed_category=$matches[1]',
+            'top'
+        );
+    }
+    
+    /**
+     * Add custom query vars
+     *
+     * @param array $vars Existing query vars
+     * @return array Modified query vars
+     */
+    public function add_query_vars($vars) {
+        $vars[] = 'athena_feed_category';
+        return $vars;
+    }
+    
+    /**
+     * Handle template for feeds page
+     *
+     * @param string $template Current template path
+     * @return string Modified template path
+     */
+    public function feeds_page_template($template) {
+        if (is_page('athena-feeds')) {
+            $new_template = ATHENA_AI_PLUGIN_DIR . 'templates/feeds-page.php';
+            if (file_exists($new_template)) {
+                return $new_template;
+            }
+        }
+        
+        return $template;
     }
 
     /**
@@ -230,41 +296,6 @@ class FeedDisplay {
         }
         
         echo '</div>';
-    }
-
-    /**
-     * Add custom query vars
-     *
-     * @param array $vars Existing query vars
-     * @return array Modified query vars
-     */
-    public function add_query_vars($vars) {
-        $vars[] = 'athena_feed_category';
-        return $vars;
-    }
-    
-    /**
-     * Check if we should display feeds after categories
-     *
-     * @param \WP_Query $query The WordPress query object
-     */
-    public function maybe_display_feeds_after_categories($query) {
-        // Only run on main query for category archives
-        if (!$query->is_main_query() || !is_category()) {
-            return;
-        }
-        
-        // Get current category
-        $category = get_queried_object();
-        if (!$category || !isset($category->slug)) {
-            return;
-        }
-        
-        // Set query var for the template
-        set_query_var('athena_feed_category', $category->slug);
-        
-        // Include the template
-        include_once ATHENA_AI_PLUGIN_DIR . 'templates/feed-display.php';
     }
 
     /**

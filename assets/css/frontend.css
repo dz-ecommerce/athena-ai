@@ -102,3 +102,77 @@
 @keyframes athena-spin {
     to { transform: rotate(360deg); }
 }
+
+/* Feeds Page Styles */
+.athena-feeds-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+
+.athena-feeds-page .page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.athena-feeds-page .page-title {
+    margin-top: 0;
+    font-size: 2rem;
+    color: #23282d;
+}
+
+.athena-feed-categories {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.athena-feed-categories h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    color: #23282d;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.athena-feed-category-list {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 1rem;
+}
+
+.athena-feed-category-list li {
+    margin: 0;
+    padding: 0;
+}
+
+.athena-feed-category-list li a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: #f5f5f5;
+    border-radius: 3px;
+    color: #444;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.athena-feed-category-list li a:hover {
+    background: #e5e5e5;
+    color: #0073aa;
+}
+
+.athena-feed-category-list li.active a {
+    background: #0073aa;
+    color: white;
+}
+
+.athena-feeds-content {
+    margin-top: 2rem;
+}

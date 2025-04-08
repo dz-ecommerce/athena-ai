@@ -96,6 +96,16 @@ class Plugin {
             'athena-ai-settings',
             [$this->settings, 'render_page']
         );
+        
+        // Add View Feeds submenu
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('View Feeds', 'athena-ai'),
+            __('View Feeds', 'athena-ai'),
+            'read',
+            'athena-view-feeds',
+            [$this, 'redirect_to_feeds_page']
+        );
 
         // Ensure proper menu order
         global $submenu;
@@ -129,12 +139,36 @@ class Plugin {
             }
             
             foreach ($menu_items as $item) {
+                if ($item[2] === 'athena-view-feeds') {
+                    // View Feeds
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
+            
+            foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-ai-settings') {
                     // Settings
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }
         }
+    }
+    
+    /**
+     * Redirect to the feeds page
+     */
+    public function redirect_to_feeds_page() {
+        $feeds_page = get_page_by_path('athena-feeds');
+        if ($feeds_page) {
+            wp_redirect(get_permalink($feeds_page->ID));
+            exit;
+        }
+        
+        // Fallback if page doesn't exist yet
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('Feeds', 'athena-ai') . '</h1>';
+        echo '<p>' . esc_html__('The feeds page has not been created yet. Please visit the site after plugin activation to create it automatically.', 'athena-ai') . '</p>';
+        echo '</div>';
     }
 
     /**
