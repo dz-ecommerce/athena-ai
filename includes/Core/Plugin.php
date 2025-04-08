@@ -159,40 +159,18 @@ class Plugin {
      * Handle admin redirects
      */
     public function handle_admin_redirects() {
-        // Check if we're on the view feeds page
-        if (isset($_GET['page']) && $_GET['page'] === 'athena-viewfeed-news') {
-            $feeds_page = get_page_by_path('athena-feeds');
-            if ($feeds_page) {
-                wp_redirect(get_permalink($feeds_page->ID));
-                exit;
-            }
-        }
+        // No redirects needed anymore as we're staying in the admin
+        return;
     }
 
     /**
      * Render the ViewFeed News page
      */
     public function render_viewfeed_news_page() {
-        require_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/view-feed-news.php';
-    }
-
-    /**
-     * Redirect to the feeds page
-     */
-    public function redirect_to_feeds_page() {
-        // Display a message instead of redirecting, since the redirect is handled in handle_admin_redirects
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Feeds', 'athena-ai') . '</h1>';
-        
-        $feeds_page = get_page_by_path('athena-feeds');
-        if (!$feeds_page) {
-            echo '<p>' . esc_html__('The feeds page has not been created yet. Please visit the site after plugin activation to create it automatically.', 'athena-ai') . '</p>';
-        } else {
-            echo '<p>' . esc_html__('If you are not automatically redirected, please click the link below:', 'athena-ai') . '</p>';
-            echo '<p><a href="' . esc_url(get_permalink($feeds_page->ID)) . '" class="button button-primary">' . esc_html__('View Feeds', 'athena-ai') . '</a></p>';
+        if (!current_user_can('read')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
         }
-        
-        echo '</div>';
+        require_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/view-feed-news.php';
     }
 
     /**
