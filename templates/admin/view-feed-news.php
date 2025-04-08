@@ -53,9 +53,14 @@ function get_feed_item_thumbnail($item, $feed_link) {
     
     // 1. Try to get image from enclosure
     $enclosure = $item->get_enclosure();
-    if ($enclosure && $enclosure->get_link() && 
-        strpos($enclosure->get_type(), 'image/') === 0) {
-        $thumbnail = $enclosure->get_link();
+    if ($enclosure && 
+        method_exists($enclosure, 'get_link') && 
+        method_exists($enclosure, 'get_type')) {
+        $link = $enclosure->get_link();
+        $type = $enclosure->get_type();
+        if ($link && $type && str_starts_with($type, 'image/')) {
+            $thumbnail = $link;
+        }
     }
     
     // 2. Try to get image from media:content
@@ -77,32 +82,36 @@ function get_feed_item_thumbnail($item, $feed_link) {
     // 4. Try to find first image in content
     if (!$thumbnail) {
         $content = $item->get_content();
-        preg_match('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $content, $matches);
-        if (!empty($matches[1])) {
-            $thumbnail = $matches[1];
+        if ($content) {
+            preg_match('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $content, $matches);
+            if (!empty($matches[1])) {
+                $thumbnail = $matches[1];
+            }
         }
     }
     
     // 5. Try to find image in description
     if (!$thumbnail) {
         $description = $item->get_description();
-        preg_match('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $description, $matches);
-        if (!empty($matches[1])) {
-            $thumbnail = $matches[1];
+        if ($description) {
+            preg_match('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $description, $matches);
+            if (!empty($matches[1])) {
+                $thumbnail = $matches[1];
+            }
         }
     }
 
     // Validate and clean thumbnail URL
     if ($thumbnail) {
         // Convert relative URLs to absolute
-        if (strpos($thumbnail, 'http') !== 0) {
+        if (!str_starts_with($thumbnail, 'http')) {
             $parsed_url = wp_parse_url($feed_link);
             if ($parsed_url && isset($parsed_url['scheme'], $parsed_url['host'])) {
                 $base_url = $parsed_url['scheme'] . '://' . $parsed_url['host'];
                 
-                if (strpos($thumbnail, '//') === 0) {
+                if (str_starts_with($thumbnail, '//')) {
                     $thumbnail = $parsed_url['scheme'] . ':' . $thumbnail;
-                } elseif (strpos($thumbnail, '/') === 0) {
+                } elseif (str_starts_with($thumbnail, '/')) {
                     $thumbnail = $base_url . $thumbnail;
                 } else {
                     $thumbnail = $base_url . '/' . $thumbnail;
