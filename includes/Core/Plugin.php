@@ -48,6 +48,7 @@ class Plugin {
         add_action('admin_menu', [$this, 'add_admin_menu'], 99); // Run after post type registration
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_action('widgets_init', [$this, 'register_widgets']);
+        add_action('admin_init', [$this, 'handle_admin_redirects']);
     }
 
     /**
@@ -155,19 +156,35 @@ class Plugin {
     }
     
     /**
+     * Handle admin redirects
+     */
+    public function handle_admin_redirects() {
+        // Check if we're on the view feeds page
+        if (isset($_GET['page']) && $_GET['page'] === 'athena-view-feeds') {
+            $feeds_page = get_page_by_path('athena-feeds');
+            if ($feeds_page) {
+                wp_redirect(get_permalink($feeds_page->ID));
+                exit;
+            }
+        }
+    }
+
+    /**
      * Redirect to the feeds page
      */
     public function redirect_to_feeds_page() {
-        $feeds_page = get_page_by_path('athena-feeds');
-        if ($feeds_page) {
-            wp_redirect(get_permalink($feeds_page->ID));
-            exit;
-        }
-        
-        // Fallback if page doesn't exist yet
+        // Display a message instead of redirecting, since the redirect is handled in handle_admin_redirects
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('Feeds', 'athena-ai') . '</h1>';
-        echo '<p>' . esc_html__('The feeds page has not been created yet. Please visit the site after plugin activation to create it automatically.', 'athena-ai') . '</p>';
+        
+        $feeds_page = get_page_by_path('athena-feeds');
+        if (!$feeds_page) {
+            echo '<p>' . esc_html__('The feeds page has not been created yet. Please visit the site after plugin activation to create it automatically.', 'athena-ai') . '</p>';
+        } else {
+            echo '<p>' . esc_html__('If you are not automatically redirected, please click the link below:', 'athena-ai') . '</p>';
+            echo '<p><a href="' . esc_url(get_permalink($feeds_page->ID)) . '" class="button button-primary">' . esc_html__('View Feeds', 'athena-ai') . '</a></p>';
+        }
+        
         echo '</div>';
     }
 
