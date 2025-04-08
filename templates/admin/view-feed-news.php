@@ -202,7 +202,10 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                                                 <div class="feed-thumbnail">
                                                                     <img src="<?php echo esc_url($thumbnail); ?>" 
                                                                          alt="<?php echo esc_attr($item->get_title()); ?>"
-                                                                         onerror="this.style.display='none'">
+                                                                         loading="lazy"
+                                                                         crossorigin="anonymous"
+                                                                         onerror="this.style.display='none'; console.log('Failed to load image:', this.src);"
+                                                                         style="max-width: 150px; height: auto;">
                                                                 </div>
                                                                 <?php endif; ?>
                                                                 <div class="feed-text">
