@@ -221,7 +221,16 @@ class FeedManager extends BaseAdmin {
             30
         );
 
-        // Add submenu items
+        // Add "All Feeds" as first submenu
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('All Feeds', 'athena-ai'),
+            __('All Feeds', 'athena-ai'),
+            'edit_athena_feeds',
+            'edit.php?post_type=athena-feed'
+        );
+
+        // Add "Add New" submenu
         add_submenu_page(
             'edit.php?post_type=athena-feed',
             __('Add New Feed', 'athena-ai'),
