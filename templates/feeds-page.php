@@ -16,6 +16,9 @@ $category_term = !empty($category) ? get_term_by('slug', $category, 'athena-feed
 
 // Set page title
 $title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->name) : __('All Feeds', 'athena-ai');
+
+// Get admin header
+require_once ABSPATH . 'wp-admin/admin-header.php';
 ?>
 <div class="wrap">
     <h1 class="wp-heading-inline"><?php echo esc_html($title); ?></h1>
@@ -25,7 +28,7 @@ $title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->
         <h2><?php esc_html_e('Categories', 'athena-ai'); ?></h2>
         <ul class="athena-feed-category-list">
             <li class="<?php echo empty($category) ? 'active' : ''; ?>">
-                <a href="<?php echo esc_url(get_permalink(get_page_by_path('athena-feeds'))); ?>">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=athena-view-feeds')); ?>">
                     <?php esc_html_e('All', 'athena-ai'); ?>
                 </a>
             </li>
@@ -40,7 +43,7 @@ $title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->
                 printf(
                     '<li class="%s"><a href="%s">%s</a></li>',
                     $is_active ? 'active' : '',
-                    esc_url(home_url('/athena-feeds/category/' . $cat->slug . '/')),
+                    esc_url(admin_url('admin.php?page=athena-view-feeds&category=' . $cat->slug)),
                     esc_html($cat->name)
                 );
             }
@@ -49,7 +52,96 @@ $title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->
     </div>
 
     <div class="athena-feeds-content">
-        <?php echo do_shortcode('[athena_feeds category="' . esc_attr($category) . '" limit="10"]'); ?>
+        <?php 
+        // Get feeds for the selected category
+        $feed_display = new AthenaAI\Frontend\FeedDisplay();
+        $feeds = $feed_display->get_feeds($category, 10);
+        
+        if (empty($feeds)) {
+            echo '<div class="notice notice-info"><p>' . esc_html__('No feeds found for this category.', 'athena-ai') . '</p></div>';
+        } else {
+            // Display feeds in admin table format
+            ?>
+            <table class="wp-list-table widefat fixed striped athena-feeds-table">
+                <thead>
+                    <tr>
+                        <th scope="col"><?php esc_html_e('Feed', 'athena-ai'); ?></th>
+                        <th scope="col"><?php esc_html_e('Items', 'athena-ai'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($feeds as $feed): ?>
+                        <tr>
+                            <td class="feed-title column-primary">
+                                <strong><?php echo esc_html($feed['title']); ?></strong>
+                                <div class="row-actions">
+                                    <span class="view">
+                                        <a href="<?php echo esc_url($feed['url']); ?>" target="_blank" rel="noopener">
+                                            <?php esc_html_e('View Source', 'athena-ai'); ?>
+                                        </a>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <?php if (!empty($feed['items'])): ?>
+                                    <div class="feed-items-container">
+                                        <ul class="feed-items-list">
+                                            <?php foreach ($feed['items'] as $index => $item): ?>
+                                                <?php if ($index < 5): // Show only first 5 items ?>
+                                                    <li class="feed-item">
+                                                        <a href="<?php echo esc_url($item['permalink']); ?>" target="_blank" rel="noopener">
+                                                            <?php echo esc_html($item['title']); ?>
+                                                        </a>
+                                                        <?php if (!empty($item['date'])): ?>
+                                                            <span class="feed-date">
+                                                                <?php echo esc_html(date_i18n(get_option('date_format'), $item['date'])); ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                        <?php if (count($feed['items']) > 5): ?>
+                                            <div class="feed-items-more">
+                                                <button type="button" class="button-link feed-items-toggle">
+                                                    <?php 
+                                                    printf(
+                                                        /* translators: %d: number of additional items */
+                                                        esc_html__('Show %d more items', 'athena-ai'), 
+                                                        count($feed['items']) - 5
+                                                    ); 
+                                                    ?>
+                                                </button>
+                                                <ul class="feed-items-list feed-items-hidden">
+                                                    <?php foreach ($feed['items'] as $index => $item): ?>
+                                                        <?php if ($index >= 5): // Show remaining items ?>
+                                                            <li class="feed-item">
+                                                                <a href="<?php echo esc_url($item['permalink']); ?>" target="_blank" rel="noopener">
+                                                                    <?php echo esc_html($item['title']); ?>
+                                                                </a>
+                                                                <?php if (!empty($item['date'])): ?>
+                                                                    <span class="feed-date">
+                                                                        <?php echo esc_html(date_i18n(get_option('date_format'), $item['date'])); ?>
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                            </li>
+                                                        <?php endif; ?>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <p><?php esc_html_e('No items found in this feed.', 'athena-ai'); ?></p>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php
+        }
+        ?>
     </div>
 </div>
 
@@ -101,4 +193,70 @@ $title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->
 .athena-feeds-content {
     margin-top: 20px;
 }
+
+.feed-items-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.feed-item {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.feed-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.feed-date {
+    display: block;
+    color: #72777c;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.feed-items-hidden {
+    display: none;
+}
+
+.feed-items-toggle {
+    margin-top: 10px;
+    color: #0073aa;
+    cursor: pointer;
+}
+
+.feed-items-toggle:hover {
+    color: #00a0d2;
+}
+
+.feed-items-more {
+    margin-top: 10px;
+}
 </style>
+
+<script>
+jQuery(document).ready(function($) {
+    // Toggle feed items
+    $('.feed-items-toggle').on('click', function() {
+        var $this = $(this);
+        var $hiddenItems = $this.siblings('.feed-items-hidden');
+        
+        if ($hiddenItems.is(':visible')) {
+            $hiddenItems.slideUp();
+            $this.text($this.text().replace('Hide', 'Show'));
+        } else {
+            $hiddenItems.slideDown();
+            $this.text($this.text().replace('Show', 'Hide'));
+        }
+    });
+});
+</script>
+
+<?php
+// Get admin footer
+require_once ABSPATH . 'wp-admin/admin-footer.php';
+?>
