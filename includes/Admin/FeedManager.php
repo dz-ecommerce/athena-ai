@@ -10,7 +10,6 @@ class FeedManager extends BaseAdmin {
         add_action('init', [$this, 'register_taxonomy']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_athena-feed', [$this, 'save_meta_box_data']);
-        add_filter('map_meta_cap', [$this, 'map_feed_capabilities'], 10, 4);
         add_filter('parent_file', [$this, 'set_current_menu']);
         add_action('admin_menu', [$this, 'register_admin_menu']);
     }
@@ -89,28 +88,29 @@ class FeedManager extends BaseAdmin {
         ];
 
         $args = [
-            'labels'              => $labels,
+            'labels'             => $labels,
             'public'             => false,
             'show_ui'            => true,
-            'show_in_menu'       => false, 
-            'capability_type'     => ['athena_feed', 'athena_feeds'],
-            'capabilities'        => [
-                'edit_post'          => 'edit_athena_feed',
-                'read_post'          => 'read_athena_feed',
-                'delete_post'        => 'delete_athena_feed',
-                'edit_posts'         => 'edit_athena_feeds',
-                'edit_others_posts'  => 'edit_others_athena_feeds',
-                'publish_posts'      => 'publish_athena_feeds',
-                'read_private_posts' => 'read_private_athena_feeds',
-                'create_posts'       => 'edit_athena_feeds',
+            'show_in_menu'       => false,
+            'show_in_admin_bar'  => true,
+            'capability_type'    => ['athena_feed', 'athena_feeds'],
+            'capabilities'       => [
+                'edit_post'          => 'manage_options',
+                'read_post'          => 'manage_options',
+                'delete_post'        => 'manage_options',
+                'edit_posts'         => 'manage_options',
+                'edit_others_posts'  => 'manage_options',
+                'publish_posts'      => 'manage_options',
+                'read_private_posts' => 'manage_options',
+                'create_posts'       => 'manage_options',
             ],
-            'map_meta_cap'       => true,
-            'hierarchical'        => false,
-            'supports'            => ['title'],
-            'has_archive'         => false,
-            'rewrite'            => false,
-            'show_in_rest'       => true,
-            'taxonomies'         => ['athena-feed-category'],
+            'map_meta_cap'      => false,
+            'hierarchical'       => false,
+            'supports'          => ['title'],
+            'has_archive'       => false,
+            'rewrite'          => false,
+            'show_in_rest'     => true,
+            'taxonomies'       => ['athena-feed-category'],
         ];
 
         register_post_type('athena-feed', $args);
@@ -120,18 +120,6 @@ class FeedManager extends BaseAdmin {
      * Map feed capabilities to WordPress core capabilities
      */
     public function map_feed_capabilities($caps, $cap, $user_id, $args) {
-        if (!in_array($cap, [
-            'edit_athena_feed',
-            'read_athena_feed',
-            'delete_athena_feed',
-            'edit_athena_feeds',
-            'edit_others_athena_feeds',
-            'publish_athena_feeds',
-            'read_private_athena_feeds'
-        ])) {
-            return $caps;
-        }
-
         // Map all feed capabilities to manage_options
         if (!user_can($user_id, 'manage_options')) {
             return ['do_not_allow'];
