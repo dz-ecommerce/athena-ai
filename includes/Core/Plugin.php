@@ -98,14 +98,14 @@ class Plugin {
             [$this->settings, 'render_page']
         );
         
-        // Add View Feeds submenu
+        // Add ViewFeed News submenu
         add_submenu_page(
             'edit.php?post_type=athena-feed',
-            __('View Feeds', 'athena-ai'),
-            __('View Feeds', 'athena-ai'),
+            __('ViewFeed News', 'athena-ai'),
+            __('ViewFeed News', 'athena-ai'),
             'read',
-            'athena-view-feeds',
-            [$this, 'redirect_to_feeds_page']
+            'athena-viewfeed-news',
+            [$this, 'render_viewfeed_news_page']
         );
 
         // Ensure proper menu order
@@ -140,8 +140,8 @@ class Plugin {
             }
             
             foreach ($menu_items as $item) {
-                if ($item[2] === 'athena-view-feeds') {
-                    // View Feeds
+                if ($item[2] === 'athena-viewfeed-news') {
+                    // ViewFeed News
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }
@@ -160,13 +160,20 @@ class Plugin {
      */
     public function handle_admin_redirects() {
         // Check if we're on the view feeds page
-        if (isset($_GET['page']) && $_GET['page'] === 'athena-view-feeds') {
+        if (isset($_GET['page']) && $_GET['page'] === 'athena-viewfeed-news') {
             $feeds_page = get_page_by_path('athena-feeds');
             if ($feeds_page) {
                 wp_redirect(get_permalink($feeds_page->ID));
                 exit;
             }
         }
+    }
+
+    /**
+     * Render the ViewFeed News page
+     */
+    public function render_viewfeed_news_page() {
+        require_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/view-feed-news.php';
     }
 
     /**
