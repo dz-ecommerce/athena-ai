@@ -3,6 +3,8 @@ namespace AthenaAI\Core;
 
 use AthenaAI\Admin\FeedManager;
 use AthenaAI\Admin\Settings;
+use AthenaAI\Frontend\FeedDisplay;
+use AthenaAI\Frontend\FeedWidget;
 
 class Plugin {
     /**
@@ -14,6 +16,11 @@ class Plugin {
      * @var \AthenaAI\Admin\Settings
      */
     private $settings;
+    
+    /**
+     * @var \AthenaAI\Frontend\FeedDisplay
+     */
+    private $feed_display;
 
     /**
      * @var Plugin
@@ -27,6 +34,7 @@ class Plugin {
         // Initialize components
         $this->feed_manager = new FeedManager();
         $this->settings = new Settings();
+        $this->feed_display = new FeedDisplay();
 
         // Register hooks
         $this->register_hooks();
@@ -39,6 +47,7 @@ class Plugin {
         add_action('init', [$this, 'init']);
         add_action('admin_menu', [$this, 'add_admin_menu'], 99); // Run after post type registration
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        add_action('widgets_init', [$this, 'register_widgets']);
     }
 
     /**
@@ -65,6 +74,13 @@ class Plugin {
             $admin->add_cap('read_private_athena_feeds');
             $admin->add_cap('manage_athena_ai');
         }
+    }
+
+    /**
+     * Register widgets
+     */
+    public function register_widgets() {
+        register_widget(FeedWidget::class);
     }
 
     /**
