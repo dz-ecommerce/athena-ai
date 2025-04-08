@@ -41,7 +41,17 @@ $feeds = get_posts([
                                         <?php if ($feed_categories && !is_wp_error($feed_categories)): ?>
                                             <span class="feed-categories">
                                                 <span class="dashicons dashicons-category"></span>
-                                                <?php echo esc_html(implode(', ', wp_list_pluck($feed_categories, 'name'))); ?>
+                                                <?php 
+                                                $category_links = array();
+                                                foreach ($feed_categories as $category) {
+                                                    $category_links[] = sprintf(
+                                                        '<a href="%s">%s</a>',
+                                                        esc_url(admin_url('edit.php?post_type=athena-feed&athena-feed-category=' . $category->slug)),
+                                                        esc_html($category->name)
+                                                    );
+                                                }
+                                                echo implode(', ', $category_links);
+                                                ?>
                                             </span>
                                         <?php endif; ?>
                                     </h2>
@@ -57,26 +67,65 @@ $feeds = get_posts([
                                                 <?php foreach ($rss_items as $item): 
                                                     $pub_date = $item->get_date('Y-m-d H:i:s');
                                                     $human_date = human_time_diff(strtotime($pub_date), current_time('timestamp'));
+                                                    
+                                                    // Get thumbnail
+                                                    $thumbnail = '';
+                                                    $enclosure = $item->get_enclosure();
+                                                    if ($enclosure && $enclosure->get_link()) {
+                                                        $thumbnail = $enclosure->get_link();
+                                                    } else {
+                                                        // Try to find image in content
+                                                        $content = $item->get_content();
+                                                        preg_match('/<img.+src=[\'"](?P<src>.+?)[\'"].*>/i', $content, $matches);
+                                                        if (!empty($matches['src'])) {
+                                                            $thumbnail = $matches['src'];
+                                                        }
+                                                    }
                                                 ?>
                                                     <tr>
                                                         <td>
-                                                            <strong>
-                                                                <a href="<?php echo esc_url($item->get_permalink()); ?>" target="_blank">
-                                                                    <?php echo esc_html($item->get_title()); ?>
-                                                                    <span class="dashicons dashicons-external"></span>
-                                                                </a>
-                                                            </strong>
-                                                            <div class="row-actions">
-                                                                <span class="date">
-                                                                    <span class="dashicons dashicons-clock"></span>
-                                                                    <?php printf(esc_html__('%s ago', 'athena-ai'), $human_date); ?>
-                                                                </span>
-                                                            </div>
-                                                            <div class="feed-excerpt">
-                                                                <?php 
-                                                                $excerpt = wp_strip_all_tags($item->get_description());
-                                                                echo esc_html(wp_trim_words($excerpt, 30, '...')); 
-                                                                ?>
+                                                            <div class="feed-item-content">
+                                                                <?php if ($thumbnail): ?>
+                                                                <div class="feed-thumbnail">
+                                                                    <img src="<?php echo esc_url($thumbnail); ?>" alt="">
+                                                                </div>
+                                                                <?php endif; ?>
+                                                                <div class="feed-text">
+                                                                    <strong>
+                                                                        <a href="<?php echo esc_url($item->get_permalink()); ?>" target="_blank">
+                                                                            <?php echo esc_html($item->get_title()); ?>
+                                                                            <span class="dashicons dashicons-external"></span>
+                                                                        </a>
+                                                                    </strong>
+                                                                    <div class="row-actions">
+                                                                        <span class="date">
+                                                                            <span class="dashicons dashicons-clock"></span>
+                                                                            <?php printf(esc_html__('%s ago', 'athena-ai'), $human_date); ?>
+                                                                        </span>
+                                                                        <?php 
+                                                                        // Get item categories
+                                                                        $categories = $item->get_categories();
+                                                                        if (!empty($categories)): ?>
+                                                                            <span class="item-categories">
+                                                                                <span class="separator">|</span>
+                                                                                <span class="dashicons dashicons-tag"></span>
+                                                                                <?php 
+                                                                                $category_names = array();
+                                                                                foreach ($categories as $category) {
+                                                                                    $category_names[] = esc_html($category->get_label());
+                                                                                }
+                                                                                echo implode(', ', $category_names);
+                                                                                ?>
+                                                                            </span>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                    <div class="feed-excerpt">
+                                                                        <?php 
+                                                                        $excerpt = wp_strip_all_tags($item->get_description());
+                                                                        echo esc_html(wp_trim_words($excerpt, 30, '...')); 
+                                                                        ?>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -121,6 +170,15 @@ $feeds = get_posts([
     margin-left: auto;
 }
 
+.athena-feed-news .feed-categories a {
+    text-decoration: none;
+    color: #2271b1;
+}
+
+.athena-feed-news .feed-categories a:hover {
+    color: #135e96;
+}
+
 .athena-feed-news .feed-categories .dashicons {
     font-size: 14px;
     width: 14px;
@@ -139,6 +197,26 @@ $feeds = get_posts([
 
 .athena-feed-news .wp-list-table td {
     padding: 12px 15px;
+}
+
+.athena-feed-news .feed-item-content {
+    display: flex;
+    gap: 15px;
+}
+
+.athena-feed-news .feed-thumbnail {
+    flex: 0 0 120px;
+}
+
+.athena-feed-news .feed-thumbnail img {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+.athena-feed-news .feed-text {
+    flex: 1;
 }
 
 .athena-feed-news .wp-list-table a {
@@ -163,6 +241,14 @@ $feeds = get_posts([
     color: #666;
     font-size: 12px;
     padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.athena-feed-news .row-actions .separator {
+    margin: 0 5px;
+    color: #dcdcde;
 }
 
 .athena-feed-news .row-actions .dashicons {
@@ -170,6 +256,12 @@ $feeds = get_posts([
     width: 14px;
     height: 14px;
     vertical-align: text-bottom;
+}
+
+.athena-feed-news .item-categories {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .athena-feed-news .feed-excerpt {
@@ -188,6 +280,20 @@ $feeds = get_posts([
     .athena-feed-news .feed-categories {
         margin-left: 0;
         margin-top: 5px;
+    }
+
+    .athena-feed-news .feed-item-content {
+        flex-direction: column;
+    }
+
+    .athena-feed-news .feed-thumbnail {
+        flex: 0 0 auto;
+    }
+
+    .athena-feed-news .feed-thumbnail img {
+        width: 100%;
+        height: auto;
+        max-height: 200px;
     }
 }
 </style>
