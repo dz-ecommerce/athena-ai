@@ -220,19 +220,6 @@ class FeedManager extends BaseAdmin {
     }
 
     /**
-     * Set the current menu parent for feed management screens
-     */
-    public function set_current_menu($parent_file) {
-        global $current_screen;
-        
-        if ($current_screen && 'athena-feed' === $current_screen->post_type) {
-            $parent_file = 'edit.php?post_type=athena-feed';
-        }
-        
-        return $parent_file;
-    }
-
-    /**
      * Register admin menu
      */
     public function register_admin_menu() {
