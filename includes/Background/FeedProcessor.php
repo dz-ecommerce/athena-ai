@@ -32,11 +32,18 @@ class FeedProcessor {
             )
         );
 
+        $processed = 0;
+        
         foreach ($feeds as $feed_data) {
             $feed = \AthenaAI\Models\Feed::get_by_id((int)$feed_data->feed_id);
-            if ($feed) {
-                $feed->fetch();
+            if ($feed && $feed->fetch()) {
+                $processed++;
             }
+        }
+        
+        // Update the last fetch time if any feeds were processed
+        if ($processed > 0) {
+            update_option('athena_last_feed_fetch', time());
         }
     }
 }
