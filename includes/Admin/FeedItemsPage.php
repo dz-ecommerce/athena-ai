@@ -72,25 +72,35 @@ class FeedItemsPage {
     }
 
     public static function render_page(): void {
-        // Check if we need to create a sample feed for testing
-        self::maybe_create_sample_feed();
+        // Check if tables exist
+        $tables_exist = \AthenaAI\Database\DatabaseSetup::tables_exist();
         
         $last_fetch_time = get_option('athena_last_feed_fetch', 0);
         $next_scheduled = wp_next_scheduled('athena_process_feeds');
         
-        // Get feed items to display
-        global $wpdb;
-        $feed_items = $wpdb->get_results(
-            "SELECT ri.*, fm.url as feed_url 
-            FROM {$wpdb->prefix}feed_raw_items ri 
-            JOIN {$wpdb->prefix}feed_metadata fm ON ri.feed_id = fm.feed_id 
-            ORDER BY ri.pub_date DESC 
-            LIMIT 20"
-        );
+        // Initialize variables
+        $feed_items = [];
+        $feed_count = 0;
+        $item_count = 0;
         
-        // Get feed count
-        $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE active = 1");
-        $item_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        if ($tables_exist) {
+            // Check if we need to create a sample feed for testing
+            self::maybe_create_sample_feed();
+            
+            // Get feed items to display
+            global $wpdb;
+            $feed_items = $wpdb->get_results(
+                "SELECT ri.*, fm.url as feed_url 
+                FROM {$wpdb->prefix}feed_raw_items ri 
+                JOIN {$wpdb->prefix}feed_metadata fm ON ri.feed_id = fm.feed_id 
+                ORDER BY ri.pub_date DESC 
+                LIMIT 20"
+            );
+            
+            // Get feed count
+            $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE active = 1");
+            $item_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        }
         ?>
         <div class="wrap athena-feed-items-page">
             <h1><?php esc_html_e('Feed Items', 'athena-ai'); ?></h1>
@@ -177,7 +187,11 @@ class FeedItemsPage {
             <div class="feed-items-container">
                 <h2><?php esc_html_e('Recent Feed Items', 'athena-ai'); ?></h2>
                 
-                <?php if (empty($feed_items)): ?>
+                <?php if (!$tables_exist): ?>
+                    <div class="notice notice-warning">
+                        <p><?php esc_html_e('Database tables are being set up. Please refresh the page in a few moments.', 'athena-ai'); ?></p>
+                    </div>
+                <?php elseif (empty($feed_items)): ?>
                     <div class="notice notice-info">
                         <p><?php esc_html_e('No feed items found. Click the "Fetch Feeds Now" button to retrieve feed items.', 'athena-ai'); ?></p>
                     </div>
@@ -229,7 +243,7 @@ class FeedItemsPage {
         // Check if any feeds exist
         $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata");
         
-        if ($feed_count > 0) {
+        if ($feed_count > 0 || $feed_count === null) {
             return;
         }
         
@@ -266,6 +280,18 @@ class FeedItemsPage {
         if (!current_user_can(self::CAPABILITY)) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'athena-ai')]);
             return;
+        }
+        
+        // Check if tables exist
+        if (!\AthenaAI\Database\DatabaseSetup::tables_exist()) {
+            // Try to create tables
+            \AthenaAI\Database\DatabaseSetup::setup_tables();
+            
+            // Check again if tables exist
+            if (!\AthenaAI\Database\DatabaseSetup::tables_exist()) {
+                wp_send_json_error(['message' => __('Database tables could not be created. Please contact the administrator.', 'athena-ai')]);
+                return;
+            }
         }
         
         // Get the feed ID from the request if we're processing a single feed
