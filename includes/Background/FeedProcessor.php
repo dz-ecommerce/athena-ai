@@ -20,23 +20,13 @@ class FeedProcessor {
     }
 
     public static function process_feeds(): void {
-        global $wpdb;
-
-        // Get active feeds that need updating
-        $feeds = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT feed_id FROM {$wpdb->prefix}feed_metadata 
-                WHERE active = 1 
-                AND (last_checked IS NULL OR last_checked < DATE_SUB(%s, INTERVAL update_interval SECOND))",
-                current_time('mysql')
-            )
-        );
+        // Get feeds that need updating using the new method in Feed class
+        $feeds = \AthenaAI\Models\Feed::get_feeds_to_update();
 
         $processed = 0;
         
-        foreach ($feeds as $feed_data) {
-            $feed = \AthenaAI\Models\Feed::get_by_id((int)$feed_data->feed_id);
-            if ($feed && $feed->fetch()) {
+        foreach ($feeds as $feed) {
+            if ($feed->fetch()) {
                 $processed++;
             }
         }

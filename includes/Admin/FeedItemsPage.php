@@ -332,12 +332,12 @@ class FeedItemsPage {
     }
     
     /**
-     * Clean up any feeds that aren't from custom post types
+     * Clean up any orphaned feed items
      */
     private static function clean_up_feeds(): void {
         global $wpdb;
         
-        // Get all feed IDs from post meta
+        // Get all feed IDs (post IDs) from custom post types
         $feed_post_ids = get_posts([
             'post_type' => 'athena-feed',
             'post_status' => 'publish',
@@ -345,81 +345,36 @@ class FeedItemsPage {
             'fields' => 'ids'
         ]);
         
-        $feed_meta_ids = [];
-        foreach ($feed_post_ids as $post_id) {
-            $feed_id = get_post_meta($post_id, '_athena_feed_metadata_id', true);
-            if ($feed_id) {
-                $feed_meta_ids[] = $feed_id;
-            }
-        }
-        
-        if (empty($feed_meta_ids)) {
-            // If no feeds from custom post types, delete all feeds from the metadata table
-            $wpdb->query("DELETE FROM {$wpdb->prefix}feed_metadata");
+        if (empty($feed_post_ids)) {
+            // If no feeds exist, delete all feed items
+            $wpdb->query("DELETE FROM {$wpdb->prefix}feed_raw_items");
             return;
         }
         
-        // Delete any feeds that aren't from custom post types
-        $feed_ids_string = implode(',', array_map('intval', $feed_meta_ids));
-        $wpdb->query("DELETE FROM {$wpdb->prefix}feed_metadata WHERE feed_id NOT IN ($feed_ids_string)");
-    }
-    
-    /**
-     * Sync feeds from custom post types to the feed metadata table
-     */
-    private static function sync_feeds_from_post_types(): void {
-        global $wpdb;
-        
-        // Get all published feed post types
-        $feed_posts = get_posts([
-            'post_type' => 'athena-feed',
-            'post_status' => 'publish',
-            'numberposts' => -1
-        ]);
-        
-        if (empty($feed_posts)) {
-            return;
+        // Delete any feed items that aren't associated with existing feeds
         }
         
-        foreach ($feed_posts as $post) {
-            // Get the feed URL from post meta
-            $feed_url = get_post_meta($post->ID, '_athena_feed_url', true);
-            
-            if (empty($feed_url)) {
-                continue;
-            }
-            
-            // Check if this feed URL already exists in the feed_metadata table
-            $existing_feed = $wpdb->get_var($wpdb->prepare(
-                "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE url = %s",
-                $feed_url
-            ));
-            
-            if (!$existing_feed) {
-                // Create a new feed in the feed_metadata table
-                $feed = new \AthenaAI\Models\Feed(
-                    $feed_url,
-                    3600, // Default update interval
-                    true  // Active by default
-                );
-                $feed->save();
-                
-                // Store the feed_id in post meta for future reference
-                $feed_id = $feed->get_id();
-                if ($feed_id !== null) {
-                    update_post_meta($post->ID, '_athena_feed_metadata_id', $feed_id);
-                }
-            } else {
-                // Store the feed_id in post meta for future reference
-                update_post_meta($post->ID, '_athena_feed_metadata_id', $existing_feed);
-            }
+        if (!get_post_meta($post->ID, '_athena_feed_active', true)) {
+            update_post_meta($post->ID, '_athena_feed_active', '1'); // Active by default
         }
     }
+}
+
+/**
+ * Handle the manual feed fetch AJAX request
+ */
+public static function handle_manual_fetch(): void {
+    check_ajax_referer(self::NONCE_ACTION, 'nonce');
     
-    /**
-     * Handle the manual feed fetch AJAX request
-     */
-    public static function handle_manual_fetch(): void {
+    if (!current_user_can(self::CAPABILITY)) {
+        wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'athena-ai')]);
+        return;
+    }
+    
+    // Check if tables exist
+    if (!\AthenaAI\Database\DatabaseSetup::tables_exist()) {
+        // Try to create tables
+        \AthenaAI\Database\DatabaseSetup::setup_tables();
         check_ajax_referer(self::NONCE_ACTION, 'nonce');
         
         if (!current_user_can(self::CAPABILITY)) {
