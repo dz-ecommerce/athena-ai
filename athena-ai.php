@@ -99,12 +99,66 @@ register_deactivation_hook(__FILE__, 'athena_ai_deactivate');
  * Register Feed Items menu
  */
 function athena_ai_register_feed_items_menu() {
-    add_submenu_page(
-        'edit.php?post_type=athena-feed',
+    // Add as a top-level menu instead of submenu
+    add_menu_page(
         __('Feed Items', 'athena-ai'),
         __('Feed Items', 'athena-ai'),
         'manage_options',
         'athena-feed-items',
-        '\AthenaAI\Admin\FeedItemsPage::render_page'
+        'athena_ai_render_feed_items_page',
+        'dashicons-rss',
+        31
     );
+}
+
+/**
+ * Render the Feed Items page
+ */
+function athena_ai_render_feed_items_page() {
+    echo '<div class="wrap">';
+    echo '<h1>' . esc_html__('Feed Items', 'athena-ai') . '</h1>';
+    
+    // Display feed items if available
+    global $wpdb;
+    
+    $items = $wpdb->get_results(
+        "SELECT ri.*, p.post_title as feed_title 
+        FROM {$wpdb->prefix}feed_raw_items ri
+        JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
+        WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
+        ORDER BY ri.pub_date DESC
+        LIMIT 20"
+    );
+    
+    if (empty($items)) {
+        echo '<p>' . esc_html__('No feed items found.', 'athena-ai') . '</p>';
+    } else {
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr>';
+        echo '<th>' . esc_html__('Title', 'athena-ai') . '</th>';
+        echo '<th>' . esc_html__('Feed', 'athena-ai') . '</th>';
+        echo '<th>' . esc_html__('Date', 'athena-ai') . '</th>';
+        echo '</tr></thead>';
+        echo '<tbody>';
+        
+        foreach ($items as $item) {
+            $raw_content = json_decode($item->raw_content);
+            $title = isset($raw_content->title) ? (string)$raw_content->title : '';
+            $link = isset($raw_content->link) ? (string)$raw_content->link : '';
+            
+            if (empty($title) && isset($raw_content->description)) {
+                $title = wp_trim_words((string)$raw_content->description, 10, '...');
+            }
+            
+            echo '<tr>';
+            echo '<td>' . ($link ? '<a href="' . esc_url($link) . '" target="_blank">' . esc_html($title) . '</a>' : esc_html($title)) . '</td>';
+            echo '<td>' . esc_html($item->feed_title) . '</td>';
+            echo '<td>' . esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($item->pub_date))) . '</td>';
+            echo '</tr>';
+        }
+        
+        echo '</tbody></table>';
+    }
+    
+    echo '</div>';
 }
