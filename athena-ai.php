@@ -121,13 +121,13 @@ function athena_ai_render_feed_items_page() {
     }
     
     // Process actions
+    $show_success_message = false;
     if (isset($_POST['athena_fetch_feeds']) && check_admin_referer('athena_fetch_feeds_nonce')) {
         // Fetch feeds manually
         do_action('athena_fetch_feeds');
         
-        // Redirect to prevent form resubmission
-        wp_redirect(add_query_arg('message', 'feeds-fetched', admin_url('admin.php?page=athena-feed-items')));
-        exit;
+        // Set flag to show success message instead of redirecting
+        $show_success_message = true;
     }
     
     // Get feed items with feed info
@@ -178,7 +178,7 @@ function athena_ai_render_feed_items_page() {
     echo '<div class="wrap">';
     
     // Display admin notices
-    if (isset($_GET['message']) && $_GET['message'] === 'feeds-fetched') {
+    if (isset($_GET['message']) && $_GET['message'] === 'feeds-fetched' || $show_success_message) {
         echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Feeds fetched successfully.', 'athena-ai') . '</p></div>';
     }
     
