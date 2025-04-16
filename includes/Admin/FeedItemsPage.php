@@ -39,7 +39,7 @@ class FeedItemsPage {
 
         wp_enqueue_style(
             'athena-feed-items',
-            plugins_url('assets/css/feed-items.css', ATHENA_PLUGIN_FILE),
+            plugins_url('assets/css/feed-items.css', ATHENA_AI_PLUGIN_FILE),
             [],
             ATHENA_VERSION
         );
