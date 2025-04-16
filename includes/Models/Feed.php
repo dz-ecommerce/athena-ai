@@ -1,8 +1,7 @@
 <?php
+declare(strict_types=1);
 
 namespace AthenaAI\Models;
-
-declare(strict_types=1);
 
 if (!defined('ABSPATH')) {
     exit;
