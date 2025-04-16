@@ -29,8 +29,8 @@ class FeedFetcher {
         // Add custom cron schedules
         add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
         
-        // Check and update database schema if needed
-        add_action('admin_init', [self::class, 'check_and_update_schema']);
+        // Check and update database schema if needed - use init hook to run before headers are sent
+        add_action('init', [self::class, 'check_and_update_schema'], 5);
     }
     
     /**
@@ -240,40 +240,47 @@ class FeedFetcher {
             return; // Table doesn't exist yet, it will be created with the correct schema
         }
         
-        // Check if fetch_count column exists
-        $fetch_count_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'fetch_count'");
-        if (empty($fetch_count_exists)) {
-            // Add the fetch_count column
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0 AFTER fetch_interval");
+        // Get existing columns
+        $existing_columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
+        $column_names = [];
+        
+        foreach ($existing_columns as $column) {
+            $column_names[] = $column->Field;
         }
         
-        // Check if created_at column exists
-        $created_at_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'created_at'");
-        if (empty($created_at_exists)) {
-            // Add the created_at column
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP AFTER last_error_message");
+        // Suppress errors to prevent headers already sent warnings
+        $wpdb->suppress_errors(true);
+        $show_errors = $wpdb->show_errors;
+        $wpdb->show_errors = false;
+        
+        // Add missing columns one by one without referencing other columns
+        if (!in_array('fetch_interval', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_interval INT DEFAULT 3600");
         }
         
-        // Check if updated_at column exists
-        $updated_at_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'updated_at'");
-        if (empty($updated_at_exists)) {
-            // Add the updated_at column
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at");
+        if (!in_array('fetch_count', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0");
         }
         
-        // Check if last_error_date column exists
-        $last_error_date_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'last_error_date'");
-        if (empty($last_error_date_exists)) {
-            // Add the last_error_date column
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL AFTER fetch_count");
+        if (!in_array('last_error_date', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL");
         }
         
-        // Check if last_error_message column exists
-        $last_error_message_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'last_error_message'");
-        if (empty($last_error_message_exists)) {
-            // Add the last_error_message column
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT AFTER last_error_date");
+        if (!in_array('last_error_message', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT");
         }
+        
+        if (!in_array('created_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+        
+        if (!in_array('updated_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+        
+        // Restore error display settings
+        $wpdb->show_errors = $show_errors;
+        $wpdb->suppress_errors(false);
     }
     
     /**

@@ -224,22 +224,25 @@ function athena_ai_render_feed_items_page() {
     $last_fetch = get_option('athena_last_feed_fetch');
     $last_fetch_text = $last_fetch ? human_time_diff($last_fetch, time()) . ' ' . __('ago', 'athena-ai') : __('Never', 'athena-ai');
     
-    // Get fetch statistics - handle the case where fetch_count column might not exist yet
-    $fetch_stats_query = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'fetch_count'");
-    if (!empty($fetch_stats_query)) {
-        // Column exists, we can use it
+    // Check if feed_metadata table exists before trying to query it
+    $metadata_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+    $fetch_stats = null;
+    
+    if ($metadata_table_exists) {
+        // Suppress errors to prevent issues with missing columns
+        $wpdb->suppress_errors(true);
+        $show_errors = $wpdb->show_errors;
+        $wpdb->show_errors = false;
+        
+        // Use a simple query that works regardless of schema
         $fetch_stats = $wpdb->get_row("SELECT 
             COUNT(DISTINCT feed_id) as active_feeds,
-            SUM(fetch_count) as total_fetches,
-            MAX(last_fetched) as last_fetched
+            COUNT(*) as total_fetches
             FROM {$wpdb->prefix}feed_metadata");
-    } else {
-        // Column doesn't exist yet, use a simpler query
-        $fetch_stats = $wpdb->get_row("SELECT 
-            COUNT(DISTINCT feed_id) as active_feeds,
-            COUNT(*) as total_fetches,
-            MAX(last_fetched) as last_fetched
-            FROM {$wpdb->prefix}feed_metadata");
+            
+        // Restore error display settings
+        $wpdb->show_errors = $show_errors;
+        $wpdb->suppress_errors(false);
     }
     
     // Pagination
@@ -308,6 +311,7 @@ function athena_ai_render_feed_items_page() {
     
     if ($fetch_stats) {
         echo '<p>';
+        // Use null coalescing operator to safely handle potentially missing properties
         $total_fetches = isset($fetch_stats->total_fetches) ? intval($fetch_stats->total_fetches) : 0;
         $items_per_feed = ($feed_count > 0) ? round($total_items / $feed_count, 1) : 0;
         
