@@ -72,8 +72,25 @@ class FeedItemsPage {
     }
 
     public static function render_page(): void {
+        // Check if we need to create a sample feed for testing
+        self::maybe_create_sample_feed();
+        
         $last_fetch_time = get_option('athena_last_feed_fetch', 0);
         $next_scheduled = wp_next_scheduled('athena_process_feeds');
+        
+        // Get feed items to display
+        global $wpdb;
+        $feed_items = $wpdb->get_results(
+            "SELECT ri.*, fm.url as feed_url 
+            FROM {$wpdb->prefix}feed_raw_items ri 
+            JOIN {$wpdb->prefix}feed_metadata fm ON ri.feed_id = fm.feed_id 
+            ORDER BY ri.pub_date DESC 
+            LIMIT 20"
+        );
+        
+        // Get feed count
+        $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE active = 1");
+        $item_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
         ?>
         <div class="wrap athena-feed-items-page">
             <h1><?php esc_html_e('Feed Items', 'athena-ai'); ?></h1>
@@ -116,6 +133,19 @@ class FeedItemsPage {
                 </div>
             </div>
             
+            <!-- Feed stats -->
+            <div class="feed-stats-container">
+                <div class="stats-box">
+                    <h3><?php esc_html_e('Active Feeds', 'athena-ai'); ?></h3>
+                    <div class="stats-number"><?php echo intval($feed_count); ?></div>
+                </div>
+                
+                <div class="stats-box">
+                    <h3><?php esc_html_e('Total Items', 'athena-ai'); ?></h3>
+                    <div class="stats-number"><?php echo intval($item_count); ?></div>
+                </div>
+            </div>
+            
             <!-- Live feed processing container -->
             <div id="feed-processing-container" class="feed-processing-container" style="display: none;">
                 <h2><?php esc_html_e('Processing Feeds', 'athena-ai'); ?></h2>
@@ -143,11 +173,88 @@ class FeedItemsPage {
                 </table>
             </div>
             
+            <!-- Feed items list -->
             <div class="feed-items-container">
-                <!-- Feed items will be displayed here -->
+                <h2><?php esc_html_e('Recent Feed Items', 'athena-ai'); ?></h2>
+                
+                <?php if (empty($feed_items)): ?>
+                    <div class="notice notice-info">
+                        <p><?php esc_html_e('No feed items found. Click the "Fetch Feeds Now" button to retrieve feed items.', 'athena-ai'); ?></p>
+                    </div>
+                <?php else: ?>
+                    <table class="wp-list-table widefat fixed striped feed-items-table">
+                        <thead>
+                            <tr>
+                                <th class="column-title"><?php esc_html_e('Title', 'athena-ai'); ?></th>
+                                <th class="column-feed_url"><?php esc_html_e('Feed', 'athena-ai'); ?></th>
+                                <th class="column-pub_date"><?php esc_html_e('Published', 'athena-ai'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($feed_items as $item): 
+                                $content = json_decode($item->raw_content, true);
+                                $title = isset($content['title']) ? $content['title'] : (isset($content->title) ? $content->title : __('Untitled', 'athena-ai'));
+                                if (is_object($title) || is_array($title)) {
+                                    $title = __('Untitled', 'athena-ai');
+                                }
+                            ?>
+                                <tr>
+                                    <td class="column-title">
+                                        <?php echo esc_html($title); ?>
+                                    </td>
+                                    <td class="column-feed_url">
+                                        <?php echo esc_html(parse_url($item->feed_url, PHP_URL_HOST)); ?>
+                                    </td>
+                                    <td class="column-pub_date">
+                                        <?php echo esc_html(human_time_diff(strtotime($item->pub_date), time()) . ' ' . __('ago', 'athena-ai')); ?>
+                                        <br>
+                                        <small><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($item->pub_date))); ?></small>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
             </div>
         </div>
         <?php
+    }
+    
+    /**
+     * Create a sample feed for testing if no feeds exist
+     */
+    private static function maybe_create_sample_feed(): void {
+        global $wpdb;
+        
+        // Check if any feeds exist
+        $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata");
+        
+        if ($feed_count > 0) {
+            return;
+        }
+        
+        // Create a sample feed
+        $sample_feeds = [
+            [
+                'url' => 'https://wordpress.org/news/feed/',
+                'update_interval' => 3600,
+                'active' => 1
+            ],
+            [
+                'url' => 'https://wptavern.com/feed',
+                'update_interval' => 3600,
+                'active' => 1
+            ]
+        ];
+        
+        foreach ($sample_feeds as $feed_data) {
+            $feed = new \AthenaAI\Models\Feed(
+                $feed_data['url'],
+                $feed_data['update_interval'],
+                (bool)$feed_data['active']
+            );
+            $feed->save();
+        }
     }
     
     /**
