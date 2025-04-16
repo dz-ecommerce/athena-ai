@@ -60,9 +60,17 @@ class Feed {
     private function process_feed_content(string $content): bool {
         global $wpdb;
 
+        // Validate content
+        if (empty($content)) {
+            $this->log_error('empty_content', 'Feed content is empty');
+            return false;
+        }
+
         // Use libxml internal errors for better error handling
         libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($content);
+        
+        // Attempt to load XML with error suppression
+        $xml = @simplexml_load_string($content);
         
         if ($xml === false) {
             $errors = libxml_get_errors();
@@ -98,27 +106,27 @@ class Feed {
 
         try {
             foreach ($items as $item) {
-                // Extract GUID - handle different feed formats
+                // Extract GUID - handle different feed formats with type safety
                 $guid = '';
-                if (isset($item->guid)) {
-                    $guid = (string)$item->guid;
-                } elseif (isset($item->id)) {
-                    $guid = (string)$item->id;
-                } elseif (isset($item->link)) {
+                if (isset($item->guid) && !empty($item->guid)) {
+                    $guid = is_object($item->guid) && isset($item->guid->__toString) ? (string)$item->guid : (string)$item->guid;
+                } elseif (isset($item->id) && !empty($item->id)) {
+                    $guid = is_object($item->id) && isset($item->id->__toString) ? (string)$item->id : (string)$item->id;
+                } elseif (isset($item->link) && !empty($item->link)) {
                     // Use link as fallback
-                    $guid = (string)$item->link;
+                    $guid = is_object($item->link) && isset($item->link->__toString) ? (string)$item->link : (string)$item->link;
                 }
                 
-                // Extract publication date - handle different formats
+                // Extract publication date - handle different formats with type safety
                 $pub_date = '';
-                if (isset($item->pubDate)) {
-                    $pub_date = (string)$item->pubDate;
-                } elseif (isset($item->published)) {
-                    $pub_date = (string)$item->published;
-                } elseif (isset($item->updated)) {
-                    $pub_date = (string)$item->updated;
-                } elseif (isset($item->date)) {
-                    $pub_date = (string)$item->date;
+                if (isset($item->pubDate) && !empty($item->pubDate)) {
+                    $pub_date = is_object($item->pubDate) && isset($item->pubDate->__toString) ? (string)$item->pubDate : (string)$item->pubDate;
+                } elseif (isset($item->published) && !empty($item->published)) {
+                    $pub_date = is_object($item->published) && isset($item->published->__toString) ? (string)$item->published : (string)$item->published;
+                } elseif (isset($item->updated) && !empty($item->updated)) {
+                    $pub_date = is_object($item->updated) && isset($item->updated->__toString) ? (string)$item->updated : (string)$item->updated;
+                } elseif (isset($item->date) && !empty($item->date)) {
+                    $pub_date = is_object($item->date) && isset($item->date->__toString) ? (string)$item->date : (string)$item->date;
                 }
                 
                 // Skip items without required data
@@ -134,31 +142,60 @@ class Feed {
                 
                 // Create a unique hash for the item
                 $item_hash = md5($guid . $pub_date);
+                
+                // Safely encode item to JSON with error handling
                 $raw_content = wp_json_encode($item);
-                $formatted_date = date('Y-m-d H:i:s', strtotime($pub_date));
+                if ($raw_content === false) {
+                    // Log JSON encoding error and skip this item
+                    $this->log_error('json_encode_error', 'Failed to encode feed item to JSON');
+                    $errors++;
+                    continue;
+                }
+                
+                // Safely parse the date with error handling
+                $timestamp = strtotime($pub_date);
+                if ($timestamp === false) {
+                    // Use current time if date parsing fails
+                    $formatted_date = current_time('mysql');
+                } else {
+                    $formatted_date = date('Y-m-d H:i:s', $timestamp);
+                }
                 
                 // Ensure the feed_id exists before inserting
                 if (!$this->post_id) {
                     throw new \Exception('Invalid feed ID');
                 }
 
-                // Store raw item using replace to handle duplicates
-                $result = $wpdb->replace(
-                    $wpdb->prefix . 'feed_raw_items',
-                    [
-                        'item_hash' => $item_hash,
-                        'feed_id' => $this->post_id,
-                        'raw_content' => $raw_content,
-                        'pub_date' => $formatted_date,
-                        'guid' => $guid
-                    ],
-                    ['%s', '%d', '%s', '%s', '%s']
-                );
-                
-                if ($result === false) {
+                // Validate data before inserting
+                if (empty($item_hash) || empty($guid) || empty($raw_content)) {
+                    $this->log_error('invalid_item_data', 'Invalid or incomplete feed item data');
                     $errors++;
-                } else {
-                    $processed++;
+                    continue;
+                }
+                
+                // Store raw item using replace to handle duplicates with error handling
+                try {
+                    $result = $wpdb->replace(
+                        $wpdb->prefix . 'feed_raw_items',
+                        [
+                            'item_hash' => $item_hash,
+                            'feed_id' => $this->post_id,
+                            'raw_content' => $raw_content,
+                            'pub_date' => $formatted_date,
+                            'guid' => $guid
+                        ],
+                        ['%s', '%d', '%s', '%s', '%s']
+                    );
+                    
+                    if ($result === false) {
+                        $this->log_error('db_insert_error', $wpdb->last_error ?: 'Failed to insert feed item');
+                        $errors++;
+                    } else {
+                        $processed++;
+                    }
+                } catch (\Exception $e) {
+                    $this->log_error('db_exception', $e->getMessage());
+                    $errors++;
                 }
             }
             
@@ -177,6 +214,106 @@ class Feed {
         $this->update_last_checked();
         return $processed > 0;
     }
+    
+    /**
+     * Update the last checked timestamp
+     */
+    private function update_last_checked(): void {
+        $now = current_time('mysql');
+        update_post_meta($this->post_id, '_athena_feed_last_checked', $now);
+        $this->last_checked = new \DateTime();
+    }
+    
+    /**
+     * Update feed metadata
+     * 
+     * @param int $processed Number of processed items
+     * @param int $errors Number of errors
+     */
+    private function update_feed_metadata(int $processed, int $errors): void {
+        global $wpdb;
+        
+        // First check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+        if (!$table_exists) {
+            // Log error but don't fail the whole process
+            error_log("Athena AI: feed_metadata table does not exist");
+            return;
+        }
+        
+        // Check if metadata exists with error suppression
+        $wpdb->suppress_errors(true);
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
+            $this->post_id
+        ));
+        $wpdb->suppress_errors(false);
+        
+        if ($wpdb->last_error) {
+            error_log("Athena AI: Error checking feed metadata: {$wpdb->last_error}");
+            return;
+        }
+        
+        $now = current_time('mysql');
+        $data = [
+            'last_fetch_date' => $now,
+            'items_count' => $processed,
+            'updated_at' => $now
+        ];
+        
+        // Add error data if there were errors
+        if ($errors > 0) {
+            $data['last_error_date'] = $now;
+            $data['last_error_message'] = "Failed to process {$errors} items";
+        }
+        
+        // Prepare format array based on data types
+        $formats = [];
+        foreach ($data as $key => $value) {
+            if (is_int($value)) {
+                $formats[] = '%d';
+            } elseif (is_float($value)) {
+                $formats[] = '%f';
+            } else {
+                $formats[] = '%s';
+            }
+        }
+        
+        try {
+            if ($exists) {
+                // Update existing record with error handling
+                $result = $wpdb->update(
+                    $wpdb->prefix . 'feed_metadata',
+                    $data,
+                    ['feed_id' => $this->post_id],
+                    $formats,
+                    ['%d']
+                );
+                
+                if ($result === false && $wpdb->last_error) {
+                    error_log("Athena AI: Error updating feed metadata: {$wpdb->last_error}");
+                }
+            } else {
+                // Insert new record with error handling
+                $data['feed_id'] = $this->post_id;
+                $data['created_at'] = $now;
+                $formats[] = '%d'; // for feed_id
+                $formats[] = '%s'; // for created_at
+                
+                $result = $wpdb->insert(
+                    $wpdb->prefix . 'feed_metadata',
+                    $data,
+                    $formats
+                );
+                
+                if ($result === false && $wpdb->last_error) {
+                    error_log("Athena AI: Error inserting feed metadata: {$wpdb->last_error}");
+                }
+            }
+        } catch (\Exception $e) {
+            error_log("Athena AI: Exception in feed metadata update: {$e->getMessage()}");
+        }
+    }
 
     /**
      * Log an error for this feed
@@ -187,17 +324,37 @@ class Feed {
     private function log_error(string $code, string $message): void {
         global $wpdb;
         
-        // Log to database
-        $wpdb->insert(
-            $wpdb->prefix . 'feed_errors',
-            [
-                'feed_id' => $this->post_id,
-                'error_code' => $code,
-                'error_message' => $message,
-                'created' => current_time('mysql')
-            ],
-            ['%d', '%s', '%s', '%s']
-        );
+        // First check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
+        if (!$table_exists) {
+            // Log to WordPress error log instead
+            error_log("Athena AI Feed Error ({$code}): {$message}");
+            return;
+        }
+        
+        try {
+            // Log to database with error handling
+            $result = $wpdb->insert(
+                $wpdb->prefix . 'feed_errors',
+                [
+                    'feed_id' => $this->post_id,
+                    'error_code' => $code,
+                    'error_message' => $message,
+                    'created' => current_time('mysql')
+                ],
+                ['%d', '%s', '%s', '%s']
+            );
+            
+            if ($result === false && $wpdb->last_error) {
+                // Log to WordPress error log as fallback
+                error_log("Athena AI: Failed to log feed error to database: {$wpdb->last_error}");
+                error_log("Athena AI Feed Error ({$code}): {$message}");
+            }
+        } catch (\Exception $e) {
+            // Log exception to WordPress error log
+            error_log("Athena AI: Exception logging feed error: {$e->getMessage()}");
+            error_log("Athena AI Feed Error ({$code}): {$message}");
+        }
         
         // Update feed metadata with last error
         $this->update_feed_error($code, $message);
@@ -220,97 +377,64 @@ class Feed {
     private function update_feed_error(string $code, string $message): void {
         global $wpdb;
         
-        $now = current_time('mysql');
-        
-        // Check if metadata exists
-        $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
-            $this->post_id
-        ));
-        
-        if ($exists) {
-            // Update existing metadata
-            $wpdb->update(
-                $wpdb->prefix . 'feed_metadata',
-                [
-                    'last_error_date' => $now,
-                    'last_error_message' => sprintf('[%s] %s', $code, $message),
-                    'updated_at' => $now
-                ],
-                ['feed_id' => $this->post_id],
-                ['%s', '%s', '%s'],
-                ['%d']
-            );
-        } else {
-            // Insert new metadata with error
-            $wpdb->insert(
-                $wpdb->prefix . 'feed_metadata',
-                [
-                    'feed_id' => $this->post_id,
-                    'last_error_date' => $now,
-                    'last_error_message' => sprintf('[%s] %s', $code, $message),
-                    'fetch_interval' => $this->update_interval,
-                    'created_at' => $now,
-                    'updated_at' => $now
-                ],
-                ['%d', '%s', '%s', '%d', '%s', '%s']
-            );
+        // First check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+        if (!$table_exists) {
+            // Log error but don't fail the whole process
+            error_log("Athena AI: feed_metadata table does not exist");
+            return;
         }
-    }
-
-    /**
-     * Update the last checked timestamp
-     */
-    private function update_last_checked(): void {
-        $now = current_time('mysql');
-        update_post_meta($this->post_id, '_athena_feed_last_checked', $now);
-        $this->last_checked = new \DateTime();
-    }
-    
-    /**
-     * Update feed metadata in the database
-     * 
-     * @param int $processed Number of processed items
-     * @param int $errors Number of errors
-     */
-    private function update_feed_metadata(int $processed, int $errors = 0): void {
-        global $wpdb;
         
         $now = current_time('mysql');
         
-        // Check if metadata exists
+        // Check if metadata exists with error suppression
+        $wpdb->suppress_errors(true);
         $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
             $this->post_id
         ));
+        $wpdb->suppress_errors(false);
         
-        if ($exists) {
-            // Update existing metadata
-            $wpdb->update(
-                $wpdb->prefix . 'feed_metadata',
-                [
-                    'last_fetched' => $now,
-                    'fetch_count' => $wpdb->prepare('fetch_count + %d', $processed),
-                    'updated_at' => $now
-                ],
-                ['feed_id' => $this->post_id],
-                ['%s', '%d', '%s'],
-                ['%d']
-            );
-        } else {
-            // Insert new metadata
-            $wpdb->insert(
-                $wpdb->prefix . 'feed_metadata',
-                [
-                    'feed_id' => $this->post_id,
-                    'last_fetched' => $now,
-                    'fetch_interval' => $this->update_interval,
-                    'fetch_count' => $processed,
-                    'created_at' => $now,
-                    'updated_at' => $now
-                ],
-                ['%d', '%s', '%d', '%d', '%s', '%s']
-            );
+        if ($wpdb->last_error) {
+            error_log("Athena AI: Error checking feed metadata: {$wpdb->last_error}");
+            return;
+        }
+        
+        try {
+            if ($exists) {
+                // Update existing metadata with error information
+                $wpdb->update(
+                    $wpdb->prefix . 'feed_metadata',
+                    [
+                        'last_error_date' => $now,
+                        'last_error_message' => sprintf('[%s] %s', $code, $message),
+                        'updated_at' => $now
+                    ],
+                    ['feed_id' => $this->post_id],
+                    ['%s', '%s', '%s'],
+                    ['%d']
+                );
+            } else {
+                // Insert new metadata with error information
+                $wpdb->insert(
+                    $wpdb->prefix . 'feed_metadata',
+                    [
+                        'feed_id' => $this->post_id,
+                        'last_error_date' => $now,
+                        'last_error_message' => sprintf('[%s] %s', $code, $message),
+                        'fetch_interval' => $this->update_interval,
+                        'created_at' => $now,
+                        'updated_at' => $now
+                    ],
+                    ['%d', '%s', '%s', '%d', '%s', '%s']
+                );
+            }
+            
+            if ($wpdb->last_error) {
+                error_log("Athena AI: Error updating feed metadata with error: {$wpdb->last_error}");
+            }
+        } catch (\Exception $e) {
+            error_log("Athena AI: Exception in feed error update: {$e->getMessage()}");
         }
     }
 

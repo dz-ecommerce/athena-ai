@@ -3,7 +3,7 @@
  * Plugin Name: Athena AI
  * Plugin URI: https://your-domain.com/athena-ai
  * Description: A powerful AI integration plugin for WordPress
- * Version: 1.0.99
+ * Version: 1.1.0
  * Author: Your Name
  * Author URI: https://your-domain.com
  * Text Domain: athena-ai
@@ -18,7 +18,7 @@ if (!defined('WPINC')) {
 }
 
 // Define plugin constants
-define('ATHENA_AI_VERSION', '1.0.99');
+define('ATHENA_AI_VERSION', '1.1.0');
 define('ATHENA_AI_PLUGIN_FILE', __FILE__);
 define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -378,13 +378,37 @@ function athena_ai_render_feed_items_page() {
         echo '<tbody>';
         
         foreach ($items as $item) {
+            // Ensure raw_content is a string before decoding
+            if (!isset($item->raw_content) || !is_string($item->raw_content)) {
+                continue; // Skip this item if raw_content is missing or not a string
+            }
+            
+            // Safely decode JSON with error handling
             $raw_content = json_decode($item->raw_content);
-            $title = isset($raw_content->title) ? (string)$raw_content->title : '';
-            $link = isset($raw_content->link) ? (string)$raw_content->link : '';
-            $description = isset($raw_content->description) ? (string)$raw_content->description : '';
+            if (json_last_error() !== JSON_ERROR_NONE || !is_object($raw_content)) {
+                // Log the error and skip this item
+                error_log('Athena AI: JSON decode error for feed item: ' . json_last_error_msg());
+                continue;
+            }
+            
+            // Safely extract and convert properties to strings
+            $title = '';
+            if (isset($raw_content->title)) {
+                $title = is_scalar($raw_content->title) ? (string)$raw_content->title : '';
+            }
+            
+            $link = '';
+            if (isset($raw_content->link)) {
+                $link = is_scalar($raw_content->link) ? (string)$raw_content->link : '';
+            }
+            
+            $description = '';
+            if (isset($raw_content->description)) {
+                $description = is_scalar($raw_content->description) ? (string)$raw_content->description : '';
+            }
             
             // Handle different feed formats
-            if (empty($link) && isset($raw_content->guid)) {
+            if (empty($link) && isset($raw_content->guid) && is_scalar($raw_content->guid)) {
                 $link = (string)$raw_content->guid;
             }
             
