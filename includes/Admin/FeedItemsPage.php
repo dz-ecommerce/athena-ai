@@ -316,8 +316,9 @@ class FeedItemsPage {
                 $feed->save();
                 
                 // Store the feed_id in post meta for future reference
-                if (isset($feed->get_id())) {
-                    update_post_meta($post->ID, '_athena_feed_metadata_id', $feed->get_id());
+                $feed_id = $feed->get_id();
+                if ($feed_id !== null) {
+                    update_post_meta($post->ID, '_athena_feed_metadata_id', $feed_id);
                 }
             } else {
                 // Store the feed_id in post meta for future reference
