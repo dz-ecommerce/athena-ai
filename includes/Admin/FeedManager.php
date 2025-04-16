@@ -279,5 +279,15 @@ class FeedManager extends BaseAdmin {
             'manage_options',
             'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
         );
+        
+        // Add Feed Items submenu
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('Feed Items', 'athena-ai'),
+            __('Feed Items', 'athena-ai'),
+            'manage_options',
+            'athena-feed-items',
+            [FeedItemsPage::class, 'render_page']
+        );
     }
 }
