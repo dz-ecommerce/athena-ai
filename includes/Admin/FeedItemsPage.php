@@ -158,6 +158,89 @@ class FeedItemsPage {
                 </div>
             </div>
             
+            <!-- Active Feeds List -->
+            <div class="active-feeds-container">
+                <h2><?php esc_html_e('Active Feeds', 'athena-ai'); ?></h2>
+                
+                <?php if ($tables_exist): ?>
+                    <?php 
+                    // Get active feeds with their post titles
+                    $active_feeds = [];
+                    if ($feed_count > 0) {
+                        $active_feeds = $wpdb->get_results(
+                            "SELECT fm.feed_id, fm.url, fm.last_checked, 
+                            (SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = fm.feed_id) as item_count 
+                            FROM {$wpdb->prefix}feed_metadata fm 
+                            WHERE fm.active = 1",
+                            ARRAY_A
+                        );
+                        
+                        // Get post titles for each feed
+                        foreach ($active_feeds as &$feed) {
+                            $post_id = $wpdb->get_var($wpdb->prepare(
+                                "SELECT post_id FROM {$wpdb->postmeta} 
+                                WHERE meta_key = '_athena_feed_metadata_id' AND meta_value = %d",
+                                $feed['feed_id']
+                            ));
+                            
+                            if ($post_id) {
+                                $feed['title'] = get_the_title($post_id);
+                            } else {
+                                $feed['title'] = __('Unknown Feed', 'athena-ai');
+                            }
+                        }
+                    }
+                    ?>
+                    
+                    <?php if (empty($active_feeds)): ?>
+                        <div class="notice notice-info">
+                            <p><?php esc_html_e('No active feeds found. Please add feeds through the Feeds menu.', 'athena-ai'); ?></p>
+                        </div>
+                    <?php else: ?>
+                        <table class="wp-list-table widefat fixed striped active-feeds-table">
+                            <thead>
+                                <tr>
+                                    <th class="column-title"><?php esc_html_e('Feed Name', 'athena-ai'); ?></th>
+                                    <th class="column-url"><?php esc_html_e('URL', 'athena-ai'); ?></th>
+                                    <th class="column-last-checked"><?php esc_html_e('Last Checked', 'athena-ai'); ?></th>
+                                    <th class="column-items"><?php esc_html_e('Items', 'athena-ai'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($active_feeds as $feed): ?>
+                                    <tr>
+                                        <td class="column-title">
+                                            <?php echo esc_html($feed['title']); ?>
+                                        </td>
+                                        <td class="column-url">
+                                            <a href="<?php echo esc_url($feed['url']); ?>" target="_blank">
+                                                <?php echo esc_html($feed['url']); ?>
+                                            </a>
+                                        </td>
+                                        <td class="column-last-checked">
+                                            <?php if ($feed['last_checked']): ?>
+                                                <?php echo esc_html(human_time_diff(strtotime($feed['last_checked']), time()) . ' ' . __('ago', 'athena-ai')); ?>
+                                                <br>
+                                                <small><?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($feed['last_checked']))); ?></small>
+                                            <?php else: ?>
+                                                <?php esc_html_e('Never', 'athena-ai'); ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="column-items">
+                                            <?php echo intval($feed['item_count']); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div class="notice notice-warning">
+                        <p><?php esc_html_e('Database tables are being set up. Please refresh the page in a few moments.', 'athena-ai'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
             <!-- Live feed processing container -->
             <div id="feed-processing-container" class="feed-processing-container" style="display: none;">
                 <h2><?php esc_html_e('Processing Feeds', 'athena-ai'); ?></h2>
@@ -238,10 +321,47 @@ class FeedItemsPage {
     
     /**
      * Sync feeds from custom post types to the feed metadata table
+     * and clean up any feeds that aren't from custom post types
      */
     private static function maybe_create_sample_feed(): void {
-        // Only sync feeds from custom post types
+        // First, clean up any existing feeds that aren't from custom post types
+        self::clean_up_feeds();
+        
+        // Then sync feeds from custom post types
         self::sync_feeds_from_post_types();
+    }
+    
+    /**
+     * Clean up any feeds that aren't from custom post types
+     */
+    private static function clean_up_feeds(): void {
+        global $wpdb;
+        
+        // Get all feed IDs from post meta
+        $feed_post_ids = get_posts([
+            'post_type' => 'athena-feed',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'fields' => 'ids'
+        ]);
+        
+        $feed_meta_ids = [];
+        foreach ($feed_post_ids as $post_id) {
+            $feed_id = get_post_meta($post_id, '_athena_feed_metadata_id', true);
+            if ($feed_id) {
+                $feed_meta_ids[] = $feed_id;
+            }
+        }
+        
+        if (empty($feed_meta_ids)) {
+            // If no feeds from custom post types, delete all feeds from the metadata table
+            $wpdb->query("DELETE FROM {$wpdb->prefix}feed_metadata");
+            return;
+        }
+        
+        // Delete any feeds that aren't from custom post types
+        $feed_ids_string = implode(',', array_map('intval', $feed_meta_ids));
+        $wpdb->query("DELETE FROM {$wpdb->prefix}feed_metadata WHERE feed_id NOT IN ($feed_ids_string)");
     }
     
     /**

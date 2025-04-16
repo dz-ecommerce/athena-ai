@@ -121,6 +121,32 @@
     color: #d63638;
 }
 
+/* Active Feeds List */
+.active-feeds-container {
+    margin: 20px 0;
+}
+
+.active-feeds-table .column-title {
+    width: 25%;
+}
+
+.active-feeds-table .column-url {
+    width: 40%;
+}
+
+.active-feeds-table .column-last-checked {
+    width: 20%;
+}
+
+.active-feeds-table .column-items {
+    width: 15%;
+    text-align: center;
+}
+
+.active-feeds-table td.column-items {
+    font-weight: 600;
+}
+
 .stats-number {
     font-size: 1.5rem;
     font-weight: 600;
