@@ -7,6 +7,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('WP_List_Table')) {
+    require_once(ABSPATH . 'wp-admin/includes/class-wp-list-table.php');
+}
+
 class FeedItemsPage {
     private const MENU_SLUG = 'athena-feed-items';
     private const CAPABILITY = 'manage_options';
@@ -18,7 +22,7 @@ class FeedItemsPage {
 
     public static function add_menu_item(): void {
         add_submenu_page(
-            'edit.php?post_type=feed_article',
+            'edit.php?post_type=athena-feed',
             __('Feed Items', 'athena-ai'),
             __('Feed Items', 'athena-ai'),
             self::CAPABILITY,
