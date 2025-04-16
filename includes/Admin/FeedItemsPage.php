@@ -32,32 +32,7 @@ class FeedItemsPage {
         );
     }
 }
-    }
 
-    public static function enqueue_styles(string $hook): void {
-        if (!str_contains($hook, self::MENU_SLUG)) {
-            return;
-        }
-
-        wp_enqueue_style(
-            'athena-feed-items',
-            plugins_url('assets/css/feed-items.css', ATHENA_PLUGIN_FILE),
-            [],
-            ATHENA_VERSION
-        );
-    }
-
-    public static function render_page(): void {
-        if (!current_user_can(self::CAPABILITY)) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
-
-        // Create an instance of our list table
-        $list_table = new FeedItemsList();
-        $list_table->prepare_items();
-
-        ?>
-        <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             
             <div class="feed-items-stats">
