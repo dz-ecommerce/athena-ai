@@ -62,6 +62,64 @@
     color: #d63638;
 }
 
+/* Feed processing container */
+.feed-processing-container {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.feed-progress {
+    height: 20px;
+    background-color: #f0f0f1;
+    border-radius: 3px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.feed-progress-bar {
+    height: 100%;
+    background-color: #2271b1;
+    transition: width 0.3s ease;
+}
+
+.feed-progress-stats {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #50575e;
+    font-size: 14px;
+}
+
+.feed-processing-table {
+    margin-top: 15px;
+}
+
+.feed-processing-table th {
+    font-weight: 600;
+}
+
+.feed-processing-table .status-cell {
+    text-align: center;
+}
+
+.feed-status-pending {
+    color: #777;
+}
+
+.feed-status-processing {
+    color: #2271b1;
+}
+
+.feed-status-success {
+    color: #00a32a;
+}
+
+.feed-status-error {
+    color: #d63638;
+}
+
 .stats-number {
     font-size: 1.5rem;
     font-weight: 600;
