@@ -28,6 +28,9 @@ class FeedFetcher {
         
         // Add custom cron schedules
         add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
+        
+        // Check and update database schema if needed
+        add_action('admin_init', [self::class, 'check_and_update_schema']);
     }
     
     /**
@@ -161,6 +164,8 @@ class FeedFetcher {
         
         // If all tables exist, we're good
         if ($metadata_exists && $items_exists && $errors_exists) {
+            // Check if we need to update the schema
+            self::check_and_update_schema();
             return true;
         }
         
@@ -221,6 +226,54 @@ class FeedFetcher {
         $errors_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
         
         return $metadata_exists && $items_exists && $errors_exists;
+    }
+    
+    /**
+     * Check and update the database schema if needed
+     */
+    public static function check_and_update_schema(): void {
+        global $wpdb;
+        
+        // Check if the feed_metadata table exists
+        $metadata_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+        if (!$metadata_exists) {
+            return; // Table doesn't exist yet, it will be created with the correct schema
+        }
+        
+        // Check if fetch_count column exists
+        $fetch_count_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'fetch_count'");
+        if (empty($fetch_count_exists)) {
+            // Add the fetch_count column
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0 AFTER fetch_interval");
+        }
+        
+        // Check if created_at column exists
+        $created_at_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'created_at'");
+        if (empty($created_at_exists)) {
+            // Add the created_at column
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP AFTER last_error_message");
+        }
+        
+        // Check if updated_at column exists
+        $updated_at_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'updated_at'");
+        if (empty($updated_at_exists)) {
+            // Add the updated_at column
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at");
+        }
+        
+        // Check if last_error_date column exists
+        $last_error_date_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'last_error_date'");
+        if (empty($last_error_date_exists)) {
+            // Add the last_error_date column
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL AFTER fetch_count");
+        }
+        
+        // Check if last_error_message column exists
+        $last_error_message_exists = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'last_error_message'");
+        if (empty($last_error_message_exists)) {
+            // Add the last_error_message column
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT AFTER last_error_date");
+        }
     }
     
     /**

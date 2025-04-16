@@ -224,12 +224,23 @@ function athena_ai_render_feed_items_page() {
     $last_fetch = get_option('athena_last_feed_fetch');
     $last_fetch_text = $last_fetch ? human_time_diff($last_fetch, time()) . ' ' . __('ago', 'athena-ai') : __('Never', 'athena-ai');
     
-    // Get fetch statistics
-    $fetch_stats = $wpdb->get_row("SELECT 
-        COUNT(DISTINCT feed_id) as active_feeds,
-        SUM(fetch_count) as total_fetches,
-        MAX(last_fetched) as last_fetched
-        FROM {$wpdb->prefix}feed_metadata");
+    // Get fetch statistics - handle the case where fetch_count column might not exist yet
+    $fetch_stats_query = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata LIKE 'fetch_count'");
+    if (!empty($fetch_stats_query)) {
+        // Column exists, we can use it
+        $fetch_stats = $wpdb->get_row("SELECT 
+            COUNT(DISTINCT feed_id) as active_feeds,
+            SUM(fetch_count) as total_fetches,
+            MAX(last_fetched) as last_fetched
+            FROM {$wpdb->prefix}feed_metadata");
+    } else {
+        // Column doesn't exist yet, use a simpler query
+        $fetch_stats = $wpdb->get_row("SELECT 
+            COUNT(DISTINCT feed_id) as active_feeds,
+            COUNT(*) as total_fetches,
+            MAX(last_fetched) as last_fetched
+            FROM {$wpdb->prefix}feed_metadata");
+    }
     
     // Pagination
     $total_pages = ceil($total_items / $items_per_page);
@@ -297,10 +308,13 @@ function athena_ai_render_feed_items_page() {
     
     if ($fetch_stats) {
         echo '<p>';
+        $total_fetches = isset($fetch_stats->total_fetches) ? intval($fetch_stats->total_fetches) : 0;
+        $items_per_feed = ($feed_count > 0) ? round($total_items / $feed_count, 1) : 0;
+        
         echo sprintf(
             esc_html__('Total Fetches: %1$s | Items Per Feed: %2$s', 'athena-ai'),
-            '<strong>' . esc_html($fetch_stats->total_fetches ?? 0) . '</strong>',
-            '<strong>' . esc_html(($feed_count > 0) ? round($total_items / $feed_count, 1) : 0) . '</strong>'
+            '<strong>' . esc_html($total_fetches) . '</strong>',
+            '<strong>' . esc_html($items_per_feed) . '</strong>'
         );
         echo '</p>';
     }
