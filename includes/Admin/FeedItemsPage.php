@@ -18,6 +18,7 @@ class FeedItemsPage {
     public static function init(): void {
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_styles']);
     }
+}
     }
 
     public static function enqueue_styles(string $hook): void {
