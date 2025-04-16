@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace AthenaAI\Admin;
 
 use AthenaAI\Admin\FeedItemsList;
+use AthenaAI\Admin\FeedItemsPage;
 
 class FeedManager extends BaseAdmin {
     /**
@@ -286,7 +287,7 @@ class FeedManager extends BaseAdmin {
             __('Feed Items', 'athena-ai'),
             'manage_options',
             'athena-feed-items',
-            [FeedItemsList::class, 'render_page']
+            [FeedItemsPage::class, 'render_page']
         );
     }
 }

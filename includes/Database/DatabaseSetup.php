@@ -36,8 +36,8 @@ class DatabaseSetup {
             return;
         }
         
-        // Check if the feed_metadata table exists
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+        // Check if the feed_raw_items table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
         
         if (!$table_exists) {
             self::setup_tables();
@@ -52,11 +52,10 @@ class DatabaseSetup {
     public static function tables_exist(): bool {
         global $wpdb;
         
-        $metadata_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
         $items_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
         $errors_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
         
-        return $metadata_exists && $items_exists && $errors_exists;
+        return $items_exists && $errors_exists;
     }
 
     public static function setup_tables(): void {
@@ -65,38 +64,26 @@ class DatabaseSetup {
 
         $charset_collate = $wpdb->get_charset_collate();
 
-        // Feed Metadata Table
-        $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_metadata (
-            feed_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            url VARCHAR(512) NOT NULL,
-            last_checked DATETIME,
-            update_interval INT DEFAULT 3600,
-            active TINYINT(1) DEFAULT 1,
-            UNIQUE KEY url (url)
-        ) $charset_collate;";
-        
-        dbDelta($sql);
-
-        // Feed Raw Items Table
+        // Feed Raw Items Table - now references post IDs directly
         $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_raw_items (
             item_hash CHAR(32) PRIMARY KEY,
-            feed_id BIGINT UNSIGNED,
+            feed_id BIGINT UNSIGNED, -- This now references the post ID of the athena-feed post type
             raw_content LONGTEXT,
             pub_date DATETIME,
             guid VARCHAR(255),
-            FOREIGN KEY (feed_id) REFERENCES {$wpdb->prefix}feed_metadata(feed_id)
+            INDEX (feed_id)
         ) $charset_collate;";
         
         dbDelta($sql);
 
-        // Feed Errors Table
+        // Feed Errors Table - now references post IDs directly
         $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_errors (
             error_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            feed_id BIGINT UNSIGNED,
+            feed_id BIGINT UNSIGNED, -- This now references the post ID of the athena-feed post type
             error_code VARCHAR(32),
             error_message TEXT,
             created DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (feed_id) REFERENCES {$wpdb->prefix}feed_metadata(feed_id)
+            INDEX (feed_id)
         ) $charset_collate;";
         
         dbDelta($sql);
