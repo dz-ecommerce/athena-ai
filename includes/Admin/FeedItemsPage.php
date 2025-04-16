@@ -18,6 +18,19 @@ class FeedItemsPage {
     public static function init(): void {
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_styles']);
     }
+
+    public static function enqueue_styles(string $hook): void {
+        if (!str_contains($hook, self::MENU_SLUG)) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'athena-feed-items',
+            plugins_url('assets/css/feed-items.css', ATHENA_PLUGIN_FILE),
+            [],
+            ATHENA_VERSION
+        );
+    }
 }
     }
 
