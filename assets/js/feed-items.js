@@ -22,6 +22,9 @@
         let processedCount = 0;
         let errorCount = 0;
         let isProcessing = false;
+        
+        // Check if we have a summary to display from a previous fetch
+        displayFetchSummary();
 
         /**
          * Handle manual feed fetch button click
@@ -220,41 +223,39 @@
                 data: {
                     action: 'athena_manual_feed_fetch',
                     nonce: athenaFeedItems.nonce,
-                    fetch_action: 'complete'
+                    fetch_action: 'complete',
+                    processed_count: processedCount,
+                    error_count: errorCount
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Update status with success message
-                        const message = sprintf(
-                            athenaFeedItems.completedText || 'Processed %d feeds with %d errors.',
-                            processedCount,
-                            errorCount
-                        );
+                        // Store the summary data in sessionStorage for display after refresh
+                        sessionStorage.setItem('athena_feed_fetch_summary', JSON.stringify({
+                            totalProcessed: processedCount,
+                            totalErrors: errorCount,
+                            newItems: response.data.newItemsCount,
+                            skippedItems: response.data.skippedItemsCount,
+                            timestamp: new Date().getTime()
+                        }));
                         
-                        $fetchStatus.html(message)
+                        // Show a brief success message before refreshing
+                        $fetchStatus.html(athenaFeedItems.refreshingText || 'Processing complete. Refreshing page...')
                             .removeClass('loading error')
                             .addClass('success');
                         
-                        // Update last fetch time
-                        if ($lastFetchTime.length) {
-                            $lastFetchTime.html(
-                                response.data.lastFetchTime + 
-                                '<br><small>' + response.data.lastFetchTimeFormatted + '</small>'
-                            );
-                        }
-                        
-                        // Update next fetch time
-                        if ($nextFetchTime.length) {
-                            $nextFetchTime.html(
-                                response.data.nextFetchTime + 
-                                (response.data.nextFetchTimeFormatted ? '<br><small>' + response.data.nextFetchTimeFormatted + '</small>' : '')
-                            );
-                        }
+                        // Refresh the page after a short delay to show the success message
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
                     } else {
                         // Show error message
                         $fetchStatus.html(response.data.message || athenaFeedItems.fetchErrorText)
                             .removeClass('loading success')
                             .addClass('error');
+                        
+                        // Re-enable button
+                        $fetchButton.prop('disabled', false);
+                        isProcessing = false;
                     }
                 },
                 error: function() {
@@ -262,20 +263,10 @@
                     $fetchStatus.html(athenaFeedItems.fetchErrorText)
                         .removeClass('loading success')
                         .addClass('error');
-                },
-                complete: function() {
+                    
                     // Re-enable button
                     $fetchButton.prop('disabled', false);
                     isProcessing = false;
-                    
-                    // Clear status message after 10 seconds
-                    setTimeout(function() {
-                        if ($fetchStatus.hasClass('success')) {
-                            $fetchStatus.fadeOut(500, function() {
-                                $(this).html('').show().css('display', '');
-                            });
-                        }
-                    }, 10000);
                 }
             });
         }
@@ -297,6 +288,66 @@
             return format.replace(/%d/g, function() {
                 return args.shift();
             });
+        }
+        
+        /**
+         * Display a summary notification after page refresh
+         */
+        function displayFetchSummary() {
+            const summaryData = sessionStorage.getItem('athena_feed_fetch_summary');
+            if (!summaryData) {
+                return;
+            }
+            
+            try {
+                const summary = JSON.parse(summaryData);
+                const currentTime = new Date().getTime();
+                
+                // Only show the summary if it's less than 30 seconds old
+                if (currentTime - summary.timestamp > 30000) {
+                    sessionStorage.removeItem('athena_feed_fetch_summary');
+                    return;
+                }
+                
+                // Create and show the summary notification
+                const $notification = $('<div class="notice notice-success is-dismissible"><p></p></div>');
+                const message = sprintf(
+                    athenaFeedItems.summaryText || 'Feed processing complete: %d feeds processed (%d with errors). %d new items added, %d items skipped.',
+                    summary.totalProcessed,
+                    summary.totalErrors,
+                    summary.newItems,
+                    summary.skippedItems
+                );
+                
+                $notification.find('p').html(message);
+                
+                // Add the close button
+                const $closeButton = $('<button type="button" class="notice-dismiss"></button>');
+                $closeButton.on('click', function() {
+                    $notification.fadeOut(300, function() {
+                        $(this).remove();
+                        sessionStorage.removeItem('athena_feed_fetch_summary');
+                    });
+                });
+                
+                $notification.append($closeButton);
+                
+                // Insert at the top of the page
+                $('.wrap.athena-feed-items-page').prepend($notification);
+                
+                // Auto-dismiss after 10 seconds
+                setTimeout(function() {
+                    if ($notification.length) {
+                        $notification.fadeOut(300, function() {
+                            $(this).remove();
+                            sessionStorage.removeItem('athena_feed_fetch_summary');
+                        });
+                    }
+                }, 10000);
+            } catch (e) {
+                console.error('Error displaying feed fetch summary:', e);
+                sessionStorage.removeItem('athena_feed_fetch_summary');
+            }
         }
     });
 })(jQuery);

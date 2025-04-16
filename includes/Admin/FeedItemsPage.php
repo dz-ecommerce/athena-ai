@@ -66,7 +66,9 @@ class FeedItemsPage {
                 'noFeedsText' => __('No active feeds found to process.', 'athena-ai'),
                 'pendingText' => __('Pending', 'athena-ai'),
                 'processingText' => __('Processing...', 'athena-ai'),
-                'completedText' => __('Processed %d feeds with %d errors.', 'athena-ai')
+                'completedText' => __('Processed %d feeds with %d errors.', 'athena-ai'),
+                'refreshingText' => __('Processing complete. Refreshing page...', 'athena-ai'),
+                'summaryText' => __('Feed processing complete: %d feeds processed (%d with errors). %d new items added, %d items skipped.', 'athena-ai')
             ]
         );
     }
@@ -444,9 +446,23 @@ class FeedItemsPage {
             return;
         }
         
-        // If we're completing the process, update the last fetch time
+        // If we're completing the process, update the last fetch time and return summary stats
         if ($action === 'complete') {
+            // Get the processed count and error count from the request
+            $processed_count = isset($_POST['processed_count']) ? intval($_POST['processed_count']) : 0;
+            $error_count = isset($_POST['error_count']) ? intval($_POST['error_count']) : 0;
+            
+            // Get the total count of items before and after processing
+            $before_count = get_option('athena_feed_items_count', 0);
+            $current_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+            
+            // Calculate new and skipped items
+            $new_items_count = max(0, $current_count - $before_count);
+            $skipped_items_count = $processed_count > 0 ? ($processed_count - $new_items_count) : 0;
+            
+            // Update the last fetch time and item count
             update_option('athena_last_feed_fetch', time());
+            update_option('athena_feed_items_count', $current_count);
             
             wp_send_json_success([
                 'message' => __('Feed processing completed', 'athena-ai'),
@@ -457,7 +473,10 @@ class FeedItemsPage {
                     __('Not scheduled', 'athena-ai'),
                 'nextFetchTimeFormatted' => wp_next_scheduled('athena_process_feeds') ? 
                     date_i18n(get_option('date_format') . ' ' . get_option('time_format'), wp_next_scheduled('athena_process_feeds')) : 
-                    ''
+                    '',
+                'newItemsCount' => $new_items_count,
+                'skippedItemsCount' => $skipped_items_count,
+                'totalItemsCount' => $current_count
             ]);
             return;
         }
