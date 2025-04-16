@@ -3,6 +3,7 @@ namespace AthenaAI\Core;
 
 use AthenaAI\Admin\FeedManager;
 use AthenaAI\Admin\Settings;
+use AthenaAI\Admin\FeedItemsPage;
 use AthenaAI\Frontend\FeedDisplay;
 use AthenaAI\Frontend\FeedWidget;
 
@@ -57,6 +58,15 @@ class Plugin {
     public function init() {
         // Add capabilities to administrator role if needed
         $this->setup_capabilities();
+
+        // Initialize the Feed Items page
+        FeedItemsPage::init();
+
+        // Initialize Database Setup
+        \AthenaAI\Database\DatabaseSetup::init();
+
+        // Initialize Feed Processor
+        \AthenaAI\Background\FeedProcessor::init();
     }
 
     /**
