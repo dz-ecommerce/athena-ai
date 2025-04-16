@@ -5,9 +5,6 @@ namespace AthenaAI\Admin;
 
 use AthenaAI\Admin\FeedItemsList;
 
-
-use AthenaAI\Admin\FeedItemsList;
-
 class FeedManager extends BaseAdmin {
     /**
      * Initialize the feed manager
