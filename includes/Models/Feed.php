@@ -60,42 +60,118 @@ class Feed {
     private function process_feed_content(string $content): bool {
         global $wpdb;
 
+        // Use libxml internal errors for better error handling
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($content);
         
         if ($xml === false) {
-            $this->log_error('xml_parse_error', 'Failed to parse feed XML');
+            $errors = libxml_get_errors();
+            $error_msg = !empty($errors) ? $errors[0]->message : 'Failed to parse feed XML';
+            $this->log_error('xml_parse_error', $error_msg);
+            libxml_clear_errors();
             return false;
         }
 
-        $items = $xml->channel->item ?? $xml->entry ?? [];
+        // Handle different feed formats (RSS, Atom, etc.)
+        $items = [];
+        if (isset($xml->channel) && isset($xml->channel->item)) {
+            // RSS format
+            $items = $xml->channel->item;
+        } elseif (isset($xml->entry)) {
+            // Atom format
+            $items = $xml->entry;
+        } elseif (isset($xml->item)) {
+            // Some RSS variants
+            $items = $xml->item;
+        }
+        
+        if (empty($items)) {
+            $this->log_error('no_items_found', 'No items found in feed');
+            return false;
+        }
+
         $processed = 0;
+        $errors = 0;
 
-        foreach ($items as $item) {
-            $guid = (string)($item->guid ?? $item->id ?? '');
-            $pub_date = (string)($item->pubDate ?? $item->published ?? '');
-            
-            if (empty($guid) || empty($pub_date)) {
-                continue;
+        // Begin transaction for better database consistency
+        $wpdb->query('START TRANSACTION');
+
+        try {
+            foreach ($items as $item) {
+                // Extract GUID - handle different feed formats
+                $guid = '';
+                if (isset($item->guid)) {
+                    $guid = (string)$item->guid;
+                } elseif (isset($item->id)) {
+                    $guid = (string)$item->id;
+                } elseif (isset($item->link)) {
+                    // Use link as fallback
+                    $guid = (string)$item->link;
+                }
+                
+                // Extract publication date - handle different formats
+                $pub_date = '';
+                if (isset($item->pubDate)) {
+                    $pub_date = (string)$item->pubDate;
+                } elseif (isset($item->published)) {
+                    $pub_date = (string)$item->published;
+                } elseif (isset($item->updated)) {
+                    $pub_date = (string)$item->updated;
+                } elseif (isset($item->date)) {
+                    $pub_date = (string)$item->date;
+                }
+                
+                // Skip items without required data
+                if (empty($guid)) {
+                    $errors++;
+                    continue;
+                }
+                
+                // If no publication date is found, use current time
+                if (empty($pub_date)) {
+                    $pub_date = current_time('mysql');
+                }
+                
+                // Create a unique hash for the item
+                $item_hash = md5($guid . $pub_date);
+                $raw_content = wp_json_encode($item);
+                $formatted_date = date('Y-m-d H:i:s', strtotime($pub_date));
+                
+                // Ensure the feed_id exists before inserting
+                if (!$this->post_id) {
+                    throw new \Exception('Invalid feed ID');
+                }
+
+                // Store raw item using replace to handle duplicates
+                $result = $wpdb->replace(
+                    $wpdb->prefix . 'feed_raw_items',
+                    [
+                        'item_hash' => $item_hash,
+                        'feed_id' => $this->post_id,
+                        'raw_content' => $raw_content,
+                        'pub_date' => $formatted_date,
+                        'guid' => $guid
+                    ],
+                    ['%s', '%d', '%s', '%s', '%s']
+                );
+                
+                if ($result === false) {
+                    $errors++;
+                } else {
+                    $processed++;
+                }
             }
-
-            $item_hash = md5($guid . $pub_date);
-            $raw_content = wp_json_encode($item);
-
-            // Store raw item
-            $wpdb->replace(
-                $wpdb->prefix . 'feed_raw_items',
-                [
-                    'item_hash' => $item_hash,
-                    'feed_id' => $this->post_id, // Using post_id instead of feed_id
-                    'raw_content' => $raw_content,
-                    'pub_date' => date('Y-m-d H:i:s', strtotime($pub_date)),
-                    'guid' => $guid
-                ],
-                ['%s', '%d', '%s', '%s', '%s']
-            );
-
-            $processed++;
+            
+            // Update feed metadata
+            $this->update_feed_metadata($processed, $errors);
+            
+            // Commit transaction
+            $wpdb->query('COMMIT');
+        } catch (\Exception $e) {
+            // Rollback on error
+            $wpdb->query('ROLLBACK');
+            $this->log_error('db_error', $e->getMessage());
+            return false;
         }
 
         $this->update_last_checked();
@@ -111,15 +187,75 @@ class Feed {
     private function log_error(string $code, string $message): void {
         global $wpdb;
         
+        // Log to database
         $wpdb->insert(
             $wpdb->prefix . 'feed_errors',
             [
-                'feed_id' => $this->post_id, // Using post_id instead of feed_id
+                'feed_id' => $this->post_id,
                 'error_code' => $code,
-                'error_message' => $message
+                'error_message' => $message,
+                'created' => current_time('mysql')
             ],
-            ['%d', '%s', '%s']
+            ['%d', '%s', '%s', '%s']
         );
+        
+        // Update feed metadata with last error
+        $this->update_feed_error($code, $message);
+        
+        // Also log to WordPress error log
+        error_log(sprintf(
+            'Athena AI Feed Error [%s]: %s (Feed ID: %d)',
+            $code,
+            $message,
+            $this->post_id
+        ));
+    }
+    
+    /**
+     * Update feed metadata with error information
+     * 
+     * @param string $code The error code
+     * @param string $message The error message
+     */
+    private function update_feed_error(string $code, string $message): void {
+        global $wpdb;
+        
+        $now = current_time('mysql');
+        
+        // Check if metadata exists
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
+            $this->post_id
+        ));
+        
+        if ($exists) {
+            // Update existing metadata
+            $wpdb->update(
+                $wpdb->prefix . 'feed_metadata',
+                [
+                    'last_error_date' => $now,
+                    'last_error_message' => sprintf('[%s] %s', $code, $message),
+                    'updated_at' => $now
+                ],
+                ['feed_id' => $this->post_id],
+                ['%s', '%s', '%s'],
+                ['%d']
+            );
+        } else {
+            // Insert new metadata with error
+            $wpdb->insert(
+                $wpdb->prefix . 'feed_metadata',
+                [
+                    'feed_id' => $this->post_id,
+                    'last_error_date' => $now,
+                    'last_error_message' => sprintf('[%s] %s', $code, $message),
+                    'fetch_interval' => $this->update_interval,
+                    'created_at' => $now,
+                    'updated_at' => $now
+                ],
+                ['%d', '%s', '%s', '%d', '%s', '%s']
+            );
+        }
     }
 
     /**
@@ -129,6 +265,53 @@ class Feed {
         $now = current_time('mysql');
         update_post_meta($this->post_id, '_athena_feed_last_checked', $now);
         $this->last_checked = new \DateTime();
+    }
+    
+    /**
+     * Update feed metadata in the database
+     * 
+     * @param int $processed Number of processed items
+     * @param int $errors Number of errors
+     */
+    private function update_feed_metadata(int $processed, int $errors = 0): void {
+        global $wpdb;
+        
+        $now = current_time('mysql');
+        
+        // Check if metadata exists
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
+            $this->post_id
+        ));
+        
+        if ($exists) {
+            // Update existing metadata
+            $wpdb->update(
+                $wpdb->prefix . 'feed_metadata',
+                [
+                    'last_fetched' => $now,
+                    'fetch_count' => $wpdb->prepare('fetch_count + %d', $processed),
+                    'updated_at' => $now
+                ],
+                ['feed_id' => $this->post_id],
+                ['%s', '%d', '%s'],
+                ['%d']
+            );
+        } else {
+            // Insert new metadata
+            $wpdb->insert(
+                $wpdb->prefix . 'feed_metadata',
+                [
+                    'feed_id' => $this->post_id,
+                    'last_fetched' => $now,
+                    'fetch_interval' => $this->update_interval,
+                    'fetch_count' => $processed,
+                    'created_at' => $now,
+                    'updated_at' => $now
+                ],
+                ['%d', '%s', '%d', '%d', '%s', '%s']
+            );
+        }
     }
 
     /**
