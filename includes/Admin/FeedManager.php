@@ -1,11 +1,19 @@
 <?php
 namespace AthenaAI\Admin;
 
+use AthenaAI\Admin\FeedItemsList;
+
 class FeedManager extends BaseAdmin {
     /**
      * Initialize the feed manager
      */
     public function __construct() {
+        // Add hooks
+        $this->add_hooks();
+    }
+
+    public function add_hooks() {
+        // Register post type and taxonomy on init
         add_action('init', [$this, 'register_post_type']);
         add_action('init', [$this, 'register_taxonomy']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
@@ -247,6 +255,16 @@ class FeedManager extends BaseAdmin {
             __('Categories', 'athena-ai'),
             'manage_options',
             'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
+        );
+
+        // Add Feed Items submenu
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('Feed Items', 'athena-ai'),
+            __('Feed Items', 'athena-ai'),
+            'manage_options',
+            'athena-feed-items',
+            [FeedItemsList::class, 'render_page']
         );
     }
 }

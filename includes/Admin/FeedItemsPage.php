@@ -16,19 +16,8 @@ class FeedItemsPage {
     private const CAPABILITY = 'manage_options';
 
     public static function init(): void {
-        add_action('admin_menu', [self::class, 'add_menu_item']);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_styles']);
     }
-
-    public static function add_menu_item(): void {
-        add_submenu_page(
-            'edit.php?post_type=athena-feed',
-            __('Feed Items', 'athena-ai'),
-            __('Feed Items', 'athena-ai'),
-            self::CAPABILITY,
-            self::MENU_SLUG,
-            [self::class, 'render_page']
-        );
     }
 
     public static function enqueue_styles(string $hook): void {
