@@ -238,43 +238,10 @@ class FeedItemsPage {
     
     /**
      * Sync feeds from custom post types to the feed metadata table
-     * and create sample feeds if no feeds exist
      */
     private static function maybe_create_sample_feed(): void {
-        global $wpdb;
-        
-        // First, sync feeds from custom post types
+        // Only sync feeds from custom post types
         self::sync_feeds_from_post_types();
-        
-        // Check if any feeds exist after syncing
-        $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata");
-        
-        if ($feed_count > 0 || $feed_count === null) {
-            return;
-        }
-        
-        // Create sample feeds only if no feeds exist after syncing
-        $sample_feeds = [
-            [
-                'url' => 'https://wordpress.org/news/feed/',
-                'update_interval' => 3600,
-                'active' => 1
-            ],
-            [
-                'url' => 'https://wptavern.com/feed',
-                'update_interval' => 3600,
-                'active' => 1
-            ]
-        ];
-        
-        foreach ($sample_feeds as $feed_data) {
-            $feed = new \AthenaAI\Models\Feed(
-                $feed_data['url'],
-                $feed_data['update_interval'],
-                (bool)$feed_data['active']
-            );
-            $feed->save();
-        }
     }
     
     /**
@@ -367,6 +334,13 @@ class FeedItemsPage {
                 WHERE fm.active = 1",
                 ARRAY_A
             );
+            
+            if (empty($feeds)) {
+                wp_send_json_error([
+                    'message' => __('No feeds found. Please add feeds through the Feeds menu before fetching.', 'athena-ai')
+                ]);
+                return;
+            }
             
             $feed_data = [];
             foreach ($feeds as $feed) {
