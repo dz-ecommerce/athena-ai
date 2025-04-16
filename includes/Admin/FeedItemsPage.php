@@ -25,6 +25,23 @@ class FeedItemsPage {
     public static function init(): void {
         // Add AJAX handlers
         add_action('wp_ajax_athena_fetch_feeds', [self::class, 'handle_manual_fetch']);
+        
+        // Register the admin page
+        add_action('admin_menu', [self::class, 'register_admin_page']);
+    }
+    
+    /**
+     * Register the admin page
+     */
+    public static function register_admin_page(): void {
+        add_submenu_page(
+            'edit.php?post_type=athena-feed',
+            __('Feed Items', 'athena-ai'),
+            __('Feed Items', 'athena-ai'),
+            self::CAPABILITY,
+            'athena-feed-items',
+            [self::class, 'render_page']
+        );
     }
     
     /**
