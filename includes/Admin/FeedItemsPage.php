@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (!class_exists('WP_List_Table')) {
-    require_once(ABSPATH . 'wp-admin/includes/class-wp-list-table.php');
+    require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
 class FeedItemsPage {
@@ -16,11 +16,24 @@ class FeedItemsPage {
     private const CAPABILITY = 'manage_options';
 
     public static function init(): void {
+        add_action('admin_menu', [self::class, 'register_menu']);
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_styles']);
     }
 
+    public static function register_menu(): void {
+        add_menu_page(
+            __('Feed Items', 'athena-ai'),
+            __('Feed Items', 'athena-ai'),
+            self::CAPABILITY,
+            self::MENU_SLUG,
+            [self::class, 'render_page'],
+            'dashicons-rss',
+            56
+        );
+    }
+
     public static function enqueue_styles(string $hook): void {
-        if (!str_contains($hook, self::MENU_SLUG)) {
+        if (strpos($hook, self::MENU_SLUG) === false) {
             return;
         }
 
@@ -31,45 +44,15 @@ class FeedItemsPage {
             ATHENA_VERSION
         );
     }
-}
 
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            
-            <div class="feed-items-stats">
-                <?php self::render_stats(); ?>
-            </div>
-
-            <form method="get">
-                <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page'] ?? ''); ?>" />
-                <?php $list_table->display(); ?>
-            </form>
-        </div>
-        <?php
-    }
-
-
-        global $wpdb;
-
-        $stats = $wpdb->get_row(
-            "SELECT 
-                COUNT(*) as total_items,
-                COUNT(DISTINCT feed_id) as total_feeds,
-                MAX(pub_date) as latest_item
-            FROM {$wpdb->prefix}feed_raw_items"
-        );
-
+    public static function render_page(): void {
         ?>
-        <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(number_format_i18n($stats->total_items)); ?></span>
-            <span class="stats-label"><?php esc_html_e('Total Items', 'athena-ai'); ?></span>
-        </div>
-        <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(number_format_i18n($stats->total_feeds)); ?></span>
-            <span class="stats-label"><?php esc_html_e('Active Feeds', 'athena-ai'); ?></span>
-        </div>
-        <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(human_time_diff(strtotime($stats->latest_item))); ?></span>
-            <span class="stats-label"><?php esc_html_e('Since Last Item', 'athena-ai'); ?></span>
+        <div class="wrap">
+            <h1><?php esc_html_e('Feed Items', 'athena-ai'); ?></h1>
+            <div class="stats-box"></div>
+            <div class="stats-box"></div>
+            <div class="stats-box"></div>
+            <!-- Add your table or content here -->
         </div>
         <?php
     }

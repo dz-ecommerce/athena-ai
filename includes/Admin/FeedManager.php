@@ -1,5 +1,10 @@
 <?php
+declare(strict_types=1);
+
 namespace AthenaAI\Admin;
+
+use AthenaAI\Admin\FeedItemsList;
+
 
 use AthenaAI\Admin\FeedItemsList;
 
