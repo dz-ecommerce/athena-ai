@@ -235,19 +235,23 @@ class FeedItemsPage {
     }
     
     /**
-     * Create a sample feed for testing if no feeds exist
+     * Sync feeds from custom post types to the feed metadata table
+     * and create sample feeds if no feeds exist
      */
     private static function maybe_create_sample_feed(): void {
         global $wpdb;
         
-        // Check if any feeds exist
+        // First, sync feeds from custom post types
+        self::sync_feeds_from_post_types();
+        
+        // Check if any feeds exist after syncing
         $feed_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata");
         
         if ($feed_count > 0 || $feed_count === null) {
             return;
         }
         
-        // Create a sample feed
+        // Create sample feeds only if no feeds exist after syncing
         $sample_feeds = [
             [
                 'url' => 'https://wordpress.org/news/feed/',
@@ -268,6 +272,57 @@ class FeedItemsPage {
                 (bool)$feed_data['active']
             );
             $feed->save();
+        }
+    }
+    
+    /**
+     * Sync feeds from custom post types to the feed metadata table
+     */
+    private static function sync_feeds_from_post_types(): void {
+        global $wpdb;
+        
+        // Get all published feed post types
+        $feed_posts = get_posts([
+            'post_type' => 'athena-feed',
+            'post_status' => 'publish',
+            'numberposts' => -1
+        ]);
+        
+        if (empty($feed_posts)) {
+            return;
+        }
+        
+        foreach ($feed_posts as $post) {
+            // Get the feed URL from post meta
+            $feed_url = get_post_meta($post->ID, '_athena_feed_url', true);
+            
+            if (empty($feed_url)) {
+                continue;
+            }
+            
+            // Check if this feed URL already exists in the feed_metadata table
+            $existing_feed = $wpdb->get_var($wpdb->prepare(
+                "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE url = %s",
+                $feed_url
+            ));
+            
+            if (!$existing_feed) {
+                // Create a new feed in the feed_metadata table
+                $feed = new \AthenaAI\Models\Feed(
+                    $feed_url,
+                    3600, // Default update interval
+                    true  // Active by default
+                );
+                $feed->save();
+                
+                // Store the feed_id in post meta for future reference
+                if (isset($feed->get_id())) {
+                    update_post_meta($post->ID, '_athena_feed_metadata_id', $feed->get_id());
+                }
+            } else {
+                // Store the feed_id in post meta for future reference
+                update_post_meta($post->ID, '_athena_feed_metadata_id', $existing_feed);
+            }
         }
     }
     

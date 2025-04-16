@@ -134,6 +134,39 @@ class Feed {
         return $feed;
     }
 
+    /**
+     * Get the feed ID
+     *
+     * @return int|null The feed ID or null if not set
+     */
+    public function get_id(): ?int {
+        return isset($this->feed_id) ? $this->feed_id : null;
+    }
+    
+    /**
+     * Get the feed URL
+     *
+     * @return string The feed URL
+     */
+    public function get_url(): string {
+        return $this->url;
+    }
+    
+    /**
+     * Set the feed URL
+     *
+     * @param string $url The new feed URL
+     * @return void
+     */
+    public function set_url(string $url): void {
+        $this->url = esc_url_raw($url);
+    }
+    
+    /**
+     * Save the feed to the database
+     *
+     * @return bool Whether the save was successful
+     */
     public function save(): bool {
         global $wpdb;
 

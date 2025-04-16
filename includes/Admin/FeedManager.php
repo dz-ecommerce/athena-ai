@@ -209,11 +209,66 @@ class FeedManager extends BaseAdmin {
 
         // Save the feed URL
         if (isset($_POST['athena_feed_url'])) {
+            $feed_url = sanitize_url($_POST['athena_feed_url']);
+            
             update_post_meta(
                 $post_id,
                 '_athena_feed_url',
-                sanitize_url($_POST['athena_feed_url'])
+                $feed_url
             );
+            
+            // Sync with feed metadata table
+            $this->sync_feed_to_metadata($post_id, $feed_url);
+        }
+    }
+    
+    /**
+     * Sync a feed from post meta to the feed metadata table
+     * 
+     * @param int $post_id The post ID
+     * @param string $feed_url The feed URL
+     */
+    private function sync_feed_to_metadata($post_id, $feed_url) {
+        global $wpdb;
+        
+        // Get existing feed_id from post meta
+        $feed_id = get_post_meta($post_id, '_athena_feed_metadata_id', true);
+        
+        // If we have a feed_id, update the existing record
+        if ($feed_id) {
+            $feed = \AthenaAI\Models\Feed::get_by_id((int)$feed_id);
+            
+            if ($feed) {
+                // If the URL has changed, update it
+                if ($feed->get_url() !== $feed_url) {
+                    $feed->set_url($feed_url);
+                    $feed->save();
+                }
+                return;
+            }
+        }
+        
+        // Check if this feed URL already exists in the feed_metadata table
+        $existing_feed = $wpdb->get_var($wpdb->prepare(
+            "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE url = %s",
+            $feed_url
+        ));
+        
+        if ($existing_feed) {
+            // Store the existing feed_id in post meta
+            update_post_meta($post_id, '_athena_feed_metadata_id', $existing_feed);
+        } else {
+            // Create a new feed in the feed_metadata table
+            $feed = new \AthenaAI\Models\Feed(
+                $feed_url,
+                3600, // Default update interval
+                true  // Active by default
+            );
+            
+            if ($feed->save() && $feed->get_id()) {
+                // Store the new feed_id in post meta
+                update_post_meta($post_id, '_athena_feed_metadata_id', $feed->get_id());
+            }
         }
     }
 
