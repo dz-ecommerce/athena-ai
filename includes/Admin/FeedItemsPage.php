@@ -47,7 +47,7 @@ class FeedItemsPage {
         <?php
     }
 
-    private static function render_stats(): void {
+
         global $wpdb;
 
         $stats = $wpdb->get_row(
