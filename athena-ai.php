@@ -60,6 +60,9 @@ function athena_ai_init() {
     
     // Register Feed Items menu directly
     add_action('admin_menu', 'athena_ai_register_feed_items_menu');
+    
+    // Initialize Feed Fetcher
+    \AthenaAI\Admin\FeedFetcher::init();
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(
