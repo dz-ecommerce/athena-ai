@@ -57,6 +57,9 @@ function athena_ai_init() {
     // Initialize main plugin class
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
+    
+    // Register Feed Items menu directly
+    add_action('admin_menu', 'athena_ai_register_feed_items_menu');
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(
@@ -91,3 +94,17 @@ function athena_ai_deactivate() {
     flush_rewrite_rules();
 }
 register_deactivation_hook(__FILE__, 'athena_ai_deactivate');
+
+/**
+ * Register Feed Items menu
+ */
+function athena_ai_register_feed_items_menu() {
+    add_submenu_page(
+        'edit.php?post_type=athena-feed',
+        __('Feed Items', 'athena-ai'),
+        __('Feed Items', 'athena-ai'),
+        'manage_options',
+        'athena-feed-items',
+        '\AthenaAI\Admin\FeedItemsPage::render_page'
+    );
+}
