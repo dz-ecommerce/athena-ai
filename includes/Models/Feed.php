@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace AthenaAI\Models;
 
+use AthenaAI\Models\GueterslohFeedProcessor;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -49,69 +51,75 @@ class Feed {
      * @return bool Whether the fetch was successful
      */
     public function fetch(?string $url = null, bool $verbose_console = false): bool {
-        // Debug-Logging aktivieren
+        // Activate debug mode if needed
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
-        // Verwende den übergebenen URL oder den gespeicherten URL
-        $fetch_url = $url ?: $this->url;
+        // Clear any existing errors
+        $this->last_error = '';
         
+        // Get the URL to fetch
+        $fetch_url = $url ?? $this->url;
         if (empty($fetch_url)) {
+            $this->last_error = 'No feed URL provided';
             if ($debug_mode) {
-                error_log("Athena AI: Feed URL is empty for feed ID: {$this->post_id}");
+                error_log("Athena AI: No feed URL provided");
             }
             if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Feed URL is empty for feed ID: ' . $this->post_id . '");</script>';
+                echo '<script>console.error("Athena AI Feed: No feed URL provided");</script>';
             }
-            $this->last_error = 'Feed URL is empty';
-            $this->log_error('empty_url', $this->last_error);
-            $this->update_feed_error('empty_url', $this->last_error);
+            $this->log_error('no_url', $this->last_error);
+            $this->update_feed_error('no_url', $this->last_error);
             return false;
         }
         
-        if ($debug_mode) {
-            error_log("Athena AI: Fetching feed from URL: {$fetch_url}");            
-        }
-        
-        if ($verbose_console) {
-            echo '<script>console.log("Athena AI Feed: Fetching feed from URL: ' . esc_js($fetch_url) . '");</script>';
-        }
-        
-        // Spezielle Behandlung für verschiedene Feed-Typen
+        // Prüfen, ob es sich um einen speziellen Feed-Typ handelt
         $is_hubspot = strpos($fetch_url, 'hubspot.com') !== false;
         $is_guetersloh = strpos($fetch_url, 'guetersloh') !== false || strpos($fetch_url, 'gütersloh') !== false;
         
-        // Angepasste Request-Parameter basierend auf Feed-Typ
-        $request_args = [
-            'timeout' => 30, // Erhöhtes Timeout für langsame Feeds
-            'sslverify' => false, // SSL-Verifizierung deaktivieren für problematische Feeds
-            'headers' => [
-                'Accept' => 'application/rss+xml, application/atom+xml, application/json, text/xml, */*',
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress/' . get_bloginfo('version')
-            ]
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Fetching feed from URL: ' . esc_js($fetch_url) . '");</script>';
+            if ($is_hubspot) {
+                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed");</script>';
+            }
+            if ($is_guetersloh) {
+                echo '<script>console.log("Athena AI Feed: Detected Gütersloh feed");</script>';
+            }
+        }
+        
+        // Set up request arguments
+        $args = [
+            'timeout' => 30,
+            'redirection' => 5,
+            'sslverify' => false
         ];
         
-        // Spezielle Behandlung für Hubspot-Feeds
+        // Special handling for feed-specific headers
         if ($is_hubspot) {
+            $args['headers'] = [
+                'Accept' => 'application/xml, application/rss+xml, text/xml, application/json, */*'
+            ];
+            
             if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed, using special handling...");</script>';
+                echo '<script>console.log("Athena AI Feed: Using special headers for Hubspot feed");</script>';
             }
-            // Zusätzliche Header für Hubspot
-            $request_args['headers']['Accept'] = 'application/json, application/rss+xml, application/atom+xml, text/xml, */*';
+        } elseif ($is_guetersloh) {
+            // Spezifische Header für den Gütersloh-Feed
+            $args['headers'] = [
+                'Accept' => 'application/xml, application/rss+xml, text/xml, */*',
+                'Accept-Charset' => 'utf-8, iso-8859-1;q=0.8, *;q=0.7',
+                'User-Agent' => 'Mozilla/5.0 (compatible; Athena AI Feed Fetcher/1.0; +https://athena-ai.com)'
+            ];
+            
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Using special headers for Gütersloh feed");</script>';
+            }
+            
+            // Sicherstellen, dass die Feed-Metadaten existieren
+            $this->ensure_feed_metadata_exists();
         }
         
-        // Spezielle Behandlung für Gütersloh-Feeds
-        if ($is_guetersloh) {
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Detected Gütersloh feed, using special handling...");</script>';
-            }
-            // Spezifische Einstellungen für Gütersloh
-            $request_args['timeout'] = 45; // Längeres Timeout
-            $request_args['redirection'] = 5; // Mehr Weiterleitungen erlauben
-        }
-        
-        // Spezielle URL-Behandlung für Gütersloh-Feed
-        if ($is_guetersloh) {
-            // Prüfen, ob die URL korrekt formatiert ist
+        // Use WordPress HTTP API to fetch the content
+        $response = wp_remote_get($fetch_url, $args);
             if (strpos($fetch_url, 'https://www.guetersloh.de/rss') !== false) {
                 // URL ist korrekt
                 if ($verbose_console) {
@@ -367,6 +375,29 @@ class Feed {
                 
                 // Nochmals versuchen mit dem bereinigten XML
                 $xml = @simplexml_load_string($xml_template, \SimpleXMLElement::class, $xml_options);
+            }
+            
+            // Wenn auch das nicht funktioniert, versuche manuelle Item-Extraktion
+            if ($xml === false) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Attempting manual item extraction for Gütersloh feed");</script>';
+                }
+                
+                $items = $this->extract_items_manually($content, $verbose_console);
+                
+                if (!empty($items)) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Successfully extracted ' . count($items) . ' items manually");</script>';
+                    }
+                    
+                    // Verarbeite die extrahierten Items
+                    $new_items_count = $this->process_feed_items($items, $verbose_console);
+                    
+                    // Aktualisiere den letzten Abrufzeitpunkt
+                    $this->update_feed_metadata();
+                    
+                    return true;
+                }
             }
         }
         
@@ -994,6 +1025,169 @@ class Feed {
 
         $this->update_last_checked();
         return $processed > 0;
+    }
+    
+    /**
+     * Extrahiert Feed-Items manuell aus dem Content
+     * 
+     * Diese Methode wird als Fallback verwendet, wenn die XML-Verarbeitung fehlschlägt,
+     * insbesondere für den Gütersloh-Feed, der eine ungewöhnliche Struktur haben kann.
+     *
+     * @param string $content Der Feed-Inhalt
+     * @param bool $verbose_console Ob detaillierte Konsolenausgaben angezeigt werden sollen
+     * @return array Ein Array von standardisierten Feed-Items
+     */
+    private function extract_items_manually(string $content, bool $verbose_console = false): array {
+        $items = [];
+        
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Starting manual item extraction...");</script>';
+        }
+        
+        // Versuche zuerst die <item>-Tags zu extrahieren
+        if (preg_match_all('/<item[^>]*>(.*?)<\/item>/is', $content, $matches)) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Found ' . count($matches[0]) . ' item tags");</script>';
+            }
+            
+            foreach ($matches[0] as $key => $item_xml) {
+                $item = [];
+                
+                // Titel extrahieren
+                if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $item_xml, $title_match)) {
+                    $item['title'] = html_entity_decode(strip_tags($title_match[1]));
+                } else {
+                    $item['title'] = 'Gütersloh Feed Item ' . ($key + 1);
+                }
+                
+                // Link extrahieren
+                if (preg_match('/<link[^>]*>(.*?)<\/link>/is', $item_xml, $link_match)) {
+                    $item['link'] = trim(strip_tags($link_match[1]));
+                } elseif (preg_match('/<link[^>]*?href=[\'"]([^\'"]+)[\'"][^>]*?>/is', $item_xml, $link_match)) {
+                    $item['link'] = trim($link_match[1]);
+                } else {
+                    $item['link'] = '';
+                }
+                
+                // Beschreibung extrahieren
+                if (preg_match('/<description[^>]*>(.*?)<\/description>/is', $item_xml, $desc_match)) {
+                    $item['description'] = html_entity_decode(strip_tags($desc_match[1]));
+                } elseif (preg_match('/<content[^>]*>(.*?)<\/content>/is', $item_xml, $content_match)) {
+                    $item['description'] = html_entity_decode(strip_tags($content_match[1]));
+                } else {
+                    $item['description'] = '';
+                }
+                
+                // Datum extrahieren
+                if (preg_match('/<pubDate[^>]*>(.*?)<\/pubDate>/is', $item_xml, $date_match)) {
+                    $item['pubDate'] = trim(strip_tags($date_match[1]));
+                } elseif (preg_match('/<published[^>]*>(.*?)<\/published>/is', $item_xml, $date_match)) {
+                    $item['pubDate'] = trim(strip_tags($date_match[1]));
+                } elseif (preg_match('/<updated[^>]*>(.*?)<\/updated>/is', $item_xml, $date_match)) {
+                    $item['pubDate'] = trim(strip_tags($date_match[1]));
+                } else {
+                    // Aktuelles Datum als Fallback
+                    $item['pubDate'] = date('r');
+                }
+                
+                // GUID extrahieren oder generieren
+                if (preg_match('/<guid[^>]*>(.*?)<\/guid>/is', $item_xml, $guid_match)) {
+                    $item['guid'] = trim(strip_tags($guid_match[1]));
+                } else {
+                    // GUID aus Link oder Titel + Datum generieren
+                    $item['guid'] = !empty($item['link']) ? $item['link'] : md5($item['title'] . $item['pubDate']);
+                }
+                
+                $items[] = $item;
+            }
+        }
+        
+        // Wenn keine Items gefunden wurden, versuche alternative Ansätze
+        if (empty($items)) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: No items found, trying alternative extraction...");</script>';
+            }
+            
+            // Erkenne Blöcke, die Items sein könnten, an typischen Mustern
+            $content_parts = preg_split('/(<div[^>]*class="[^"]*item[^"]*"[^>]*>|<li[^>]*>|<article[^>]*>|<entry[^>]*>|<item[^>]*>)/i', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
+            
+            if (count($content_parts) > 2) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Found ' . (floor(count($content_parts) / 2)) . ' potential content blocks");</script>';
+                }
+                
+                for ($i = 1; $i < count($content_parts); $i += 2) {
+                    $potential_item = $content_parts[$i] . $content_parts[$i + 1] ?? '';
+                    
+                    $item = [];
+                    
+                    // Für jeden Block, versuche Titel zu extrahieren
+                    if (preg_match('/<h[1-6][^>]*>(.*?)<\/h[1-6]>/is', $potential_item, $title_match) || 
+                        preg_match('/<title[^>]*>(.*?)<\/title>/is', $potential_item, $title_match) || 
+                        preg_match('/<a[^>]*>(.*?)<\/a>/is', $potential_item, $title_match)) {
+                        $item['title'] = html_entity_decode(strip_tags($title_match[1]));
+                    } else {
+                        $item['title'] = 'Gütersloh Feed Item ' . (floor($i / 2) + 1);
+                    }
+                    
+                    // Versuche Link zu extrahieren
+                    if (preg_match('/<a[^>]*?href=[\'"]([^\'"]+)[\'"][^>]*?>/is', $potential_item, $link_match)) {
+                        $item['link'] = $link_match[1];
+                    } else {
+                        $item['link'] = '';
+                    }
+                    
+                    // Verwende den gesamten Block als Beschreibung, wenn nichts anderes gefunden wird
+                    $item['description'] = html_entity_decode(strip_tags($potential_item));
+                    
+                    // Aktuelles Datum als Fallback
+                    $item['pubDate'] = date('r');
+                    
+                    // GUID aus Link oder Titel + Beschreibung generieren
+                    $item['guid'] = !empty($item['link']) ? $item['link'] : md5($item['title'] . $item['description']);
+                    
+                    $items[] = $item;
+                }
+            }
+        }
+        
+        // Stelle sicher, dass alle Items gut formatiert sind
+        foreach ($items as &$item) {
+            // Titel und Beschreibung trimmen
+            $item['title'] = trim($item['title']);
+            $item['description'] = trim($item['description']);
+            
+            // Leere Titel beheben
+            if (empty($item['title'])) {
+                $item['title'] = 'Gütersloh Feed Item';
+            }
+            
+            // Leere Beschreibungen beheben
+            if (empty($item['description'])) {
+                $item['description'] = 'Keine Beschreibung verfügbar';
+            }
+            
+            // Leere Links beheben (optional)
+            if (empty($item['link'])) {
+                // Verwende eine Standard-URL oder lasse leer
+                $item['link'] = 'https://www.guetersloh.de';
+            }
+            
+            // Überprüfe und formatiere das Datum
+            if (!empty($item['pubDate'])) {
+                // Versuche, das Datum zu parsen und zu formatieren
+                $timestamp = strtotime($item['pubDate']);
+                if ($timestamp !== false) {
+                    $item['pubDate'] = date('r', $timestamp);
+                }
+            }
+        }
+        
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Extracted ' . count($items) . ' items manually");</script>';
+        }
+        
+        return $items;
     }
     
     /**

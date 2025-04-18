@@ -155,26 +155,7 @@ class FeedFetcher {
      * @return array Array with success, error, and new items counts
      */
     public static function fetch_all_feeds(bool $force_fetch = false, bool $verbose_console = false): array {
-        global $wpdb;
-        
-        $results = [
-            'success' => 0,
-            'error' => 0,
-            'new_items' => 0,
-            'details' => []
-        ];
-        
-        // Enable debug logging if debug mode is enabled
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
-        
-        // Wenn verbose_console aktiviert ist, JavaScript-Debugging-Ausgabe vorbereiten
-        if ($verbose_console) {
-            echo '<script>console.log("Athena AI Feed Fetcher: Starting feed fetch process...");</script>';
-            
-            // Ausgabe der WordPress-Version und PHP-Version für Debugging
-            echo '<script>console.log("WordPress Version: ' . get_bloginfo('version') . '");</script>';
-            echo '<script>console.log("PHP Version: ' . phpversion() . '");</script>';
-        }
         
         if ($debug_mode) {
             error_log('Athena AI: Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
