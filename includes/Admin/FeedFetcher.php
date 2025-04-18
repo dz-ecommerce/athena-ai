@@ -157,10 +157,27 @@ class FeedFetcher {
     public static function fetch_all_feeds(bool $force_fetch = false, bool $verbose_console = false): array {
         global $wpdb;
         
+        // Initialisiere das Results-Array mit Standardwerten
+        $results = [
+            'success' => 0,
+            'error' => 0,
+            'new_items' => 0,
+            'details' => []
+        ];
+        
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
         if ($debug_mode) {
             error_log('Athena AI: Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
+        }
+        
+        // Wenn verbose_console aktiviert ist, JavaScript-Debugging-Ausgabe vorbereiten
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed Fetcher: Starting feed fetch process...");</script>';
+            
+            // Ausgabe der WordPress-Version und PHP-Version für Debugging
+            echo '<script>console.log("WordPress Version: ' . get_bloginfo('version') . '");</script>';
+            echo '<script>console.log("PHP Version: ' . phpversion() . '");</script>';
         }
         
         // Ensure required tables exist
@@ -219,6 +236,15 @@ class FeedFetcher {
                     if ($verbose_console) {
                         echo '<script>console.error("Athena AI Feed Fetcher: Failed to ensure feed metadata for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
                     }
+                    
+                    // Stelle sicher, dass die Array-Indizes existieren
+                    if (!isset($results['error'])) {
+                        $results['error'] = 0;
+                    }
+                    if (!isset($results['details'])) {
+                        $results['details'] = [];
+                    }
+                    
                     $results['error']++;
                     $results['details'][] = 'Failed to ensure feed metadata for feed: ' . $feed_post->post_title;
                     continue;
@@ -347,6 +373,10 @@ class FeedFetcher {
                 $fetch_result = $feed->fetch($feed_url, $verbose_console);
                 
                 if ($fetch_result) {
+                    // Stelle sicher, dass der success-Index initialisiert ist
+                    if (!isset($results['success'])) {
+                        $results['success'] = 0;
+                    }
                     $results['success']++;
                     
                     if ($verbose_console) {
@@ -374,6 +404,14 @@ class FeedFetcher {
                         error_log("Athena AI: Successfully fetched feed: {$feed_post->post_title}. New items: {$new_items}");
                     }
                 } else {
+                    // Stelle sicher, dass die Array-Indizes existieren
+                    if (!isset($results['error'])) {
+                        $results['error'] = 0;
+                    }
+                    if (!isset($results['details'])) {
+                        $results['details'] = [];
+                    }
+                    
                     $results['error']++;
                     $results['details'][] = 'Failed to fetch feed: ' . $feed_post->post_title;
                     
@@ -389,6 +427,14 @@ class FeedFetcher {
                     }
                 }
             } catch (\Exception $e) {
+                // Stelle sicher, dass die Array-Indizes existieren
+                if (!isset($results['error'])) {
+                    $results['error'] = 0;
+                }
+                if (!isset($results['details'])) {
+                    $results['details'] = [];
+                }
+                
                 $results['error']++;
                 $results['details'][] = 'Error processing feed ' . $feed_post->post_title . ': ' . $e->getMessage();
                 
@@ -403,6 +449,11 @@ class FeedFetcher {
             
             // Add a small delay to prevent overwhelming external servers
             usleep(500000); // 0.5 second delay
+        }
+        
+        // Stelle sicher, dass der 'new_items'-Index existiert
+        if (!isset($results['new_items'])) {
+            $results['new_items'] = 0;
         }
         
         // Speichere die Gesamtzahl der neuen Items
