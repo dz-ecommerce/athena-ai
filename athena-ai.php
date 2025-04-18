@@ -96,6 +96,9 @@ function athena_ai_init() {
     $plugin = new \AthenaAI\Core\Plugin();
     $plugin->init();
     
+    // Register Feed Items menu directly
+    add_action('admin_menu', 'athena_ai_register_feed_items_menu');
+    
     // Initialize admin classes
     if (is_admin()) {
         new \AthenaAI\Admin\Settings();

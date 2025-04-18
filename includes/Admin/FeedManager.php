@@ -240,18 +240,36 @@ class FeedManager extends BaseAdmin {
 
     /**
      * Register admin menu
+     * 
+     * Hinweis: Dieser Code wurde angepasst, um zu verhindern, dass der Athena AI-Menüpunkt doppelt angezeigt wird
      */
     public function register_admin_menu() {
-        // Add main menu
-        add_menu_page(
-            __('Athena AI', 'athena-ai'),
-            __('Athena AI', 'athena-ai'),
-            'manage_options',
-            'edit.php?post_type=athena-feed',
-            null,
-            'dashicons-rss',
-            30
-        );
+        // Prüfe, ob das Hauptmenü bereits registriert wurde
+        global $menu;
+        $menu_exists = false;
+        
+        if (is_array($menu)) {
+            foreach ($menu as $item) {
+                if (isset($item[2]) && $item[2] === 'edit.php?post_type=athena-feed') {
+                    $menu_exists = true;
+                    break;
+                }
+            }
+        }
+        
+        // Registriere das Hauptmenü nur, wenn es noch nicht existiert
+        if (!$menu_exists) {
+            // Add main menu
+            add_menu_page(
+                __('Athena AI', 'athena-ai'),
+                __('Athena AI', 'athena-ai'),
+                'manage_options',
+                'edit.php?post_type=athena-feed',
+                null,
+                'dashicons-rss',
+                30
+            );
+        }
 
         // Add "All Feeds" as first submenu
         add_submenu_page(
@@ -280,14 +298,14 @@ class FeedManager extends BaseAdmin {
             'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
         );
         
-        // Add Feed Items submenu
+        // Add ViewFeed News submenu
         add_submenu_page(
             'edit.php?post_type=athena-feed',
-            __('Feed Items', 'athena-ai'),
-            __('Feed Items', 'athena-ai'),
-            'manage_options',
-            'athena-feed-items',
-            [FeedItemsPage::class, 'render_page']
+            __('ViewFeed News', 'athena-ai'),
+            __('ViewFeed News', 'athena-ai'),
+            'read',
+            'athena-viewfeed-news',
+            [\AthenaAI\Core\Plugin::class, 'render_viewfeed_news_page']
         );
     }
 }
