@@ -134,16 +134,17 @@ class Feed {
             error_log("Athena AI: Received feed content (length: {$body_length} bytes)");
         }
         
-        return $this->process_feed_content($body);
+        return $this->process_feed_content($body, $verbose_console);
     }
 
     /**
      * Process the feed content
      * 
      * @param string $content The feed content
+     * @param bool $verbose_console Whether to output verbose debugging information to the JavaScript console
      * @return bool Whether the processing was successful
      */
-    private function process_feed_content(string $content): bool {
+    private function process_feed_content(string $content, bool $verbose_console = false): bool {
         global $wpdb;
         
         // Debug-Logging aktivieren
