@@ -558,13 +558,57 @@ class FeedFetcher {
         }
         
         try {
-            // Check if entry already exists
-            $exists = $wpdb->get_var(
+            // Hole die Feed-URL aus den Post-Meta-Daten
+            $feed_url = get_post_meta($feed_id, '_athena_feed_url', true);
+            
+            // Check if entry already exists by feed_id or URL
+            $exists = false;
+            
+            // Prüfen, ob ein Eintrag mit dieser feed_id existiert
+            $exists_by_id = $wpdb->get_var(
                 $wpdb->prepare(
                     "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
                     $feed_id
                 )
             );
+            
+            if ($exists_by_id) {
+                $exists = true;
+            }
+            
+            // Prüfen, ob ein Eintrag mit dieser URL existiert (falls URL vorhanden)
+            if (!$exists && !empty($feed_url)) {
+                $exists_by_url = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT feed_id FROM {$wpdb->prefix}feed_metadata WHERE url = %s",
+                        esc_url_raw($feed_url)
+                    )
+                );
+                
+                if ($exists_by_url) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Feed metadata already exists with URL {$feed_url} for feed ID {$exists_by_url}, but trying to create for feed ID {$feed_id}");
+                    }
+                    
+                    // Wenn ein Eintrag mit dieser URL existiert, aber eine andere feed_id hat,
+                    // aktualisieren wir den vorhandenen Eintrag mit der neuen feed_id
+                    if ($exists_by_url != $feed_id) {
+                        $update_result = $wpdb->update(
+                            $wpdb->prefix . 'feed_metadata',
+                            ['feed_id' => $feed_id],
+                            ['feed_id' => $exists_by_url],
+                            ['%d'],
+                            ['%d']
+                        );
+                        
+                        if ($debug_mode) {
+                            error_log("Athena AI: Updated feed metadata from feed ID {$exists_by_url} to {$feed_id}. Result: " . ($update_result !== false ? 'success' : 'failed'));
+                        }
+                    }
+                    
+                    $exists = true;
+                }
+            }
             
             // If no entry exists, create one
             if (!$exists) {
@@ -593,8 +637,7 @@ class FeedFetcher {
                     error_log("Athena AI: Feed ID: {$feed_id}, Update interval: {$update_interval}");
                 }
                 
-                // Hole die Feed-URL aus den Post-Meta-Daten
-                $feed_url = get_post_meta($feed_id, '_athena_feed_url', true);
+                // Feed-URL wurde bereits oben geholt
                 
                 // Daten für das Einfügen vorbereiten
                 $data = [

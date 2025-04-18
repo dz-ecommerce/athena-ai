@@ -71,6 +71,15 @@ class Feed {
             error_log("Athena AI: Fetching feed from URL: {$fetch_url}");            
         }
         
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Fetching feed from URL: ' . esc_js($fetch_url) . '");</script>';
+            
+            // Prüfen, ob es ein Hubspot-Feed ist
+            if (strpos($fetch_url, 'hubspot.com') !== false) {
+                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed, using special handling...");</script>';
+            }
+        }
+        
         $response = wp_safe_remote_get($fetch_url, [
             'timeout' => 15,
             'headers' => ['Accept' => 'application/rss+xml, application/atom+xml']
@@ -134,7 +143,26 @@ class Feed {
             error_log("Athena AI: Received feed content (length: {$body_length} bytes)");
         }
         
-        return $this->process_feed_content($body, $verbose_console);
+        // Spezielle Behandlung für Hubspot-Feeds
+    if (strpos($fetch_url, 'hubspot.com') !== false && $verbose_console) {
+        echo '<script>console.log("Athena AI Feed: Processing Hubspot feed content...");</script>';
+        
+        // Prüfe die ersten Zeichen des Inhalts, um zu sehen, ob es JSON sein könnte
+        $content_start = substr($body, 0, 10);
+        if (strpos($content_start, '{') === 0 || strpos($content_start, '[') === 0) {
+            echo '<script>console.log("Athena AI Feed: Content appears to be JSON format");</script>';
+        } else {
+            echo '<script>console.log("Athena AI Feed: Content appears to be XML/RSS format");</script>';
+        }
+        
+        // Zeige die ersten 100 Zeichen des Inhalts
+        $preview = substr($body, 0, 100);
+        $preview = str_replace(["\n", "\r"], "", $preview);
+        $preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
+        echo '<script>console.log("Athena AI Feed: Content preview: ' . esc_js($preview) . '...");</script>';
+    }
+    
+    return $this->process_feed_content($body, $verbose_console);
     }
 
     /**
