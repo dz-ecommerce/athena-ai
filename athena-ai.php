@@ -109,7 +109,7 @@ function athena_ai_init() {
     
     // Initialize feed classes
     \AthenaAI\Admin\FeedFetcher::init();
-    new \AthenaAI\Admin\Maintenance();
+    \AthenaAI\Admin\Maintenance::init(); // Statische init-Methode aufrufen statt Objekt zu erstellen
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(

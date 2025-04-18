@@ -241,71 +241,40 @@ class FeedManager extends BaseAdmin {
     /**
      * Register admin menu
      * 
-     * Hinweis: Dieser Code wurde angepasst, um zu verhindern, dass der Athena AI-Menüpunkt doppelt angezeigt wird
+     * Hinweis: Dieser Code wurde angepasst, um zu verhindern, dass Menüpunkte doppelt angezeigt werden
      */
     public function register_admin_menu() {
-        // Prüfe, ob das Hauptmenü bereits registriert wurde
-        global $menu;
-        $menu_exists = false;
-        
-        if (is_array($menu)) {
-            foreach ($menu as $item) {
-                if (isset($item[2]) && $item[2] === 'edit.php?post_type=athena-feed') {
-                    $menu_exists = true;
-                    break;
-                }
-            }
-        }
-        
-        // Registriere das Hauptmenü nur, wenn es noch nicht existiert
-        if (!$menu_exists) {
-            // Add main menu
-            add_menu_page(
-                __('Athena AI', 'athena-ai'),
-                __('Athena AI', 'athena-ai'),
-                'manage_options',
+        // WordPress registriert den CPT-Menüpunkt automatisch, wenn wir 'menu_position' angeben
+        // Wir müssen nur benutzerdefinierte Untermenüpunkte hinzufügen
+
+        // Prüfe, ob die Untermenüpunkte bereits existieren
+        global $submenu;
+        $submenu_exists = is_array($submenu) && isset($submenu['edit.php?post_type=athena-feed']);
+
+        // Benutzerdefinierte Untermenüpunkte nur hinzufügen, wenn das Hauptmenü existiert, aber die Untermenüpunkte noch nicht
+        if (!$submenu_exists) {
+            // WordPress erstellt automatisch einen "All Feeds"-Menüpunkt, daher müssen wir ihn nicht manuell hinzufügen
+
+            // Add "Add New" submenu - wir vertrauen darauf, dass WordPress diesen Menüpunkt bereits erstellt hat
+
+            // Add categories submenu
+            add_submenu_page(
                 'edit.php?post_type=athena-feed',
-                null,
-                'dashicons-rss',
-                30
+                __('Feed Categories', 'athena-ai'),
+                __('Categories', 'athena-ai'),
+                'manage_options',
+                'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
+            );
+            
+            // Add ViewFeed News submenu
+            add_submenu_page(
+                'edit.php?post_type=athena-feed',
+                __('ViewFeed News', 'athena-ai'),
+                __('ViewFeed News', 'athena-ai'),
+                'read',
+                'athena-viewfeed-news',
+                [\AthenaAI\Core\Plugin::class, 'render_viewfeed_news_page']
             );
         }
-
-        // Add "All Feeds" as first submenu
-        add_submenu_page(
-            'edit.php?post_type=athena-feed',
-            __('All Feeds', 'athena-ai'),
-            __('All Feeds', 'athena-ai'),
-            'edit_athena_feeds',
-            'edit.php?post_type=athena-feed'
-        );
-
-        // Add "Add New" submenu
-        add_submenu_page(
-            'edit.php?post_type=athena-feed',
-            __('Add New Feed', 'athena-ai'),
-            __('Add New', 'athena-ai'),
-            'edit_athena_feeds',
-            'post-new.php?post_type=athena-feed'
-        );
-
-        // Add categories submenu
-        add_submenu_page(
-            'edit.php?post_type=athena-feed',
-            __('Feed Categories', 'athena-ai'),
-            __('Categories', 'athena-ai'),
-            'manage_options',
-            'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
-        );
-        
-        // Add ViewFeed News submenu
-        add_submenu_page(
-            'edit.php?post_type=athena-feed',
-            __('ViewFeed News', 'athena-ai'),
-            __('ViewFeed News', 'athena-ai'),
-            'read',
-            'athena-viewfeed-news',
-            [\AthenaAI\Core\Plugin::class, 'render_viewfeed_news_page']
-        );
     }
 }
