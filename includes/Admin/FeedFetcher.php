@@ -448,7 +448,8 @@ class FeedFetcher {
         
         // Debug-Logging aktivieren
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
-        $verbose_console = true; // Immer Konsolenausgaben aktivieren für diese kritische Funktion
+        // Keine Konsolenausgaben in dieser Methode, da sie während der WordPress-Initialisierung aufgerufen wird
+        // und "Headers already sent"-Fehler verursachen kann
         
         // Fehlerausgabe unterdrücken, um "Headers already sent"-Probleme zu vermeiden
         $wpdb->suppress_errors(true);
@@ -464,9 +465,7 @@ class FeedFetcher {
                 if ($debug_mode) {
                     error_log('Athena AI: feed_metadata table does not exist, cannot update schema');
                 }
-                if ($verbose_console) {
-                    echo '<script>console.warn("Athena AI Feed Fetcher: feed_metadata table does not exist, cannot update schema");</script>';
-                }
+                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
                 return;
             }
             
@@ -477,9 +476,7 @@ class FeedFetcher {
                 if ($debug_mode) {
                     error_log('Athena AI: Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
                 }
-                if ($verbose_console) {
-                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to get columns from feed_metadata table. Error: ' . esc_js($wpdb->last_error) . '");</script>';
-                }
+                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
                 return;
             }
             
@@ -488,9 +485,7 @@ class FeedFetcher {
             if ($debug_mode) {
                 error_log('Athena AI: Current feed_metadata table columns: ' . implode(', ', $column_names));
             }
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed Fetcher: Current feed_metadata table columns: ' . implode(', ', $column_names) . '");</script>';
-            }
+            // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
             
             // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
             if (!in_array('last_fetched', $column_names)) {
@@ -498,9 +493,7 @@ class FeedFetcher {
                 if ($debug_mode) {
                     error_log('Athena AI: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
                 }
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed Fetcher: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed') . '");</script>';
-                }
+                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
             }
             
             // Add missing columns one by one without referencing other columns
@@ -531,9 +524,7 @@ class FeedFetcher {
             if ($debug_mode) {
                 error_log('Athena AI: Exception in check_and_update_schema: ' . $e->getMessage());
             }
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed Fetcher: Exception in check_and_update_schema: ' . esc_js($e->getMessage()) . '");</script>';
-            }
+            // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
         }
         
         // Restore error display settings
