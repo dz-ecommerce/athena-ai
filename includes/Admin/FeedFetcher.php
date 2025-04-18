@@ -15,16 +15,41 @@ use AthenaAI\Models\Feed;
 class FeedFetcher {
     
     /**
-     * Initialize the feed fetcher
+     * Initialize the FeedFetcher
      */
     public static function init(): void {
-        // Register the feed fetch action
+        // Register the cron hook
         add_action('athena_fetch_feeds', [self::class, 'fetch_all_feeds']);
         
-        // Register the cron event if not already registered
-        if (!wp_next_scheduled('athena_fetch_feeds')) {
-            wp_schedule_event(time(), 'hourly', 'athena_fetch_feeds');
+        // Holen des konfigurierten Intervalls
+        $interval = get_option('athena_ai_feed_cron_interval', 'hourly');
+        
+        // Schedule the event if it's not already scheduled or if the interval has changed
+        $timestamp = wp_next_scheduled('athena_fetch_feeds');
+        $current_interval = wp_get_schedule('athena_fetch_feeds');
+        
+        if (!$timestamp || $current_interval !== $interval) {
+            // Bestehenden Cron-Job entfernen, falls vorhanden
+            if ($timestamp) {
+                wp_unschedule_event($timestamp, 'athena_fetch_feeds');
+            }
+            
+            // Neuen Cron-Job mit dem konfigurierten Intervall planen
+            wp_schedule_event(time(), $interval, 'athena_fetch_feeds');
+            
+            if (WP_DEBUG) {
+                error_log("Athena AI: Feed fetch cron job scheduled with interval: {$interval}");
+            }
         }
+        
+        // Register admin post action for manual feed fetching
+        add_action('admin_post_athena_debug_fetch_feeds', [self::class, 'handle_manual_fetch']);
+        
+        // Add custom cron schedules
+        add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
+        
+        // Check and update database schema if needed - use init hook to run before headers are sent
+        add_action('init', [self::class, 'check_and_update_schema'], 5);
         
         // Add a manual check on admin_init to ensure the cron is registered
         // This helps in cases where the cron might have been unregistered

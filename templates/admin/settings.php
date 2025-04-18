@@ -664,6 +664,20 @@
                         </p>
                     </td>
                 </tr>
+                <tr valign="top">
+                    <th scope="row"><?php _e('Feed Fetch Interval', 'athena-ai'); ?></th>
+                    <td>
+                        <select name="athena_ai_feed_cron_interval">
+                            <option value="athena_1min" <?php selected($settings['feed_cron_interval'], 'athena_1min'); ?>><?php _e('Every Minute', 'athena-ai'); ?></option>
+                            <option value="athena_5min" <?php selected($settings['feed_cron_interval'], 'athena_5min'); ?>><?php _e('Every 5 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_15min" <?php selected($settings['feed_cron_interval'], 'athena_15min'); ?>><?php _e('Every 15 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_30min" <?php selected($settings['feed_cron_interval'], 'athena_30min'); ?>><?php _e('Every 30 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_45min" <?php selected($settings['feed_cron_interval'], 'athena_45min'); ?>><?php _e('Every 45 Minutes', 'athena-ai'); ?></option>
+                            <option value="hourly" <?php selected($settings['feed_cron_interval'], 'hourly'); ?>><?php _e('Hourly', 'athena-ai'); ?></option>
+                        </select>
+                        <p class="description"><?php _e('How often should the plugin check for new feed items.', 'athena-ai'); ?></p>
+                    </td>
+                </tr>
                 <tr>
                     <th scope="row">
                         <?php esc_html_e('Manual Feed Fetch', 'athena-ai'); ?>

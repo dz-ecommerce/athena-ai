@@ -51,6 +51,44 @@ function athena_ai_load_textdomain() {
 add_action('init', 'athena_ai_load_textdomain');
 
 /**
+ * Registrieren der benutzerdefinierten Cron-Intervalle
+ */
+function athena_ai_add_cron_intervals($schedules) {
+    // 1 Minute Intervall
+    $schedules['athena_1min'] = [
+        'interval' => 60,
+        'display' => __('Every Minute', 'athena-ai')
+    ];
+    
+    // 5 Minuten Intervall
+    $schedules['athena_5min'] = [
+        'interval' => 300,
+        'display' => __('Every 5 Minutes', 'athena-ai')
+    ];
+    
+    // 15 Minuten Intervall
+    $schedules['athena_15min'] = [
+        'interval' => 900,
+        'display' => __('Every 15 Minutes', 'athena-ai')
+    ];
+    
+    // 30 Minuten Intervall
+    $schedules['athena_30min'] = [
+        'interval' => 1800,
+        'display' => __('Every 30 Minutes', 'athena-ai')
+    ];
+    
+    // 45 Minuten Intervall
+    $schedules['athena_45min'] = [
+        'interval' => 2700,
+        'display' => __('Every 45 Minutes', 'athena-ai')
+    ];
+    
+    return $schedules;
+}
+add_filter('cron_schedules', 'athena_ai_add_cron_intervals');
+
+/**
  * Initialize the plugin
  */
 function athena_ai_init() {

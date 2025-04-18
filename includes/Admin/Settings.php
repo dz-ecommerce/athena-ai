@@ -41,7 +41,8 @@ class Settings extends BaseAdmin {
         'stablediffusion_steps' => '30',
         
         // Maintenance Settings
-        'enable_debug_mode' => false
+        'enable_debug_mode' => false,
+        'feed_cron_interval' => 'hourly' // Default: hourly
     ];
 
     /**
@@ -145,9 +146,36 @@ class Settings extends BaseAdmin {
         $settings['athena_ai_stablediffusion_api_key'] = sanitize_text_field($_POST['athena_ai_stablediffusion_api_key'] ?? '');
         $settings['athena_ai_stablediffusion_model'] = sanitize_text_field($_POST['athena_ai_stablediffusion_model'] ?? '');
         $settings['athena_ai_stablediffusion_steps'] = intval($_POST['athena_ai_stablediffusion_steps'] ?? 30);
+        
+        // Maintenance Settings
+        $settings['athena_ai_enable_debug_mode'] = isset($_POST['athena_ai_enable_debug_mode']) ? '1' : '0';
+        $settings['athena_ai_feed_cron_interval'] = sanitize_text_field($_POST['athena_ai_feed_cron_interval'] ?? 'hourly');
 
         foreach ($settings as $key => $value) {
             update_option($key, $value);
+        }
+        
+        // Wenn sich das Cron-Intervall geändert hat, den Cron-Job neu planen
+        $old_interval = get_option('athena_ai_feed_cron_interval', 'hourly');
+        $new_interval = $settings['athena_ai_feed_cron_interval'];
+        
+        if ($old_interval !== $new_interval) {
+            // Bestehenden Cron-Job entfernen
+            $timestamp = wp_next_scheduled('athena_fetch_feeds');
+            if ($timestamp) {
+                wp_unschedule_event($timestamp, 'athena_fetch_feeds');
+            }
+            
+            // Neuen Cron-Job mit dem neuen Intervall planen
+            wp_schedule_event(time(), $new_interval, 'athena_fetch_feeds');
+            
+            // Erfolgsmeldung hinzufügen
+            add_settings_error(
+                'athena_ai_messages',
+                'athena_ai_cron_rescheduled',
+                $this->__('Feed fetch cron job has been rescheduled with new interval.', 'athena-ai'),
+                'updated'
+            );
         }
 
         add_settings_error(
@@ -202,6 +230,7 @@ class Settings extends BaseAdmin {
 
         // Maintenance Settings
         $settings['enable_debug_mode'] = get_option('athena_ai_enable_debug_mode', $this->default_settings['enable_debug_mode']);
+        $settings['feed_cron_interval'] = get_option('athena_ai_feed_cron_interval', $this->default_settings['feed_cron_interval']);
 
         return $settings;
     }
