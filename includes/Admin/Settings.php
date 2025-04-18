@@ -38,7 +38,10 @@ class Settings extends BaseAdmin {
 
         'stablediffusion_api_key' => '',
         'stablediffusion_model' => 'stable-diffusion-xl-1024-v1-0',
-        'stablediffusion_steps' => '30'
+        'stablediffusion_steps' => '30',
+        
+        // Maintenance Settings
+        'enable_debug_mode' => false
     ];
 
     /**
@@ -49,12 +52,27 @@ class Settings extends BaseAdmin {
             $this->save_settings();
         }
 
+        // Führe Maintenance-Aktionen aus, wenn angefordert
+        if (isset($_POST['fix_cron']) && $this->verify_nonce('athena_ai_maintenance')) {
+            $this->fix_cron_schedule();
+        }
+        
+        // Erstelle Datenbanktabellen, wenn angefordert
+        if (isset($_POST['create_tables']) && $this->verify_nonce('athena_ai_maintenance')) {
+            $this->create_database_tables();
+        }
+
         $settings = $this->get_settings();
+        
+        // Sammle Maintenance-Daten
+        $maintenance_data = $this->get_maintenance_data();
         
         $this->render_template('settings', [
             'title' => $this->__('Athena AI Settings', 'athena-ai'),
             'settings' => $settings,
             'nonce_field' => $this->get_nonce_field('athena_ai_settings'),
+            'maintenance_nonce_field' => $this->get_nonce_field('athena_ai_maintenance'),
+            'maintenance' => $maintenance_data,
             'models' => [
                 'openai' => [
                     'gpt-4' => 'GPT-4',
@@ -182,6 +200,111 @@ class Settings extends BaseAdmin {
         $settings['stablediffusion_model'] = get_option('athena_ai_stablediffusion_model', $this->default_settings['stablediffusion_model']);
         $settings['stablediffusion_steps'] = get_option('athena_ai_stablediffusion_steps', $this->default_settings['stablediffusion_steps']);
 
+        // Maintenance Settings
+        $settings['enable_debug_mode'] = get_option('athena_ai_enable_debug_mode', $this->default_settings['enable_debug_mode']);
+
         return $settings;
+    }
+    
+    /**
+     * Sammelt Daten für den Maintenance-Tab
+     *
+     * @return array
+     */
+    private function get_maintenance_data() {
+        global $wpdb;
+        $data = [];
+        
+        // Feed-Datenbank prüfen
+        $feed_items_table = $wpdb->prefix . 'feed_raw_items';
+        $feed_metadata_table = $wpdb->prefix . 'feed_metadata';
+        
+        $data['feed_items_table_exists'] = $wpdb->get_var("SHOW TABLES LIKE '{$feed_items_table}'") === $feed_items_table;
+        $data['feed_metadata_table_exists'] = $wpdb->get_var("SHOW TABLES LIKE '{$feed_metadata_table}'") === $feed_metadata_table;
+        
+        // Feed-Items zählen
+        if ($data['feed_items_table_exists']) {
+            $data['feed_items_count'] = $wpdb->get_var("SELECT COUNT(*) FROM {$feed_items_table}");
+        } else {
+            $data['feed_items_count'] = 0;
+        }
+        
+        // Feed-Metadaten zählen
+        if ($data['feed_metadata_table_exists']) {
+            $data['feed_metadata_count'] = $wpdb->get_var("SELECT COUNT(*) FROM {$feed_metadata_table}");
+        } else {
+            $data['feed_metadata_count'] = 0;
+        }
+        
+        // Cron-Status prüfen
+        $data['cron_event_scheduled'] = wp_next_scheduled('athena_fetch_feeds') !== false;
+        if ($data['cron_event_scheduled']) {
+            $data['next_cron_run'] = wp_next_scheduled('athena_fetch_feeds');
+            $data['next_cron_run_human'] = human_time_diff(time(), $data['next_cron_run']) . ' ' . __('from now', 'athena-ai');
+        }
+        
+        // Letzte Fetch-Zeit
+        $data['last_fetch_time'] = get_option('athena_last_feed_fetch', 0);
+        if ($data['last_fetch_time'] > 0) {
+            $data['last_fetch_human'] = human_time_diff($data['last_fetch_time'], time()) . ' ' . __('ago', 'athena-ai');
+        } else {
+            $data['last_fetch_human'] = __('Never', 'athena-ai');
+        }
+        
+        // Anzahl der Feeds
+        $data['feed_count'] = wp_count_posts('athena-feed')->publish;
+        
+        // WordPress-Cron-Status
+        $data['wp_cron_disabled'] = defined('DISABLE_WP_CRON') && DISABLE_WP_CRON;
+        
+        return $data;
+    }
+    
+    /**
+     * Repariert den Cron-Zeitplan
+     */
+    private function fix_cron_schedule() {
+        // Bestehenden Cron-Job entfernen
+        $timestamp = wp_next_scheduled('athena_fetch_feeds');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'athena_fetch_feeds');
+        }
+        
+        // Neuen Cron-Job planen
+        wp_schedule_event(time(), 'hourly', 'athena_fetch_feeds');
+        
+        // Erfolgsmeldung anzeigen
+        add_settings_error(
+            'athena_ai_messages',
+            'athena_ai_cron_fixed',
+            $this->__('Feed fetch cron job has been rescheduled successfully.', 'athena-ai'),
+            'updated'
+        );
+    }
+    
+    /**
+     * Erstellt die erforderlichen Datenbanktabellen für das Feed-System
+     */
+    private function create_database_tables() {
+        // Verwende die FeedFetcher-Klasse, um die Tabellen zu erstellen
+        $result = \AthenaAI\Admin\FeedFetcher::ensure_required_tables();
+        
+        if ($result) {
+            // Erfolgsmeldung anzeigen
+            add_settings_error(
+                'athena_ai_messages',
+                'athena_ai_tables_created',
+                $this->__('Feed database tables have been created successfully.', 'athena-ai'),
+                'updated'
+            );
+        } else {
+            // Fehlermeldung anzeigen
+            add_settings_error(
+                'athena_ai_messages',
+                'athena_ai_tables_error',
+                $this->__('There was an error creating the feed database tables. Please check the error log for details.', 'athena-ai'),
+                'error'
+            );
+        }
     }
 }

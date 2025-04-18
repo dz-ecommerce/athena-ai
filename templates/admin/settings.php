@@ -18,6 +18,9 @@
         <a href="#" class="nav-tab" data-tab="image-ai-settings">
             <?php esc_html_e('Image AI Settings', 'athena-ai'); ?>
         </a>
+        <a href="#" class="nav-tab" data-tab="maintenance-settings">
+            <?php esc_html_e('Maintenance', 'athena-ai'); ?>
+        </a>
     </h2>
 
     <form method="post" action="">
@@ -485,6 +488,198 @@
             </table>
         </div>
 
+        <!-- Maintenance Tab Content -->
+        <div id="maintenance-settings" class="tab-content">
+            <h2><?php esc_html_e('System Maintenance', 'athena-ai'); ?></h2>
+            <p class="description">
+                <?php esc_html_e('Check and maintain system components for optimal performance.', 'athena-ai'); ?>
+            </p>
+
+            <!-- Feed System Status -->
+            <h3><?php esc_html_e('Feed System Status', 'athena-ai'); ?></h3>
+            <table class="widefat" style="margin-bottom: 20px;">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e('Component', 'athena-ai'); ?></th>
+                        <th><?php esc_html_e('Status', 'athena-ai'); ?></th>
+                        <th><?php esc_html_e('Details', 'athena-ai'); ?></th>
+                        <th><?php esc_html_e('Actions', 'athena-ai'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Feed Items Database -->
+                    <tr>
+                        <td><strong><?php esc_html_e('Feed Items Database', 'athena-ai'); ?></strong></td>
+                        <td>
+                            <?php if ($maintenance['feed_items_table_exists']): ?>
+                                <span class="status-ok"><?php esc_html_e('OK', 'athena-ai'); ?></span>
+                            <?php else: ?>
+                                <span class="status-error"><?php esc_html_e('Missing', 'athena-ai'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['feed_items_table_exists']): ?>
+                                <?php printf(esc_html__('Table exists with %d items', 'athena-ai'), $maintenance['feed_items_count']); ?>
+                            <?php else: ?>
+                                <?php esc_html_e('The feed items database table is missing', 'athena-ai'); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!$maintenance['feed_items_table_exists']): ?>
+                                <form method="post" action="">
+                                    <?php echo $maintenance_nonce_field; ?>
+                                    <input type="hidden" name="create_tables" value="1">
+                                    <button type="submit" class="button button-small"><?php esc_html_e('Create Table', 'athena-ai'); ?></button>
+                                </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    
+                    <!-- Feed Metadata Database -->
+                    <tr>
+                        <td><strong><?php esc_html_e('Feed Metadata Database', 'athena-ai'); ?></strong></td>
+                        <td>
+                            <?php if ($maintenance['feed_metadata_table_exists']): ?>
+                                <span class="status-ok"><?php esc_html_e('OK', 'athena-ai'); ?></span>
+                            <?php else: ?>
+                                <span class="status-error"><?php esc_html_e('Missing', 'athena-ai'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['feed_metadata_table_exists']): ?>
+                                <?php printf(esc_html__('Table exists with %d entries', 'athena-ai'), $maintenance['feed_metadata_count']); ?>
+                            <?php else: ?>
+                                <?php esc_html_e('The feed metadata database table is missing', 'athena-ai'); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!$maintenance['feed_metadata_table_exists']): ?>
+                                <form method="post" action="">
+                                    <?php echo $maintenance_nonce_field; ?>
+                                    <input type="hidden" name="create_tables" value="1">
+                                    <button type="submit" class="button button-small"><?php esc_html_e('Create Table', 'athena-ai'); ?></button>
+                                </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    
+                    <!-- Feed Cron Job -->
+                    <tr>
+                        <td><strong><?php esc_html_e('Feed Fetch Cron Job', 'athena-ai'); ?></strong></td>
+                        <td>
+                            <?php if ($maintenance['cron_event_scheduled']): ?>
+                                <span class="status-ok"><?php esc_html_e('Scheduled', 'athena-ai'); ?></span>
+                            <?php else: ?>
+                                <span class="status-error"><?php esc_html_e('Not Scheduled', 'athena-ai'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['cron_event_scheduled']): ?>
+                                <?php printf(esc_html__('Next run: %s', 'athena-ai'), $maintenance['next_cron_run_human']); ?>
+                                <br>
+                                <?php printf(esc_html__('Last fetch: %s', 'athena-ai'), $maintenance['last_fetch_human']); ?>
+                            <?php else: ?>
+                                <?php esc_html_e('The automatic feed fetch is not scheduled', 'athena-ai'); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <form method="post" action="">
+                                <?php echo $maintenance_nonce_field; ?>
+                                <input type="hidden" name="fix_cron" value="1">
+                                <button type="submit" class="button button-small"><?php esc_html_e('Fix Schedule', 'athena-ai'); ?></button>
+                            </form>
+                        </td>
+                    </tr>
+                    
+                    <!-- WordPress Cron Status -->
+                    <tr>
+                        <td><strong><?php esc_html_e('WordPress Cron', 'athena-ai'); ?></strong></td>
+                        <td>
+                            <?php if ($maintenance['wp_cron_disabled']): ?>
+                                <span class="status-warning"><?php esc_html_e('Disabled', 'athena-ai'); ?></span>
+                            <?php else: ?>
+                                <span class="status-ok"><?php esc_html_e('Enabled', 'athena-ai'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['wp_cron_disabled']): ?>
+                                <?php esc_html_e('WordPress cron is disabled in wp-config.php (DISABLE_WP_CRON is set to true)', 'athena-ai'); ?>
+                                <br>
+                                <?php esc_html_e('You need to set up a server cron job to trigger WordPress scheduled tasks', 'athena-ai'); ?>
+                            <?php else: ?>
+                                <?php esc_html_e('WordPress cron is enabled and will run on site visits', 'athena-ai'); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['wp_cron_disabled']): ?>
+                                <a href="https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/" target="_blank" class="button button-small"><?php esc_html_e('Learn More', 'athena-ai'); ?></a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    
+                    <!-- Feed Count -->
+                    <tr>
+                        <td><strong><?php esc_html_e('Active Feeds', 'athena-ai'); ?></strong></td>
+                        <td>
+                            <?php if ($maintenance['feed_count'] > 0): ?>
+                                <span class="status-ok"><?php echo esc_html($maintenance['feed_count']); ?></span>
+                            <?php else: ?>
+                                <span class="status-warning"><?php esc_html_e('None', 'athena-ai'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($maintenance['feed_count'] > 0): ?>
+                                <?php printf(esc_html__('%d active feeds configured', 'athena-ai'), $maintenance['feed_count']); ?>
+                            <?php else: ?>
+                                <?php esc_html_e('No feeds are configured', 'athena-ai'); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <a href="<?php echo esc_url(admin_url('edit.php?post_type=athena-feed')); ?>" class="button button-small"><?php esc_html_e('Manage Feeds', 'athena-ai'); ?></a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Debug Tools -->
+            <h3><?php esc_html_e('Debug Tools', 'athena-ai'); ?></h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="athena_ai_enable_debug_mode">
+                            <?php esc_html_e('Debug Mode', 'athena-ai'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" 
+                                   name="athena_ai_enable_debug_mode" 
+                                   id="athena_ai_enable_debug_mode" 
+                                   value="1" 
+                                   <?php checked($settings['enable_debug_mode'], true); ?>>
+                            <?php esc_html_e('Enable debug mode', 'athena-ai'); ?>
+                        </label>
+                        <p class="description">
+                            <?php esc_html_e('When enabled, additional debug information will be logged to the WordPress debug log', 'athena-ai'); ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <?php esc_html_e('Manual Feed Fetch', 'athena-ai'); ?>
+                    </th>
+                    <td>
+                        <a href="<?php echo esc_url(admin_url('admin-post.php?action=athena_debug_fetch_feeds')); ?>" class="button">
+                            <?php esc_html_e('Fetch Feeds Now', 'athena-ai'); ?>
+                        </a>
+                        <p class="description">
+                            <?php esc_html_e('Manually trigger the feed fetch process for all active feeds', 'athena-ai'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
         <?php submit_button($this->__('Save Settings')); ?>
     </form>
 </div>
@@ -531,5 +726,42 @@ h3 {
 .temperature-value {
     margin-left: 10px;
     font-weight: bold;
+}
+
+/* Maintenance Tab Styles */
+.status-ok {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.status-warning {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #fff3cd;
+    color: #856404;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.status-error {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+#maintenance-settings .widefat th {
+    padding: 10px;
+}
+
+#maintenance-settings .widefat td {
+    padding: 12px 10px;
+    vertical-align: middle;
 }
 </style>
