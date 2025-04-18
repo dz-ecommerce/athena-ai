@@ -594,25 +594,96 @@ class Feed {
             foreach ($items as $item) {
                 // Extract GUID - handle different feed formats with type safety
                 $guid = '';
-                if (isset($item->guid) && !empty($item->guid)) {
-                    $guid = is_object($item->guid) && isset($item->guid->__toString) ? (string)$item->guid : (string)$item->guid;
-                } elseif (isset($item->id) && !empty($item->id)) {
-                    $guid = is_object($item->id) && isset($item->id->__toString) ? (string)$item->id : (string)$item->id;
-                } elseif (isset($item->link) && !empty($item->link)) {
-                    // Use link as fallback
-                    $guid = is_object($item->link) && isset($item->link->__toString) ? (string)$item->link : (string)$item->link;
+                
+                // Spezielle Behandlung für Gütersloh-Feed
+                if ($is_guetersloh) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Extracting GUID for Gütersloh item...");</script>';
+                    }
+                    
+                    // Versuche, die Item-Eigenschaften zu debuggen
+                    if ($verbose_console) {
+                        $item_keys = get_object_vars($item);
+                        echo '<script>console.log("Gütersloh item properties: ", ' . json_encode(array_keys($item_keys)) . ');</script>';
+                    }
+                    
+                    // Gütersloh verwendet manchmal eine andere Struktur für GUIDs
+                    if (isset($item->guid) && !empty($item->guid)) {
+                        $guid = is_object($item->guid) && isset($item->guid->__toString) ? (string)$item->guid : (string)$item->guid;
+                        if ($verbose_console) {
+                            echo '<script>console.log("Found Gütersloh GUID: ' . esc_js($guid) . '");</script>';
+                        }
+                    } elseif (isset($item->link) && !empty($item->link)) {
+                        $guid = is_object($item->link) && isset($item->link->__toString) ? (string)$item->link : (string)$item->link;
+                        if ($verbose_console) {
+                            echo '<script>console.log("Using Gütersloh link as GUID: ' . esc_js($guid) . '");</script>';
+                        }
+                    } elseif (isset($item->title) && !empty($item->title)) {
+                        // Fallback: Verwende Titel als GUID
+                        $title = is_object($item->title) && isset($item->title->__toString) ? (string)$item->title : (string)$item->title;
+                        $guid = 'guetersloh-' . md5($title);
+                        if ($verbose_console) {
+                            echo '<script>console.log("Generated Gütersloh GUID from title: ' . esc_js($guid) . '");</script>';
+                        }
+                    } else {
+                        // Generiere einen zufälligen GUID als letzten Ausweg
+                        $guid = 'guetersloh-' . uniqid();
+                        if ($verbose_console) {
+                            echo '<script>console.log("Generated random Gütersloh GUID: ' . esc_js($guid) . '");</script>';
+                        }
+                    }
+                } 
+                // Standard-GUID-Extraktion für andere Feeds
+                else {
+                    if (isset($item->guid) && !empty($item->guid)) {
+                        $guid = is_object($item->guid) && isset($item->guid->__toString) ? (string)$item->guid : (string)$item->guid;
+                    } elseif (isset($item->id) && !empty($item->id)) {
+                        $guid = is_object($item->id) && isset($item->id->__toString) ? (string)$item->id : (string)$item->id;
+                    } elseif (isset($item->link) && !empty($item->link)) {
+                        // Use link as fallback
+                        $guid = is_object($item->link) && isset($item->link->__toString) ? (string)$item->link : (string)$item->link;
+                    }
                 }
                 
                 // Extract publication date - handle different formats with type safety
                 $pub_date = '';
-                if (isset($item->pubDate) && !empty($item->pubDate)) {
-                    $pub_date = is_object($item->pubDate) && isset($item->pubDate->__toString) ? (string)$item->pubDate : (string)$item->pubDate;
-                } elseif (isset($item->published) && !empty($item->published)) {
-                    $pub_date = is_object($item->published) && isset($item->published->__toString) ? (string)$item->published : (string)$item->published;
-                } elseif (isset($item->updated) && !empty($item->updated)) {
-                    $pub_date = is_object($item->updated) && isset($item->updated->__toString) ? (string)$item->updated : (string)$item->updated;
-                } elseif (isset($item->date) && !empty($item->date)) {
-                    $pub_date = is_object($item->date) && isset($item->date->__toString) ? (string)$item->date : (string)$item->date;
+                
+                // Spezielle Behandlung für Gütersloh-Feed
+                if ($is_guetersloh) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Extracting publication date for Gütersloh item...");</script>';
+                    }
+                    
+                    // Gütersloh verwendet manchmal andere Feldnamen für Daten
+                    if (isset($item->pubDate) && !empty($item->pubDate)) {
+                        $pub_date = is_object($item->pubDate) && isset($item->pubDate->__toString) ? (string)$item->pubDate : (string)$item->pubDate;
+                        if ($verbose_console) {
+                            echo '<script>console.log("Found Gütersloh pubDate: ' . esc_js($pub_date) . '");</script>';
+                        }
+                    } elseif (isset($item->date) && !empty($item->date)) {
+                        $pub_date = is_object($item->date) && isset($item->date->__toString) ? (string)$item->date : (string)$item->date;
+                        if ($verbose_console) {
+                            echo '<script>console.log("Found Gütersloh date: ' . esc_js($pub_date) . '");</script>';
+                        }
+                    } else {
+                        // Verwende das aktuelle Datum als Fallback
+                        $pub_date = current_time('mysql');
+                        if ($verbose_console) {
+                            echo '<script>console.log("Using current time for Gütersloh item: ' . esc_js($pub_date) . '");</script>';
+                        }
+                    }
+                }
+                // Standard-Datumsextraktion für andere Feeds
+                else {
+                    if (isset($item->pubDate) && !empty($item->pubDate)) {
+                        $pub_date = is_object($item->pubDate) && isset($item->pubDate->__toString) ? (string)$item->pubDate : (string)$item->pubDate;
+                    } elseif (isset($item->published) && !empty($item->published)) {
+                        $pub_date = is_object($item->published) && isset($item->published->__toString) ? (string)$item->published : (string)$item->published;
+                    } elseif (isset($item->updated) && !empty($item->updated)) {
+                        $pub_date = is_object($item->updated) && isset($item->updated->__toString) ? (string)$item->updated : (string)$item->updated;
+                    } elseif (isset($item->date) && !empty($item->date)) {
+                        $pub_date = is_object($item->date) && isset($item->date->__toString) ? (string)$item->date : (string)$item->date;
+                    }
                 }
                 
                 // Skip items without required data
@@ -700,21 +771,77 @@ class Feed {
                 
                 // Store raw item using replace to handle duplicates with error handling
                 try {
-                    $result = $wpdb->replace(
+                    // Spezielle Behandlung für Gütersloh-Feed
+                    if ($is_guetersloh && $verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Preparing to store Gütersloh item in database...");</script>';
+                        echo '<script>console.log("Athena AI Feed: Item hash: ' . esc_js($item_hash) . '");</script>';
+                        echo '<script>console.log("Athena AI Feed: Feed ID: ' . esc_js($this->post_id) . '");</script>';
+                        echo '<script>console.log("Athena AI Feed: GUID: ' . esc_js($guid) . '");</script>';
+                        echo '<script>console.log("Athena AI Feed: Publication date: ' . esc_js($formatted_date) . '");</script>';
+                    }
+                    
+                    // Sicherstellen, dass raw_content nicht zu lang ist
+                    $max_content_length = 65535; // MySQL TEXT-Feld-Limit
+                    if (strlen($raw_content) > $max_content_length) {
+                        if ($verbose_console) {
+                            echo '<script>console.warn("Athena AI Feed: Raw content exceeds maximum length, truncating...");</script>';
+                        }
+                        $raw_content = substr($raw_content, 0, $max_content_length);
+                    }
+                    
+                    // Sicherstellen, dass GUID nicht zu lang ist
+                    $max_guid_length = 255; // Typische Spaltenlänge für GUID
+                    if (strlen($guid) > $max_guid_length) {
+                        if ($verbose_console) {
+                            echo '<script>console.warn("Athena AI Feed: GUID exceeds maximum length, truncating...");</script>';
+                        }
+                        $guid = substr($guid, 0, $max_guid_length);
+                    }
+                    
+                    // Daten für die Datenbank vorbereiten
+                    $data = [
+                        'item_hash' => $item_hash,
+                        'feed_id' => $this->post_id,
+                        'raw_content' => $raw_content,
+                        'pub_date' => $formatted_date,
+                        'guid' => $guid
+                    ];
+                    
+                    // Versuche zuerst einen INSERT
+                    $insert_result = $wpdb->insert(
                         $wpdb->prefix . 'feed_raw_items',
-                        [
-                            'item_hash' => $item_hash,
-                            'feed_id' => $this->post_id,
-                            'raw_content' => $raw_content,
-                            'pub_date' => $formatted_date,
-                            'guid' => $guid
-                        ],
+                        $data,
                         ['%s', '%d', '%s', '%s', '%s']
                     );
+                    
+                    // Wenn INSERT fehlschlägt wegen Duplikat, versuche UPDATE
+                    if ($insert_result === false && strpos($wpdb->last_error, 'Duplicate entry') !== false) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed: Duplicate entry detected, updating existing item...");</script>';
+                        }
+                        
+                        $update_result = $wpdb->update(
+                            $wpdb->prefix . 'feed_raw_items',
+                            [
+                                'raw_content' => $raw_content,
+                                'pub_date' => $formatted_date
+                            ],
+                            ['item_hash' => $item_hash],
+                            ['%s', '%s'],
+                            ['%s']
+                        );
+                        
+                        $result = ($update_result !== false);
+                    } else {
+                        $result = ($insert_result !== false);
+                    }
                     
                     if ($result === false) {
                         if ($debug_mode) {
                             error_log("Athena AI: Database error: " . ($wpdb->last_error ?: 'Failed to insert feed item'));
+                        }
+                        if ($verbose_console) {
+                            echo '<script>console.error("Athena AI Feed: Database error: ' . esc_js($wpdb->last_error ?: 'Failed to insert feed item') . '");</script>';
                         }
                         $this->log_error('db_insert_error', $wpdb->last_error ?: 'Failed to insert feed item');
                         $errors++;
@@ -727,10 +854,16 @@ class Feed {
                             if ($debug_mode) {
                                 error_log("Athena AI: Updated existing item with GUID: {$guid}");
                             }
+                            if ($verbose_console) {
+                                echo '<script>console.log("Athena AI Feed: Updated existing item with GUID: ' . esc_js($guid) . '");</script>';
+                            }
                         } else {
                             $new_items++;
                             if ($debug_mode) {
                                 error_log("Athena AI: Inserted new item with GUID: {$guid}");
+                            }
+                            if ($verbose_console) {
+                                echo '<script>console.log("Athena AI Feed: Inserted new item with GUID: ' . esc_js($guid) . '");</script>';
                             }
                         }
                     }
