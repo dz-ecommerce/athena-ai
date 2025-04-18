@@ -64,6 +64,7 @@ class Feed {
             }
             $this->last_error = 'Feed URL is empty';
             $this->log_error('empty_url', $this->last_error);
+            $this->update_feed_error($this->last_error);
             return false;
         }
         
@@ -73,17 +74,43 @@ class Feed {
         
         if ($verbose_console) {
             echo '<script>console.log("Athena AI Feed: Fetching feed from URL: ' . esc_js($fetch_url) . '");</script>';
-            
-            // Prüfen, ob es ein Hubspot-Feed ist
-            if (strpos($fetch_url, 'hubspot.com') !== false) {
-                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed, using special handling...");</script>';
-            }
         }
         
-        $response = wp_safe_remote_get($fetch_url, [
-            'timeout' => 15,
-            'headers' => ['Accept' => 'application/rss+xml, application/atom+xml']
-        ]);
+        // Spezielle Behandlung für verschiedene Feed-Typen
+        $is_hubspot = strpos($fetch_url, 'hubspot.com') !== false;
+        $is_guetersloh = strpos($fetch_url, 'guetersloh') !== false || strpos($fetch_url, 'gütersloh') !== false;
+        
+        // Angepasste Request-Parameter basierend auf Feed-Typ
+        $request_args = [
+            'timeout' => 30, // Erhöhtes Timeout für langsame Feeds
+            'sslverify' => false, // SSL-Verifizierung deaktivieren für problematische Feeds
+            'headers' => [
+                'Accept' => 'application/rss+xml, application/atom+xml, application/json, text/xml, */*',
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) WordPress/' . get_bloginfo('version')
+            ]
+        ];
+        
+        // Spezielle Behandlung für Hubspot-Feeds
+        if ($is_hubspot) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed, using special handling...");</script>';
+            }
+            // Zusätzliche Header für Hubspot
+            $request_args['headers']['Accept'] = 'application/json, application/rss+xml, application/atom+xml, text/xml, */*';
+        }
+        
+        // Spezielle Behandlung für Gütersloh-Feeds
+        if ($is_guetersloh) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Detected Gütersloh feed, using special handling...");</script>';
+            }
+            // Spezifische Einstellungen für Gütersloh
+            $request_args['timeout'] = 45; // Längeres Timeout
+            $request_args['redirection'] = 5; // Mehr Weiterleitungen erlauben
+        }
+        
+        // Feed abrufen mit angepassten Parametern
+        $response = wp_safe_remote_get($fetch_url, $request_args);
 
         if (is_wp_error($response)) {
             $error_code = $response->get_error_code();
@@ -99,7 +126,7 @@ class Feed {
             
             $this->last_error = "HTTP error: {$error_code} - {$error_message}";
             $this->log_error($error_code, $error_message);
-            $this->update_feed_error($error_message);
+            $this->update_feed_error($this->last_error);
             return false;
         }
         
@@ -117,7 +144,7 @@ class Feed {
             
             $this->last_error = $error_message;
             $this->log_error('http_error', $error_message);
-            $this->update_feed_error($error_message);
+            $this->update_feed_error($this->last_error);
             return false;
         }
 
@@ -143,26 +170,39 @@ class Feed {
             error_log("Athena AI: Received feed content (length: {$body_length} bytes)");
         }
         
-        // Spezielle Behandlung für Hubspot-Feeds
-    if (strpos($fetch_url, 'hubspot.com') !== false && $verbose_console) {
-        echo '<script>console.log("Athena AI Feed: Processing Hubspot feed content...");</script>';
-        
-        // Prüfe die ersten Zeichen des Inhalts, um zu sehen, ob es JSON sein könnte
-        $content_start = substr($body, 0, 10);
-        if (strpos($content_start, '{') === 0 || strpos($content_start, '[') === 0) {
-            echo '<script>console.log("Athena AI Feed: Content appears to be JSON format");</script>';
-        } else {
-            echo '<script>console.log("Athena AI Feed: Content appears to be XML/RSS format");</script>';
+        // Ausgabe von Feed-Informationen für Debugging
+        if ($verbose_console) {
+            // Prüfe die ersten Zeichen des Inhalts, um zu sehen, ob es JSON sein könnte
+            $content_start = substr($body, 0, 10);
+            $content_type = wp_remote_retrieve_header($response, 'content-type');
+            
+            echo '<script>console.log("Athena AI Feed: Content-Type from header: ' . esc_js($content_type) . '");</script>';
+            
+            if (strpos($content_start, '{') === 0 || strpos($content_start, '[') === 0) {
+                echo '<script>console.log("Athena AI Feed: Content appears to be JSON format");</script>';
+            } else if (strpos($content_start, '<?xml') !== false || strpos($body, '<?xml') !== false) {
+                echo '<script>console.log("Athena AI Feed: Content appears to be XML format");</script>';
+            } else {
+                echo '<script>console.log("Athena AI Feed: Content format could not be determined");</script>';
+            }
+            
+            // Zeige die ersten 200 Zeichen des Inhalts
+            $preview = substr($body, 0, 200);
+            $preview = str_replace(["\n", "\r"], " ", $preview);
+            $preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
+            echo '<script>console.log("Athena AI Feed: Content preview: ' . esc_js($preview) . '...");</script>';
         }
         
-        // Zeige die ersten 100 Zeichen des Inhalts
-        $preview = substr($body, 0, 100);
-        $preview = str_replace(["\n", "\r"], "", $preview);
-        $preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
-        echo '<script>console.log("Athena AI Feed: Content preview: ' . esc_js($preview) . '...");</script>';
-    }
-    
-    return $this->process_feed_content($body, $verbose_console);
+        // Versuche, den Feed-Inhalt zu verarbeiten
+        $result = $this->process_feed_content($body, $verbose_console);
+        
+        if (!$result && empty($this->last_error)) {
+            $this->last_error = 'Failed to process feed content';
+            $this->log_error('process_error', $this->last_error);
+            $this->update_feed_error($this->last_error);
+        }
+        
+        return $result;
     }
 
     /**
@@ -183,10 +223,19 @@ class Feed {
             if ($debug_mode) {
                 error_log("Athena AI: Feed content is empty");
             }
-            $this->log_error('empty_content', 'Feed content is empty');
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Feed content is empty");</script>';
+            }
+            $this->last_error = 'Feed content is empty';
+            $this->log_error('empty_content', $this->last_error);
+            $this->update_feed_error($this->last_error);
             return false;
         }
 
+        // Prüfen, ob es sich um einen speziellen Feed-Typ handelt
+        $is_hubspot = strpos($this->url, 'hubspot.com') !== false;
+        $is_guetersloh = strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false;
+        
         // Use libxml internal errors for better error handling
         libxml_use_internal_errors(true);
         
@@ -317,25 +366,77 @@ class Feed {
                     echo '<script>console.log("Attempting to parse content as JSON...");</script>';
                 }
                 
+                // Versuche, den JSON-Inhalt zu decodieren
                 $json_data = json_decode($content, false);
+                $json_error = json_last_error();
                 
-                if ($json_data !== null) {
+                if ($json_error !== JSON_ERROR_NONE) {
+                    $error_msg = json_last_error_msg();
+                    if ($verbose_console) {
+                        echo '<script>console.error("JSON parse error: ' . esc_js($error_msg) . '");</script>';
+                    }
+                    if ($debug_mode) {
+                        error_log("Athena AI: JSON parse error: {$error_msg}");
+                    }
+                    $this->last_error = 'JSON parse error: ' . $error_msg;
+                    $this->log_error('json_parse_error', $error_msg);
+                    $this->update_feed_error($this->last_error);
+                } else if ($json_data !== null) {
                     if ($verbose_console) {
                         echo '<script>console.log("Successfully parsed JSON content");</script>';
+                        echo '<script>console.log("JSON structure: ", ' . json_encode(array_keys(get_object_vars($json_data))) . ');</script>';
                     }
                     
-                    // Versuche, Items aus dem JSON zu extrahieren
-                    if (isset($json_data->items) && is_array($json_data->items)) {
-                        $items = $json_data->items;
-                    } elseif (isset($json_data->entries) && is_array($json_data->entries)) {
-                        $items = $json_data->entries;
-                    } elseif (isset($json_data->posts) && is_array($json_data->posts)) {
-                        $items = $json_data->posts;
-                    }
-                    
-                    if (!empty($items)) {
+                    // Spezielle Behandlung für Hubspot-Feeds
+                    if ($is_hubspot) {
                         if ($verbose_console) {
-                            echo '<script>console.log("Found " + ' . count($items) . ' + " items in JSON");</script>';
+                            echo '<script>console.log("Applying special handling for Hubspot JSON feed...");</script>';
+                        }
+                        
+                        // Hubspot-spezifische JSON-Struktur prüfen
+                        if (isset($json_data->objects) && is_array($json_data->objects)) {
+                            $items = $json_data->objects;
+                            if ($verbose_console) {
+                                echo '<script>console.log("Found Hubspot objects array with " + ' . count($items) . ' + " items");</script>';
+                            }
+                        }
+                    }
+                    
+                    // Spezielle Behandlung für Gütersloh-Feeds
+                    if ($is_guetersloh) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Applying special handling for Gütersloh JSON feed...");</script>';
+                        }
+                        
+                        // Gütersloh-spezifische JSON-Struktur prüfen
+                        if (isset($json_data->data) && is_array($json_data->data)) {
+                            $items = $json_data->data;
+                            if ($verbose_console) {
+                                echo '<script>console.log("Found Gütersloh data array with " + ' . count($items) . ' + " items");</script>';
+                            }
+                        }
+                    }
+                    
+                    // Standard-JSON-Strukturen prüfen
+                    if (empty($items)) {
+                        // Versuche, Items aus dem JSON zu extrahieren
+                        if (isset($json_data->items) && is_array($json_data->items)) {
+                            $items = $json_data->items;
+                        } elseif (isset($json_data->entries) && is_array($json_data->entries)) {
+                            $items = $json_data->entries;
+                        } elseif (isset($json_data->posts) && is_array($json_data->posts)) {
+                            $items = $json_data->posts;
+                        } elseif (isset($json_data->feed) && isset($json_data->feed->entry) && is_array($json_data->feed->entry)) {
+                            $items = $json_data->feed->entry;
+                        } elseif (is_array($json_data)) {
+                            // Der Feed selbst ist ein Array von Items
+                            $items = $json_data;
+                        }
+                        
+                        if (!empty($items)) {
+                            if ($verbose_console) {
+                                echo '<script>console.log("Found " + ' . count($items) . ' + " items in standard JSON structure");</script>';
+                            }
                         }
                     }
                 }

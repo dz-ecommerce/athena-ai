@@ -272,7 +272,19 @@ class FeedFetcher {
                 }
                 
                 // Create feed model
-                $feed = new Feed($feed_post->ID);
+                $feed = Feed::get_by_id($feed_post->ID);
+                
+                if (!$feed) {
+                    if ($debug_mode) {
+                        error_log('Athena AI: Failed to create Feed object for feed ID ' . $feed_post->ID);
+                    }
+                    if ($verbose_console) {
+                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to create Feed object for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
+                    }
+                    $results['error']++;
+                    $results['details'][] = 'Failed to create Feed object for feed: ' . $feed_post->post_title;
+                    continue;
+                }
                 
                 // Fetch feed content
                 $fetch_result = $feed->fetch($feed_url, $verbose_console);
