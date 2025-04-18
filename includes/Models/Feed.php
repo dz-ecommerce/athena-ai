@@ -1399,6 +1399,16 @@ class Feed {
     }
     
     /**
+     * Set the feed ID (post ID)
+     *
+     * @param int $id The post ID to set
+     * @return void
+     */
+    public function set_id(int $id): void {
+        $this->post_id = $id;
+    }
+    
+    /**
      * Get the feed URL
      *
      * @return string The feed URL

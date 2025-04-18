@@ -253,6 +253,60 @@ class FeedFetcher {
                     continue;
                 }
                 
+                // Prüfen, ob es der Gütersloh-Feed ist
+                $is_guetersloh = strpos($feed_url, 'guetersloh') !== false || strpos($feed_url, 'gütersloh') !== false;
+                
+                // Bei Gütersloh-Feed direkt die Metadaten in der Datenbank erstellen
+                if ($is_guetersloh) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed Fetcher: Direct database handling for Gütersloh feed...");</script>';
+                    }
+                    
+                    // Direkte Datenbankbearbeitung
+                    $now = current_time('mysql');
+                    $update_interval = get_post_meta($feed_post->ID, '_athena_feed_update_interval', true) ?: 3600;
+                    
+                    // Lösche zuerst alle vorhandenen Metadaten für diesen Feed
+                    $wpdb->delete(
+                        $wpdb->prefix . 'feed_metadata',
+                        ['feed_id' => $feed_post->ID],
+                        ['%d']
+                    );
+                    
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed Fetcher: Cleaned existing Gütersloh feed metadata");</script>';
+                    }
+                    
+                    // Füge neue Metadaten ein
+                    $data = [
+                        'feed_id' => $feed_post->ID,
+                        'url' => esc_url_raw($feed_url),
+                        'fetch_interval' => $update_interval,
+                        'created_at' => $now,
+                        'updated_at' => $now
+                    ];
+                    
+                    $formats = ['%d', '%s', '%d', '%s', '%s'];
+                    
+                    $wpdb->suppress_errors(true);
+                    $result = $wpdb->insert(
+                        $wpdb->prefix . 'feed_metadata',
+                        $data,
+                        $formats
+                    );
+                    $wpdb->suppress_errors(false);
+                    
+                    if ($result === false) {
+                        if ($verbose_console) {
+                            echo '<script>console.error("Athena AI Feed Fetcher: Failed to create feed metadata directly: ' . esc_js($wpdb->last_error) . '");</script>';
+                        }
+                    } else {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed Fetcher: Successfully created feed metadata directly");</script>';
+                        }
+                    }
+                }
+                
                 if ($debug_mode) {
                     error_log('Athena AI: Processing feed: ' . $feed_post->post_title . ' (ID: ' . $feed_post->ID . ', URL: ' . $feed_url . ')');
                 }
@@ -281,9 +335,26 @@ class FeedFetcher {
                     if ($verbose_console) {
                         echo '<script>console.error("Athena AI Feed Fetcher: Failed to create Feed object for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
                     }
-                    $results['error']++;
-                    $results['details'][] = 'Failed to create Feed object for feed: ' . $feed_post->post_title;
-                    continue;
+                    
+                    // Für den Gütersloh-Feed einen alternativen Ansatz versuchen
+                    if ($is_guetersloh) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed Fetcher: Attempting alternative approach for Gütersloh feed...");</script>';
+                        }
+                        
+                        // Manuell ein Feed-Objekt erstellen
+                        $feed = new Feed($feed_url, 3600, true);
+                        // Feed-ID manuell setzen
+                        $feed->set_id($feed_post->ID);
+                        
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed Fetcher: Manually created Gütersloh feed object");</script>';
+                        }
+                    } else {
+                        $results['error']++;
+                        $results['details'][] = 'Failed to create Feed object for feed: ' . $feed_post->post_title;
+                        continue;
+                    }
                 }
                 
                 // Fetch feed content
