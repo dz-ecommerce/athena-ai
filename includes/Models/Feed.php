@@ -579,6 +579,16 @@ class Feed {
         $wpdb->query('START TRANSACTION');
 
         try {
+            // Ensure feed metadata exists before processing items
+            if (!$this->ensure_feed_metadata_exists()) {
+                if ($debug_mode) {
+                    error_log("Athena AI: Failed to ensure feed metadata exists for feed ID {$this->post_id}");
+                }
+                if ($verbose_console) {
+                    echo '<script>console.error("Athena AI Feed: Failed to ensure feed metadata exists for feed ID ' . $this->post_id . '");</script>';
+                }
+                throw new \Exception('Failed to ensure feed metadata exists');
+            }
             // Debug-Logging aktivieren
             $debug_mode = get_option('athena_ai_enable_debug_mode', false);
             
@@ -907,6 +917,96 @@ class Feed {
         $now = current_time('mysql');
         update_post_meta($this->post_id, '_athena_feed_last_checked', $now);
         $this->last_checked = new \DateTime();
+    }
+    
+    /**
+     * Ensure feed metadata exists in the database
+     * 
+     * @return bool Whether the metadata exists or was created successfully
+     */
+    private function ensure_feed_metadata_exists(): bool {
+        global $wpdb;
+        
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        
+        // Wenn keine post_id gesetzt ist, können wir keine Metadaten erstellen
+        if ($this->post_id === null) {
+            if ($debug_mode) {
+                error_log("Athena AI: Cannot ensure feed metadata - no feed ID available");
+            }
+            return false;
+        }
+        
+        // First check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
+        if (!$table_exists) {
+            if ($debug_mode) {
+                error_log("Athena AI: feed_metadata table does not exist");
+            }
+            return false;
+        }
+        
+        // Check if metadata already exists
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}feed_metadata WHERE feed_id = %d",
+            $this->post_id
+        ));
+        
+        if ($exists) {
+            // Metadata already exists
+            return true;
+        }
+        
+        // Create new metadata entry
+        $now = current_time('mysql');
+        
+        // Check if the URL column exists in the table
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
+        $has_url_column = false;
+        
+        foreach ($columns as $column) {
+            if ($column->Field === 'url') {
+                $has_url_column = true;
+                break;
+            }
+        }
+        
+        // Prepare data for insertion
+        $data = [
+            'feed_id' => $this->post_id,
+            'fetch_interval' => $this->update_interval,
+            'created_at' => $now,
+            'updated_at' => $now
+        ];
+        
+        $formats = ['%d', '%d', '%s', '%s'];
+        
+        // Add URL if the column exists
+        if ($has_url_column && !empty($this->url)) {
+            $data['url'] = esc_url_raw($this->url);
+            $formats[] = '%s';
+        }
+        
+        // Insert the data
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'feed_metadata',
+            $data,
+            $formats
+        );
+        
+        if ($result === false) {
+            if ($debug_mode) {
+                error_log("Athena AI: Failed to create feed metadata: {$wpdb->last_error}");
+            }
+            return false;
+        }
+        
+        if ($debug_mode) {
+            error_log("Athena AI: Created feed metadata for feed ID {$this->post_id}");
+        }
+        
+        return true;
     }
     
     /**
