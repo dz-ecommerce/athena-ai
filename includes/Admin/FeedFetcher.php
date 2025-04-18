@@ -64,8 +64,22 @@ class FeedFetcher {
                 wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
             }
             
+            // Zuerst sicherstellen, dass die Datenbankstruktur korrekt ist
+            // Dies muss vor dem Abrufen der Feeds erfolgen, um Fehler zu vermeiden
+            self::check_and_update_schema();
+            
+            // Fehlerausgabe unterdrücken, um "Headers already sent"-Probleme zu vermeiden
+            global $wpdb;
+            $wpdb->suppress_errors(true);
+            $show_errors = $wpdb->show_errors;
+            $wpdb->show_errors = false;
+            
             // Feeds mit Force-Flag abrufen
             $result = self::fetch_all_feeds(true);
+            
+            // Fehlerausgabe wiederherstellen
+            $wpdb->show_errors = $show_errors;
+            $wpdb->suppress_errors(false);
             
             // Debug-Informationen protokollieren
             if (get_option('athena_ai_enable_debug_mode', false)) {
@@ -73,8 +87,13 @@ class FeedFetcher {
                 error_log('Athena AI: Fetch result - Success: ' . $result['success'] . ', Errors: ' . $result['error']);
             }
             
-            // Zurück zur Feed-Items-Seite mit Statusparameter
-            wp_redirect(admin_url('admin.php?page=athena-feed-items&feed_fetched=1'));
+            // Statt Weiterleitung mit wp_redirect, die JavaScript-Weiterleitung verwenden
+            // Dies vermeidet das "Headers already sent"-Problem
+            echo '<html><head>';
+            echo '<meta http-equiv="refresh" content="0;URL=\'' . admin_url('admin.php?page=athena-feed-items&feed_fetched=1') . '\'" />';
+            echo '</head><body>';
+            echo '<p>' . __('Feed fetch completed. Redirecting...', 'athena-ai') . '</p>';
+            echo '</body></html>';
             exit;
         });
     }
@@ -374,10 +393,23 @@ class FeedFetcher {
             $column_names[] = $column->Field;
         }
         
+        // Debug-Ausgabe der vorhandenen Spalten, wenn Debug-Modus aktiviert ist
+        if (get_option('athena_ai_enable_debug_mode', false)) {
+            error_log('Athena AI: Checking feed_metadata table schema. Existing columns: ' . implode(', ', $column_names));
+        }
+        
         // Suppress errors to prevent headers already sent warnings
         $wpdb->suppress_errors(true);
         $show_errors = $wpdb->show_errors;
         $wpdb->show_errors = false;
+        
+        // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
+        if (!in_array('last_fetched', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
+            if (get_option('athena_ai_enable_debug_mode', false)) {
+                error_log('Athena AI: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
+            }
+        }
         
         // Add missing columns one by one without referencing other columns
         if (!in_array('fetch_interval', $column_names)) {

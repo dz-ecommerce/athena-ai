@@ -172,8 +172,21 @@ function athena_ai_render_feed_items_page() {
     }
     
     if (isset($_POST['athena_fetch_feeds']) && check_admin_referer('athena_fetch_feeds_nonce')) {
+        // Zuerst sicherstellen, dass die Datenbankstruktur korrekt ist
+        // Dies muss vor dem Abrufen der Feeds erfolgen, um Fehler zu vermeiden
+        \AthenaAI\Admin\FeedFetcher::check_and_update_schema();
+        
+        // Fehlerausgabe unterdrücken, um Probleme zu vermeiden
+        $wpdb->suppress_errors(true);
+        $show_errors = $wpdb->show_errors;
+        $wpdb->show_errors = false;
+        
         // Fetch feeds manually with force flag set to true
         $fetch_result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true);
+        
+        // Fehlerausgabe wiederherstellen
+        $wpdb->show_errors = $show_errors;
+        $wpdb->suppress_errors(false);
         
         if ($fetch_result['success'] > 0) {
             $show_success_message = true;
