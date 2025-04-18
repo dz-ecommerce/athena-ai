@@ -26,11 +26,29 @@ class FeedFetcher {
             wp_schedule_event(time(), 'hourly', 'athena_fetch_feeds');
         }
         
+        // Add a manual check on admin_init to ensure the cron is registered
+        // This helps in cases where the cron might have been unregistered
+        add_action('admin_init', function() {
+            if (!wp_next_scheduled('athena_fetch_feeds')) {
+                wp_schedule_event(time(), 'hourly', 'athena_fetch_feeds');
+                error_log('Athena AI: Rescheduled missing feed fetch cron event');
+            }
+        });
+        
         // Add custom cron schedules
         add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
         
         // Check and update database schema if needed - use init hook to run before headers are sent
         add_action('init', [self::class, 'check_and_update_schema'], 5);
+        
+        // Add debug action to manually trigger feed fetch (for testing)
+        add_action('admin_post_athena_debug_fetch_feeds', function() {
+            if (current_user_can('manage_options')) {
+                self::fetch_all_feeds(true);
+                wp_redirect(admin_url('admin.php?page=athena-feed-items&feed_fetched=1'));
+                exit;
+            }
+        });
     }
     
     /**

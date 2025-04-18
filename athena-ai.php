@@ -128,6 +128,11 @@ function athena_ai_render_feed_items_page() {
     $show_success_message = false;
     $show_error_message = false;
     
+    // Check for feed_fetched parameter (from debug action)
+    if (isset($_GET['feed_fetched']) && $_GET['feed_fetched'] == 1) {
+        $show_success_message = true;
+    }
+    
     if (isset($_POST['athena_fetch_feeds']) && check_admin_referer('athena_fetch_feeds_nonce')) {
         // Fetch feeds manually with force flag set to true
         $fetch_result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true);
@@ -295,6 +300,9 @@ function athena_ai_render_feed_items_page() {
     wp_nonce_field('athena_fetch_feeds_nonce');
     echo '<input type="submit" name="athena_fetch_feeds" class="page-title-action" value="' . esc_attr__('Fetch Feeds Now', 'athena-ai') . '">';
     echo '</form>';
+    
+    // Add debug button
+    echo ' <a href="' . esc_url(admin_url('admin-post.php?action=athena_debug_fetch_feeds')) . '" class="page-title-action">' . esc_html__('Debug Cron Fetch', 'athena-ai') . '</a>';
     
     // Display stats
     echo '<div class="athena-feed-stats" style="margin: 15px 0; padding: 10px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">';
