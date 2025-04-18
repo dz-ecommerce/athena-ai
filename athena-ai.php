@@ -156,6 +156,9 @@ function athena_ai_register_feed_items_menu() {
  * Render the Feed Items page
  */
 function athena_ai_render_feed_items_page() {
+    // Globale Variablen deklarieren
+    global $wpdb;
+    
     // Check if user has capability
     if (!current_user_can('manage_options')) {
         wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
@@ -198,7 +201,6 @@ function athena_ai_render_feed_items_page() {
     }
     
     // Get feed items with feed info
-    global $wpdb;
     
     // Get filter parameters
     $feed_filter = isset($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
