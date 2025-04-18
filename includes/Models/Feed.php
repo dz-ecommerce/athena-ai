@@ -254,34 +254,120 @@ class Feed {
         $is_hubspot = strpos($this->url, 'hubspot.com') !== false;
         $is_guetersloh = strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false;
         
+        // Spezielle Vorverarbeitung für Gütersloh-Feed
+        if ($is_guetersloh) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Applying special preprocessing for Gütersloh content...");</script>';
+                
+                // Zeige ersten Teil des Inhalts für Debugging
+                $preview = substr($content, 0, 200);
+                $safe_preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
+                echo '<script>console.log("Original content preview: ' . esc_js($safe_preview) . '");</script>';
+            }
+            
+            // Entferne BOM und normalisiere Zeilenumbrüche
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+            $content = str_replace("\r\n", "\n", $content);
+            
+            // Konvertiere ISO-8859-1 nach UTF-8 falls notwendig
+            if (!mb_check_encoding($content, 'UTF-8')) {
+                $content = mb_convert_encoding($content, 'UTF-8', 'ISO-8859-1');
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Converted encoding from ISO-8859-1 to UTF-8");</script>';
+                }
+            }
+            
+            // Ersetze kritische Umlaute in XML-Tags (aber nicht im Content)
+            $content = preg_replace_callback('/<([^>]*)>/', function($matches) {
+                return '<' . str_replace(
+                    ['ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'], 
+                    ['ae', 'oe', 'ue', 'Ae', 'Oe', 'Ue', 'ss'], 
+                    $matches[1]
+                ) . '>';
+            }, $content);
+            
+            // Stelle sicher, dass XML-Header korrekt ist
+            if (strpos($content, '<?xml') === false) {
+                $content = '<?xml version="1.0" encoding="UTF-8"?>' . $content;
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Added missing XML header");</script>';
+                }
+            }
+            
+            if ($verbose_console) {
+                // Zeige bearbeiteten Inhalt für Debugging
+                $preview = substr($content, 0, 200);
+                $safe_preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
+                echo '<script>console.log("Processed content preview: ' . esc_js($safe_preview) . '");</script>';
+            }
+        }
+        
         // Use libxml internal errors for better error handling
         libxml_use_internal_errors(true);
         
         // Versuche, ungültige Zeichen zu entfernen
         $content = preg_replace('/[^\x{0009}\x{000A}\x{000D}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $content);
         
-        // Spezielle Behandlung für Gütersloh-Feed
-        if ($is_guetersloh && $verbose_console) {
-            echo '<script>console.log("Athena AI Feed: Applying special handling for Gütersloh XML feed...");</script>';
+        // XML-Optionen anpassen für bessere Feed-Kompatibilität
+        $xml_options = LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA;
+        
+        // Bei Gütersloh-Feed zusätzliche Optionen nutzen
+        if ($is_guetersloh) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Using extended XML options for Gütersloh feed");</script>';
+            }
+            $xml_options |= LIBXML_PARSEHUGE | LIBXML_BIGLINES | LIBXML_NOBLANKS;
             
-            // Entferne BOM (Byte Order Mark) falls vorhanden
-            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-            
-            // Entferne ungültige Steuerzeichen
-            $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $content);
-            
-            // Ersetze HTML-Entities in XML-Tags
-            $content = preg_replace_callback('/<([^>]*)>/', function($matches) {
-                return '<' . html_entity_decode($matches[1]) . '>';
-            }, $content);
+            // Versuche, das Format zu reparieren wenn nötig
+            if (strpos($content, '<rss') === false && strpos($content, '<feed') === false) {
+                if (strpos($content, '<item') !== false) {
+                    // Entdecktes Format: <item>-Tags ohne <rss>-Wrapper
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Gütersloh feed appears to be missing RSS container tags, adding wrapper");</script>';
+                    }
+                    $content = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>' . $content . '</channel></rss>';
+                }
+            }
         }
         
-        // Attempt to load XML with error suppression
-        $xml = @simplexml_load_string($content);
+        // Mehrere Parsing-Optionen versuchen
+        $xml = false;
         
-        // Wenn das Laden fehlschlägt, versuche es mit der LIBXML_NOWARNING-Option
+        // Versuch 1: Normales Laden
         if ($xml === false) {
-            $xml = @simplexml_load_string($content, \SimpleXMLElement::class, LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA);
+            $xml = @simplexml_load_string($content);
+        }
+        
+        // Versuch 2: Mit Optionen laden
+        if ($xml === false) {
+            $xml = @simplexml_load_string($content, \SimpleXMLElement::class, $xml_options);
+        }
+        
+        // Versuch 3: Für Gütersloh vereinfachten XML-Parser versuchen
+        if ($xml === false && $is_guetersloh) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Attempting simplified XML parsing for Gütersloh feed");</script>';
+            }
+            
+            // SimpleXML-Fehler zurücksetzen
+            libxml_clear_errors();
+            
+            // Vereinfachte Extraktion von <item>-Tags mit RegEx
+            if (preg_match_all('/<item[^>]*>(.*?)<\/item>/is', $content, $matches)) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Extracted ' . count($matches[0]) . ' items with regex");</script>';
+                }
+                
+                // Manuell ein SimpleXML-Objekt erstellen
+                $xml_template = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Gütersloh Feed</title>';
+                foreach ($matches[0] as $item) {
+                    $xml_template .= $item;
+                }
+                $xml_template .= '</channel></rss>';
+                
+                // Nochmals versuchen mit dem bereinigten XML
+                $xml = @simplexml_load_string($xml_template, \SimpleXMLElement::class, $xml_options);
+            }
         }
         
         if ($xml === false) {
@@ -1293,17 +1379,47 @@ class Feed {
     private function update_feed_error(string $code, string $message): void {
         global $wpdb;
         
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        $verbose_console = defined('DOING_AJAX') && DOING_AJAX;
+        
+        // Prüfen, ob es sich um einen speziellen Feed-Typ handelt
+        $is_guetersloh = strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false;
+        
         // Wenn keine post_id gesetzt ist, können wir keine Metadaten aktualisieren
         if ($this->post_id === null) {
-            error_log("Athena AI: Cannot update feed metadata with error - no feed ID available");
+            if ($debug_mode) {
+                error_log("Athena AI: Cannot update feed metadata with error - no feed ID available");
+            }
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Cannot update feed metadata - no feed ID available");</script>';
+            }
             return;
+        }
+        
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Updating feed metadata with error code [' . esc_js($code) . '] for feed ID ' . $this->post_id . '");</script>';
+        }
+        
+        // Bei Gütersloh-Feed zuerst direkt die Metadaten erstellen
+        if ($is_guetersloh) {
+            $this->ensure_feed_metadata_exists();
+            
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Ensured Gütersloh feed metadata exists before updating error");</script>';
+            }
         }
         
         // First check if the table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
         if (!$table_exists) {
             // Log error but don't fail the whole process
-            error_log("Athena AI: feed_metadata table does not exist");
+            if ($debug_mode) {
+                error_log("Athena AI: feed_metadata table does not exist");
+            }
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: feed_metadata table does not exist");</script>';
+            }
             return;
         }
         
@@ -1318,14 +1434,29 @@ class Feed {
         $wpdb->suppress_errors(false);
         
         if ($wpdb->last_error) {
-            error_log("Athena AI: Error checking feed metadata: {$wpdb->last_error}");
-            return;
+            if ($debug_mode) {
+                error_log("Athena AI: Error checking feed metadata: {$wpdb->last_error}");
+            }
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Error checking feed metadata: ' . esc_js($wpdb->last_error) . '");</script>';
+            }
+            
+            // Trotz Fehler versuchen, das Update durchzuführen
+            $exists = false;
         }
         
         try {
             if ($exists) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Updating existing feed metadata with error");</script>';
+                }
+                
+                // Vor dem Update Fehler löschen
+                $wpdb->last_error = '';
+                
                 // Update existing metadata with error information
-                $wpdb->update(
+                $wpdb->suppress_errors(true);
+                $result = $wpdb->update(
                     $wpdb->prefix . 'feed_metadata',
                     [
                         'last_error_date' => $now,
@@ -1336,27 +1467,94 @@ class Feed {
                     ['%s', '%s', '%s'],
                     ['%d']
                 );
+                $wpdb->suppress_errors(false);
+                
+                if ($result === false && $wpdb->last_error) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Error updating feed metadata: {$wpdb->last_error}");
+                    }
+                    if ($verbose_console) {
+                        echo '<script>console.error("Athena AI Feed: Error updating feed metadata: ' . esc_js($wpdb->last_error) . '");</script>';
+                    }
+                }
             } else {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Creating new feed metadata with error");</script>';
+                }
+                
+                // Bereite Daten vor
+                $data = [
+                    'feed_id' => $this->post_id,
+                    'last_error_date' => $now,
+                    'last_error_message' => sprintf('[%s] %s', $code, $message),
+                    'fetch_interval' => $this->update_interval,
+                    'created_at' => $now,
+                    'updated_at' => $now
+                ];
+                
+                // Prüfe, ob URL-Spalte existiert
+                $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
+                if ($columns) {
+                    foreach ($columns as $column) {
+                        if ($column->Field === 'url' && !empty($this->url)) {
+                            $data['url'] = esc_url_raw($this->url);
+                            if ($verbose_console) {
+                                echo '<script>console.log("Athena AI Feed: Adding URL to metadata: ' . esc_js($this->url) . '");</script>';
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // Vor dem Insert Fehler löschen
+                $wpdb->last_error = '';
+                
                 // Insert new metadata with error information
-                $wpdb->insert(
+                $wpdb->suppress_errors(true);
+                $result = $wpdb->insert(
                     $wpdb->prefix . 'feed_metadata',
-                    [
-                        'feed_id' => $this->post_id,
-                        'last_error_date' => $now,
-                        'last_error_message' => sprintf('[%s] %s', $code, $message),
-                        'fetch_interval' => $this->update_interval,
-                        'created_at' => $now,
-                        'updated_at' => $now
-                    ],
-                    ['%d', '%s', '%s', '%d', '%s', '%s']
+                    $data,
+                    ['%d', '%s', '%s', '%d', '%s', '%s', '%s']
                 );
-            }
-            
-            if ($wpdb->last_error) {
-                error_log("Athena AI: Error updating feed metadata with error: {$wpdb->last_error}");
+                $wpdb->suppress_errors(false);
+                
+                if ($result === false && $wpdb->last_error) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Error creating feed metadata: {$wpdb->last_error}");
+                    }
+                    if ($verbose_console) {
+                        echo '<script>console.error("Athena AI Feed: Error creating feed metadata: ' . esc_js($wpdb->last_error) . '");</script>';
+                    }
+                    
+                    // Bei Gütersloh-Feed versuche einen alternativen Ansatz - Löschen und neu erstellen
+                    if ($is_guetersloh) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed: Attempting alternate approach for Gütersloh feed - delete and recreate");</script>';
+                        }
+                        
+                        // Lösche bestehende Einträge für diese Feed-ID
+                        $wpdb->delete(
+                            $wpdb->prefix . 'feed_metadata',
+                            ['feed_id' => $this->post_id],
+                            ['%d']
+                        );
+                        
+                        // Nochmals versuchen nach dem Löschen
+                        $wpdb->insert(
+                            $wpdb->prefix . 'feed_metadata',
+                            $data,
+                            ['%d', '%s', '%s', '%d', '%s', '%s', '%s']
+                        );
+                    }
+                }
             }
         } catch (\Exception $e) {
-            error_log("Athena AI: Exception in feed error update: {$e->getMessage()}");
+            if ($debug_mode) {
+                error_log("Athena AI: Exception in feed error update: {$e->getMessage()}");
+            }
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Exception in feed error update: ' . esc_js($e->getMessage()) . '");</script>';
+            }
         }
     }
 
