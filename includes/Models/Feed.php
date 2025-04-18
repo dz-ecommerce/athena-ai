@@ -255,9 +255,26 @@ class Feed {
                 // Detailliertere Struktur ausgeben
                 if (isset($xml->channel)) {
                     echo '<script>console.log("Channel Elements: ", ' . json_encode(array_keys(get_object_vars($xml->channel))) . ');</script>';
+                    
+                    // Prüfen, ob es ein HubSpot-Feed ist, der eine besondere Struktur haben könnte
+                    if (strpos($this->url, 'hubspot.com') !== false) {
+                        echo '<script>console.log("HubSpot Feed detected, checking special structure...");</script>';
+                        
+                        // Prüfen, ob es Items unter einem anderen Namen gibt
+                        if (isset($xml->channel->entry)) {
+                            echo '<script>console.log("Found entries under channel->entry");</script>';
+                            $items = $xml->channel->entry;
+                        } elseif (isset($xml->entry)) {
+                            echo '<script>console.log("Found entries under entry");</script>';
+                            $items = $xml->entry;
+                        } elseif (isset($xml->channel->post)) {
+                            echo '<script>console.log("Found entries under channel->post");</script>';
+                            $items = $xml->channel->post;
+                        }
+                    }
                 }
                 
-                // Versuche, die ersten 10 Zeichen des XML-Inhalts zu zeigen
+                // Versuche, die ersten 500 Zeichen des XML-Inhalts zu zeigen
                 $content_preview = substr($content, 0, 500);
                 $content_preview = str_replace(["\n", "\r"], "", $content_preview);
                 $content_preview = htmlspecialchars($content_preview, ENT_QUOTES, 'UTF-8');
@@ -266,10 +283,43 @@ class Feed {
                 echo '<script>console.groupEnd();</script>';
             }
             
-            $this->last_error = 'Unknown feed format - neither RSS nor Atom detected';
-            $this->log_error('unknown_feed_format', 'Unknown feed format');
-            $this->update_feed_error($this->last_error);
-            return false;
+            // Versuche, den Feed als JSON zu parsen, falls es kein gültiges XML ist
+            if (strpos($content, '{') === 0 || strpos($content, '[') === 0) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Attempting to parse content as JSON...");</script>';
+                }
+                
+                $json_data = json_decode($content, false);
+                
+                if ($json_data !== null) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Successfully parsed JSON content");</script>';
+                    }
+                    
+                    // Versuche, Items aus dem JSON zu extrahieren
+                    if (isset($json_data->items) && is_array($json_data->items)) {
+                        $items = $json_data->items;
+                    } elseif (isset($json_data->entries) && is_array($json_data->entries)) {
+                        $items = $json_data->entries;
+                    } elseif (isset($json_data->posts) && is_array($json_data->posts)) {
+                        $items = $json_data->posts;
+                    }
+                    
+                    if (!empty($items)) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Found " + ' . count($items) . ' + " items in JSON");</script>';
+                        }
+                    }
+                }
+            }
+            
+            // Wenn immer noch keine Items gefunden wurden, geben wir einen Fehler zurück
+            if (empty($items)) {
+                $this->last_error = 'Unknown feed format - neither RSS, Atom nor JSON detected';
+                $this->log_error('unknown_feed_format', 'Unknown feed format');
+                $this->update_feed_error($this->last_error);
+                return false;
+            }
         }
         
         if ($debug_mode) {

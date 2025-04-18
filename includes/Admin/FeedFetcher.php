@@ -593,6 +593,9 @@ class FeedFetcher {
                     error_log("Athena AI: Feed ID: {$feed_id}, Update interval: {$update_interval}");
                 }
                 
+                // Hole die Feed-URL aus den Post-Meta-Daten
+                $feed_url = get_post_meta($feed_id, '_athena_feed_url', true);
+                
                 // Daten für das Einfügen vorbereiten
                 $data = [
                     'feed_id' => $feed_id,
@@ -605,6 +608,11 @@ class FeedFetcher {
                 // Prüfen, ob last_fetched-Spalte existiert
                 if (in_array('last_fetched', $column_names)) {
                     $data['last_fetched'] = $now;
+                }
+                
+                // Prüfen, ob url-Spalte existiert und URL-Wert setzen
+                if (in_array('url', $column_names) && !empty($feed_url)) {
+                    $data['url'] = esc_url_raw($feed_url);
                 }
                 
                 // Formatierungstypen für die Daten
