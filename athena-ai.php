@@ -299,9 +299,9 @@ function athena_ai_render_feed_items_page() {
         if ($fetch_result) {
             echo '<div class="notice notice-success is-dismissible"><p>' . 
                 sprintf(
-                    esc_html__('Feeds fetched successfully: %d feeds processed, %d items added.', 'athena-ai'),
+                    esc_html__('Feeds fetched successfully: %d feeds processed, %d new items added.', 'athena-ai'),
                     $fetch_result['success'],
-                    $fetch_result['success']
+                    $fetch_result['new_items']
                 ) . 
                 '</p></div>';
         } else {
@@ -361,10 +361,14 @@ function athena_ai_render_feed_items_page() {
         $total_fetches = isset($fetch_stats->total_fetches) ? intval($fetch_stats->total_fetches) : 0;
         $items_per_feed = ($feed_count > 0) ? round($total_items / $feed_count, 1) : 0;
         
+        // Hole die Anzahl der neuen Items aus dem letzten Fetch
+        $last_new_items = get_option('athena_last_feed_new_items', 0);
+        
         echo sprintf(
-            esc_html__('Total Fetches: %1$s | Items Per Feed: %2$s', 'athena-ai'),
+            esc_html__('Total Fetches: %1$s | Items Per Feed: %2$s | New Items from Last Fetch: %3$s', 'athena-ai'),
             '<strong>' . esc_html($total_fetches) . '</strong>',
-            '<strong>' . esc_html($items_per_feed) . '</strong>'
+            '<strong>' . esc_html($items_per_feed) . '</strong>',
+            '<strong>' . esc_html($last_new_items) . '</strong>'
         );
         echo '</p>';
     }

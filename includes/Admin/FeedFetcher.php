@@ -123,12 +123,19 @@ class FeedFetcher {
      * Fetch all feeds
      * 
      * @param bool $force_fetch Whether to force fetch all feeds regardless of their update interval
-     * @return array Array with success and error counts
+     * @return array Array with success, error, and new items counts
      */
     public static function fetch_all_feeds(bool $force_fetch = false): array {
         global $wpdb;
         
-        // Debug-Logging aktivieren
+        $results = [
+            'success' => 0,
+            'error' => 0,
+            'new_items' => 0,
+            'details' => []
+        ];
+        
+        // Enable debug logging if debug mode is enabled
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
         if ($debug_mode) {
@@ -137,112 +144,135 @@ class FeedFetcher {
         
         // Ensure required tables exist
         if (!self::ensure_required_tables()) {
-            error_log('Athena AI: Required tables do not exist, aborting feed fetch');
-            return ['success' => 0, 'error' => 0, 'message' => 'Required tables do not exist'];
+            if ($debug_mode) {
+                error_log('Athena AI: Required tables do not exist. Aborting feed fetch.');
+            }
+            $results['error']++;
+            $results['details'][] = 'Required database tables do not exist';
+            return $results;
         }
         
         // Get feeds to update
-        if ($force_fetch) {
-            // Get all active feeds if force fetching
-            $feeds = get_posts([
+        $feeds = $force_fetch ? 
+            get_posts([
                 'post_type' => 'athena-feed',
                 'post_status' => 'publish',
                 'numberposts' => -1,
-                'meta_query' => [
-                    [
-                        'key' => '_athena_feed_active',
-                        'value' => '1',
-                        'compare' => '='
-                    ]
-                ]
-            ]);
-            
-            if ($debug_mode) {
-                error_log('Athena AI: Force fetching all active feeds. Found ' . count($feeds) . ' feeds.');
-            }
-        } else {
-            // Get only feeds that need updating based on their interval
-            $feeds = self::get_feeds_due_for_update();
-            
-            if ($debug_mode) {
-                error_log('Athena AI: Fetching feeds due for update. Found ' . count($feeds) . ' feeds.');
-            }
+            ]) : 
+            self::get_feeds_due_for_update();
+        
+        if ($debug_mode) {
+            error_log('Athena AI: Found ' . count($feeds) . ' feeds to process');
         }
         
         if (empty($feeds)) {
-            error_log('Athena AI: No feeds to fetch. Check if feeds exist and are active.');
-            return ['success' => 0, 'error' => 0, 'message' => 'No feeds to fetch'];
+            if ($debug_mode) {
+                error_log('Athena AI: No feeds to process. Exiting.');
+            }
+            return $results;
         }
         
-        $success_count = 0;
-        $error_count = 0;
-        $messages = [];
-        $processed_items = 0;
+        // Zähler für neue Feed-Items
+        $total_new_items = 0;
         
-        // Process each feed
         foreach ($feeds as $feed_post) {
-            if ($debug_mode) {
-                error_log('Athena AI: Processing feed: ' . get_the_title($feed_post->ID) . ' (ID: ' . $feed_post->ID . ')');
-            }
-            
-            // Ensure feed metadata exists
-            self::ensure_feed_metadata_exists($feed_post->ID);
-            
-            // Get feed URL for logging
-            $feed_url = get_post_meta($feed_post->ID, '_athena_feed_url', true);
-            
-            if ($debug_mode) {
-                error_log('Athena AI: Fetching feed URL: ' . $feed_url);
-            }
-            
-            // Get feed object and fetch content
-            $feed = Feed::get_by_id($feed_post->ID);
-            
-            if ($feed && $feed->fetch()) {
-                $success_count++;
+            try {
+                // Ensure feed metadata exists
+                if (!self::ensure_feed_metadata_exists($feed_post->ID)) {
+                    if ($debug_mode) {
+                        error_log('Athena AI: Failed to ensure feed metadata for feed ID ' . $feed_post->ID);
+                    }
+                    $results['error']++;
+                    $results['details'][] = 'Failed to ensure feed metadata for feed: ' . $feed_post->post_title;
+                    continue;
+                }
                 
-                // Get the number of items processed from the feed
-                $feed_items_count = $wpdb->get_var($wpdb->prepare(
+                // Get feed URL
+                $feed_url = get_post_meta($feed_post->ID, '_athena_feed_url', true);
+                
+                if (empty($feed_url)) {
+                    if ($debug_mode) {
+                        error_log('Athena AI: Feed URL is empty for feed ID ' . $feed_post->ID);
+                    }
+                    $results['error']++;
+                    $results['details'][] = 'Feed URL is empty for feed: ' . $feed_post->post_title;
+                    continue;
+                }
+                
+                if ($debug_mode) {
+                    error_log('Athena AI: Processing feed: ' . $feed_post->post_title . ' (ID: ' . $feed_post->ID . ', URL: ' . $feed_url . ')');
+                }
+                
+                // Zähle die aktuellen Feed-Items vor dem Abruf
+                $before_count = (int)$wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d",
                     $feed_post->ID
                 ));
                 
                 if ($debug_mode) {
-                    error_log('Athena AI: Successfully fetched feed: ' . get_the_title($feed_post->ID) . '. Total items: ' . $feed_items_count);
+                    error_log("Athena AI: Feed {$feed_post->post_title} has {$before_count} items before fetch");
                 }
                 
-                $processed_items += $feed_items_count;
-            } else {
-                $error_count++;
-                $error_message = sprintf('Failed to fetch feed: %s (URL: %s)', get_the_title($feed_post->ID), $feed_url);
-                $messages[] = $error_message;
+                // Create feed model
+                $feed = new Feed($feed_post->ID);
                 
-                error_log('Athena AI: ' . $error_message);
+                // Fetch feed content
+                $fetch_result = $feed->fetch($feed_url);
+                
+                if ($fetch_result) {
+                    $results['success']++;
+                    
+                    // Zähle die Feed-Items nach dem Abruf
+                    $after_count = (int)$wpdb->get_var($wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d",
+                        $feed_post->ID
+                    ));
+                    
+                    if ($debug_mode) {
+                        error_log("Athena AI: Feed {$feed_post->post_title} has {$after_count} items after fetch");
+                    }
+                    
+                    // Berechne die Anzahl der neuen Items
+                    $new_items = max(0, $after_count - $before_count);
+                    $total_new_items += $new_items;
+                    
+                    // Speichere die Anzahl der neuen Items für diesen Feed
+                    update_post_meta($feed_post->ID, '_athena_feed_last_new_items', $new_items);
+                    
+                    if ($debug_mode) {
+                        error_log("Athena AI: Successfully fetched feed: {$feed_post->post_title}. New items: {$new_items}");
+                    }
+                } else {
+                    $results['error']++;
+                    $results['details'][] = 'Failed to fetch feed: ' . $feed_post->post_title;
+                    
+                    if ($debug_mode) {
+                        error_log('Athena AI: Failed to fetch feed: ' . $feed_post->post_title);
+                    }
+                }
+            } catch (\Exception $e) {
+                $results['error']++;
+                $results['details'][] = 'Error processing feed ' . $feed_post->post_title . ': ' . $e->getMessage();
+                
+                if ($debug_mode) {
+                    error_log('Athena AI: Exception while processing feed: ' . $e->getMessage());
+                }
             }
             
             // Add a small delay to prevent overwhelming external servers
             usleep(500000); // 0.5 second delay
         }
         
-        // Update last fetch time
+        // Speichere die Gesamtzahl der neuen Items
+        $results['new_items'] = $total_new_items;
+        update_option('athena_last_feed_new_items', $total_new_items);
         update_option('athena_last_feed_fetch', time());
         
-        // Log the results
-        $log_message = sprintf(
-            'Athena AI: Fetched %d feeds successfully, %d failed. Total items processed: %d.',
-            $success_count,
-            $error_count,
-            $processed_items
-        );
-        error_log($log_message);
+        if ($debug_mode) {
+            error_log("Athena AI: Feed fetch process completed. Success: {$results['success']}, Errors: {$results['error']}, New items: {$total_new_items}");
+        }
         
-        return [
-            'success' => $success_count,
-            'error' => $error_count,
-            'message' => $log_message,
-            'details' => $messages,
-            'items_processed' => $processed_items
-        ];
+        return $results;
     }
     
     /**
