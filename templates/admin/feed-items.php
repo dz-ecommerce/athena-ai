@@ -2,6 +2,20 @@
 /**
  * Template für die Feed-Items-Seite
  */
+
+// Fehlerbehandlung für diese Seite - nur Fehler protokollieren, nicht anzeigen
+$previous_error_reporting = error_reporting();
+error_reporting(E_ERROR);
+
+// Wichtig: Stelle sicher, dass die Import-Date-Eigenschaft korrekt behandelt wird
+if (!empty($items)) {
+    foreach ($items as $key => $item) {
+        // Stelle sicher, dass alle erforderlichen Eigenschaften existieren
+        if (!isset($item->import_date)) {
+            $items[$key]->import_date = '';
+        }
+    }
+}
 ?>
 <div class="wrap athena-ai-admin">
     <div class="flex justify-between items-center mb-6">
@@ -235,7 +249,8 @@
                     </td>
                     <td>
                         <?php
-                        $import_date = strtotime($item->import_date);
+                        // Überprüfe, ob import_date existiert
+                        $import_date = isset($item->import_date) && !empty($item->import_date) ? strtotime($item->import_date) : false;
                         echo $import_date ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $import_date) : '–';
                         ?>
                     </td>
