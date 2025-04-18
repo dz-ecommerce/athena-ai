@@ -64,7 +64,7 @@ class Feed {
             }
             $this->last_error = 'Feed URL is empty';
             $this->log_error('empty_url', $this->last_error);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('empty_url', $this->last_error);
             return false;
         }
         
@@ -126,7 +126,7 @@ class Feed {
             
             $this->last_error = "HTTP error: {$error_code} - {$error_message}";
             $this->log_error($error_code, $error_message);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error($error_code, $error_message);
             return false;
         }
         
@@ -144,7 +144,7 @@ class Feed {
             
             $this->last_error = $error_message;
             $this->log_error('http_error', $error_message);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('http_error', $error_message);
             return false;
         }
 
@@ -161,7 +161,7 @@ class Feed {
             
             $this->last_error = 'Feed response body is empty';
             $this->log_error('empty_response', $this->last_error);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('empty_response', $this->last_error);
             return false;
         }
         
@@ -199,7 +199,7 @@ class Feed {
         if (!$result && empty($this->last_error)) {
             $this->last_error = 'Failed to process feed content';
             $this->log_error('process_error', $this->last_error);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('process_error', $this->last_error);
         }
         
         return $result;
@@ -228,7 +228,7 @@ class Feed {
             }
             $this->last_error = 'Feed content is empty';
             $this->log_error('empty_content', $this->last_error);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('empty_content', $this->last_error);
             return false;
         }
 
@@ -275,7 +275,7 @@ class Feed {
             
             $this->last_error = 'XML parse error: ' . $error_msg;
             $this->log_error('xml_parse_error', $error_msg);
-            $this->update_feed_error($this->last_error);
+            $this->update_feed_error('xml_parse_error', $error_msg);
             libxml_clear_errors();
             return false;
         }
@@ -380,7 +380,7 @@ class Feed {
                     }
                     $this->last_error = 'JSON parse error: ' . $error_msg;
                     $this->log_error('json_parse_error', $error_msg);
-                    $this->update_feed_error($this->last_error);
+                    $this->update_feed_error('json_parse_error', $error_msg);
                 } else if ($json_data !== null) {
                     if ($verbose_console) {
                         echo '<script>console.log("Successfully parsed JSON content");</script>';
@@ -446,7 +446,7 @@ class Feed {
             if (empty($items)) {
                 $this->last_error = 'Unknown feed format - neither RSS, Atom nor JSON detected';
                 $this->log_error('unknown_feed_format', 'Unknown feed format');
-                $this->update_feed_error($this->last_error);
+                $this->update_feed_error('unknown_feed_format', 'Unknown feed format');
                 return false;
             }
         }
