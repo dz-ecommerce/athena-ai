@@ -59,7 +59,24 @@ class FeedFetcher {
         });
         
         // Add debug action to manually trigger feed fetch (for testing)
-        add_action('admin_post_athena_debug_fetch_feeds', [self::class, 'handle_manual_fetch']);
+        add_action('admin_post_athena_debug_fetch_feeds', function() {
+            if (!current_user_can('manage_options')) {
+                wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
+            }
+            
+            // Feeds mit Force-Flag abrufen
+            $result = self::fetch_all_feeds(true);
+            
+            // Debug-Informationen protokollieren
+            if (get_option('athena_ai_enable_debug_mode', false)) {
+                error_log('Athena AI: Manual feed fetch triggered via admin-post.php');
+                error_log('Athena AI: Fetch result - Success: ' . $result['success'] . ', Errors: ' . $result['error']);
+            }
+            
+            // Zurück zur Feed-Items-Seite mit Statusparameter
+            wp_redirect(admin_url('admin.php?page=athena-feed-items&feed_fetched=1'));
+            exit;
+        });
     }
     
     /**
@@ -408,28 +425,6 @@ class FeedFetcher {
         return true;
     }
     
-    /**
-     * Handle manual feed fetch from admin-post.php
-     */
-    public static function handle_manual_fetch(): void {
-        // Überprüfen der Berechtigungen
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
-        }
-        
-        // Feeds mit Force-Flag abrufen
-        $result = self::fetch_all_feeds(true);
-        
-        // Debug-Informationen protokollieren
-        if (get_option('athena_ai_enable_debug_mode', false)) {
-            error_log('Athena AI: Manual feed fetch triggered via admin-post.php');
-            error_log('Athena AI: Fetch result - Success: ' . $result['success'] . ', Errors: ' . $result['error']);
-        }
-        
-        // Zurück zur Feed-Items-Seite mit Statusparameter
-        wp_redirect(admin_url('admin.php?page=athena-feed-items&feed_fetched=1'));
-        exit;
-    }
     
     /**
      * Get feeds that are due for an update based on their fetch interval
