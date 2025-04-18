@@ -34,17 +34,29 @@ class Feed {
     /**
      * Fetch feed content from the URL
      * 
+     * @param string|null $url Optional URL to override the stored feed URL
      * @return bool Whether the fetch was successful
      */
-    public function fetch(): bool {
+    public function fetch(?string $url = null): bool {
         // Debug-Logging aktivieren
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
-        if ($debug_mode) {
-            error_log("Athena AI: Fetching feed from URL: {$this->url}");
+        // Verwende den übergebenen URL oder den gespeicherten URL
+        $fetch_url = $url ?: $this->url;
+        
+        if (empty($fetch_url)) {
+            if ($debug_mode) {
+                error_log("Athena AI: Feed URL is empty for feed ID: {$this->post_id}");
+            }
+            $this->log_error('empty_url', 'Feed URL is empty');
+            return false;
         }
         
-        $response = wp_safe_remote_get($this->url, [
+        if ($debug_mode) {
+            error_log("Athena AI: Fetching feed from URL: {$fetch_url}");            
+        }
+        
+        $response = wp_safe_remote_get($fetch_url, [
             'timeout' => 15,
             'headers' => ['Accept' => 'application/rss+xml, application/atom+xml']
         ]);
@@ -58,6 +70,7 @@ class Feed {
             }
             
             $this->log_error($error_code, $error_message);
+            $this->update_feed_error($error_message);
             return false;
         }
         
@@ -70,6 +83,7 @@ class Feed {
             }
             
             $this->log_error('http_error', $error_message);
+            $this->update_feed_error($error_message);
             return false;
         }
 
@@ -81,6 +95,7 @@ class Feed {
             }
             
             $this->log_error('empty_response', 'Feed response body is empty');
+            $this->update_feed_error('Feed response body is empty');
             return false;
         }
         
@@ -135,6 +150,7 @@ class Feed {
             }
             
             $this->log_error('xml_parse_error', $error_msg);
+            $this->update_feed_error('XML parse error: ' . $error_msg);
             libxml_clear_errors();
             return false;
         }
@@ -183,7 +199,8 @@ class Feed {
                 error_log("Athena AI: XML structure: " . print_r(array_keys($xml_keys), true));
             }
             
-            $this->log_error('no_items_found', 'No items found in feed');
+            $this->log_error('unknown_feed_format', 'Unknown feed format');
+            $this->update_feed_error('Unknown feed format - neither RSS nor Atom detected');
             return false;
         }
         
