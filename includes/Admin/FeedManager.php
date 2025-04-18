@@ -85,7 +85,7 @@ class FeedManager extends BaseAdmin {
         $labels = [
             'name'                  => _x('Feeds', 'Post type general name', 'athena-ai'),
             'singular_name'         => _x('Feed', 'Post type singular name', 'athena-ai'),
-            'menu_name'            => _x('Feeds', 'Admin Menu text', 'athena-ai'),
+            'menu_name'            => _x('Athena AI', 'Admin Menu text', 'athena-ai'),
             'name_admin_bar'       => _x('Feed', 'Add New on Toolbar', 'athena-ai'),
             'add_new'              => __('Add New', 'athena-ai'),
             'add_new_item'         => __('Add New Feed', 'athena-ai'),
@@ -102,7 +102,7 @@ class FeedManager extends BaseAdmin {
             'labels'            => $labels,
             'public'            => false,
             'show_ui'           => true,
-            'show_in_menu'      => false, // We'll add our own menu
+            'show_in_menu'      => true, // Aktiviere das Standard-WordPress-Menü
             'capability_type'   => 'athena_feed',
             'capabilities'      => [
                 'publish_posts'     => 'edit_athena_feeds',
