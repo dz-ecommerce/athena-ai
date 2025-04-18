@@ -101,6 +101,9 @@ function athena_ai_init() {
     
     // Initialize Feed Fetcher
     \AthenaAI\Admin\FeedFetcher::init();
+    
+    // Initialize Maintenance page
+    \AthenaAI\Admin\Maintenance::init();
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(

@@ -93,16 +93,23 @@ class Feed {
             'sslverify' => false
         ];
         
-        // Special handling for feed-specific headers
-        if ($is_hubspot) {
-            $args['headers'] = [
-                'Accept' => 'application/xml, application/rss+xml, text/xml, application/json, */*'
-            ];
-            
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Using special headers for Hubspot feed");</script>';
+        // Spezielle URL-Behandlung für Gütersloh-Feed
+        if ($is_guetersloh) {
+            // Prüfen, ob die URL korrekt formatiert ist
+            if (strpos($fetch_url, 'https://www.guetersloh.de/rss') !== false) {
+                // URL ist korrekt
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Using standard Gütersloh feed URL: ' . esc_js($fetch_url) . '");</script>';
+                }
+            } else {
+                // Versuche, die URL zu korrigieren
+                $corrected_url = 'https://www.guetersloh.de/rss';
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Correcting Gütersloh feed URL from ' . esc_js($fetch_url) . ' to ' . esc_js($corrected_url) . '");</script>';
+                }
+                $fetch_url = $corrected_url;
             }
-        } elseif ($is_guetersloh) {
+            
             // Spezifische Header für den Gütersloh-Feed
             $args['headers'] = [
                 'Accept' => 'application/xml, application/rss+xml, text/xml, */*',
@@ -117,27 +124,20 @@ class Feed {
             // Sicherstellen, dass die Feed-Metadaten existieren
             $this->ensure_feed_metadata_exists();
         }
-        
-        // Use WordPress HTTP API to fetch the content
-        $response = wp_remote_get($fetch_url, $args);
-            if (strpos($fetch_url, 'https://www.guetersloh.de/rss') !== false) {
-                // URL ist korrekt
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Using standard Gütersloh feed URL: ' . esc_js($fetch_url) . '");</script>';
-                }
-            } else {
-                // Versuche, die URL zu korrigieren
-                $corrected_url = 'https://www.guetersloh.de/rss';
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Correcting Gütersloh feed URL from ' . esc_js($fetch_url) . ' to ' . esc_js($corrected_url) . '");</script>';
-                }
-                $fetch_url = $corrected_url;
+        // Special handling for Hubspot feed
+        elseif ($is_hubspot) {
+            $args['headers'] = [
+                'Accept' => 'application/xml, application/rss+xml, text/xml, application/json, */*'
+            ];
+            
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Using special headers for Hubspot feed");</script>';
             }
         }
         
-        // Feed abrufen mit angepassten Parametern
-        $response = wp_safe_remote_get($fetch_url, $request_args);
-
+        // Use WordPress HTTP API to fetch the content
+        $response = wp_remote_get($fetch_url, $args);
+        
         if (is_wp_error($response)) {
             $error_code = $response->get_error_code();
             $error_message = $response->get_error_message();
