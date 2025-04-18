@@ -1,0 +1,13 @@
+{
+  "name": "athena-ai",
+  "version": "1.0.0",
+  "description": "Athena AI WordPress Plugin",
+  "scripts": {
+    "build:css": "tailwindcss -i ./assets/css/tailwind.css -o ./assets/css/athena-admin.css --minify",
+    "watch:css": "tailwindcss -i ./assets/css/tailwind.css -o ./assets/css/athena-admin.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.3",
+    "@tailwindcss/forms": "^0.5.4"
+  }
+}

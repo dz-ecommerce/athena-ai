@@ -1,0 +1,304 @@
+/* 
+ * Athena AI Admin Styles mit Tailwind CSS
+ * Diese Datei wurde mit Tailwind CSS generiert
+ */
+
+/* Base Tailwind-Komponenten */
+.athena-ai-admin *, .athena-ai-admin ::before, .athena-ai-admin ::after { box-sizing: border-box; }
+
+/* Container und Layouts */
+.athena-ai-admin .container { width: 100%; margin-right: auto; margin-left: auto; padding-right: 1rem; padding-left: 1rem; }
+.athena-ai-admin .flex { display: flex; }
+.athena-ai-admin .grid { display: grid; }
+.athena-ai-admin .hidden { display: none; }
+.athena-ai-admin .flex-col { flex-direction: column; }
+.athena-ai-admin .flex-row { flex-direction: row; }
+.athena-ai-admin .items-center { align-items: center; }
+.athena-ai-admin .justify-between { justify-content: space-between; }
+.athena-ai-admin .gap-4 { gap: 1rem; }
+.athena-ai-admin .space-x-4 > * + * { margin-left: 1rem; }
+.athena-ai-admin .space-y-4 > * + * { margin-top: 1rem; }
+
+/* Abstände */
+.athena-ai-admin .p-4 { padding: 1rem; }
+.athena-ai-admin .p-6 { padding: 1.5rem; }
+.athena-ai-admin .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.athena-ai-admin .px-4 { padding-left: 1rem; padding-right: 1rem; }
+.athena-ai-admin .m-4 { margin: 1rem; }
+.athena-ai-admin .mb-4 { margin-bottom: 1rem; }
+.athena-ai-admin .mb-6 { margin-bottom: 1.5rem; }
+.athena-ai-admin .mt-4 { margin-top: 1rem; }
+
+/* Farben */
+.athena-ai-admin .bg-white { background-color: #ffffff; }
+.athena-ai-admin .bg-gray-50 { background-color: #f9fafb; }
+.athena-ai-admin .bg-gray-100 { background-color: #f3f4f6; }
+.athena-ai-admin .bg-blue-50 { background-color: #eff6ff; }
+.athena-ai-admin .bg-blue-500 { background-color: #3b82f6; }
+.athena-ai-admin .bg-blue-600 { background-color: #2563eb; }
+.athena-ai-admin .bg-blue-700 { background-color: #1d4ed8; }
+.athena-ai-admin .bg-red-100 { background-color: #fee2e2; }
+.athena-ai-admin .bg-red-600 { background-color: #dc2626; }
+.athena-ai-admin .bg-red-700 { background-color: #b91c1c; }
+.athena-ai-admin .bg-green-100 { background-color: #d1fae5; }
+.athena-ai-admin .bg-yellow-100 { background-color: #fef3c7; }
+.athena-ai-admin .text-gray-500 { color: #6b7280; }
+.athena-ai-admin .text-gray-700 { color: #374151; }
+.athena-ai-admin .text-gray-900 { color: #111827; }
+.athena-ai-admin .text-blue-500 { color: #3b82f6; }
+.athena-ai-admin .text-blue-600 { color: #2563eb; }
+.athena-ai-admin .text-white { color: #ffffff; }
+.athena-ai-admin .text-red-800 { color: #991b1b; }
+.athena-ai-admin .text-green-800 { color: #065f46; }
+.athena-ai-admin .text-yellow-800 { color: #92400e; }
+
+/* Typografie */
+.athena-ai-admin .text-xs { font-size: 0.75rem; line-height: 1rem; }
+.athena-ai-admin .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.athena-ai-admin .text-base { font-size: 1rem; line-height: 1.5rem; }
+.athena-ai-admin .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.athena-ai-admin .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.athena-ai-admin .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.athena-ai-admin .font-medium { font-weight: 500; }
+.athena-ai-admin .font-semibold { font-weight: 600; }
+.athena-ai-admin .font-bold { font-weight: 700; }
+.athena-ai-admin .uppercase { text-transform: uppercase; }
+.athena-ai-admin .tracking-wider { letter-spacing: 0.05em; }
+
+/* Rahmen und Schatten */
+.athena-ai-admin .rounded-md { border-radius: 0.375rem; }
+.athena-ai-admin .rounded-lg { border-radius: 0.5rem; }
+.athena-ai-admin .rounded-full { border-radius: 9999px; }
+.athena-ai-admin .border { border-width: 1px; }
+.athena-ai-admin .border-gray-200 { border-color: #e5e7eb; }
+.athena-ai-admin .border-blue-500 { border-color: #3b82f6; }
+.athena-ai-admin .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+.athena-ai-admin .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+
+/* Komponenten */
+.athena-ai-admin .athena-card {
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.athena-ai-admin .athena-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.athena-ai-admin .athena-button:hover {
+  background-color: #1d4ed8;
+}
+
+.athena-ai-admin .athena-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.athena-ai-admin .athena-button-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.athena-ai-admin .athena-button-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.athena-ai-admin .athena-button-danger {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.athena-ai-admin .athena-button-danger:hover {
+  background-color: #b91c1c;
+}
+
+.athena-ai-admin .athena-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.athena-ai-admin .athena-table thead {
+  background-color: #f9fafb;
+}
+
+.athena-ai-admin .athena-table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.athena-ai-admin .athena-table tbody tr {
+  background-color: #ffffff;
+}
+
+.athena-ai-admin .athena-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.athena-ai-admin .athena-table td {
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.athena-ai-admin .athena-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.athena-ai-admin .athena-tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+.athena-ai-admin .athena-tab {
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.athena-ai-admin .athena-tab:hover {
+  color: #374151;
+}
+
+.athena-ai-admin .athena-tab-active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.athena-ai-admin .athena-feed-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: border-color 0.15s;
+  margin-bottom: 0.5rem;
+}
+
+.athena-ai-admin .athena-feed-item:hover {
+  border-color: #3b82f6;
+}
+
+.athena-ai-admin .athena-feed-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 2rem;
+  width: 2rem;
+  border-radius: 9999px;
+  background-color: #eff6ff;
+  color: #3b82f6;
+  margin-right: 1rem;
+}
+
+.athena-ai-admin .athena-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.athena-ai-admin .athena-badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.athena-ai-admin .athena-badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.athena-ai-admin .athena-badge-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Responsive Anpassungen */
+@media (min-width: 640px) {
+  .athena-ai-admin .container { max-width: 640px; }
+  .athena-ai-admin .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) {
+  .athena-ai-admin .container { max-width: 768px; }
+  .athena-ai-admin .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .athena-ai-admin .container { max-width: 1024px; }
+  .athena-ai-admin .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* WordPress Admin Anpassungen */
+.athena-ai-admin #wpbody-content {
+  padding-bottom: 0;
+}
+
+.athena-ai-admin .wrap h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.athena-ai-admin .wp-header-end {
+  margin-bottom: 1.5rem;
+}
+
+/* Kompatibilität mit WordPress-Elementen */
+.athena-ai-admin .notice {
+  margin: 0 0 1.5rem 0;
+}
+
+/* Überschreibt einige WordPress-Button-Stile */
+.athena-ai-admin .button.button-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  height: auto;
+  line-height: normal;
+}
+
+.athena-ai-admin .button.button-primary:hover {
+  background-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: none;
+}

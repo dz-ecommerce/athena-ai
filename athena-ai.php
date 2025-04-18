@@ -99,11 +99,17 @@ function athena_ai_init() {
     // Register Feed Items menu directly
     add_action('admin_menu', 'athena_ai_register_feed_items_menu');
     
-    // Initialize Feed Fetcher
-    \AthenaAI\Admin\FeedFetcher::init();
+    // Initialize admin classes
+    if (is_admin()) {
+        new \AthenaAI\Admin\Settings();
+        new \AthenaAI\Admin\FeedManager();
+        new \AthenaAI\Admin\StylesManager(); // Neue StylesManager-Klasse für Tailwind CSS
+        new \AthenaAI\Admin\FeedItemsManager(); // Manager für Feed-Items AJAX-Funktionalität
+    }
     
-    // Initialize Maintenance page
-    \AthenaAI\Admin\Maintenance::init();
+    // Initialize feed classes
+    \AthenaAI\Admin\FeedFetcher::init();
+    new \AthenaAI\Admin\Maintenance();
 
     // Initialize GitHub updater
     $updater = new \AthenaAI\Core\UpdateChecker(
@@ -314,212 +320,6 @@ function athena_ai_render_feed_items_page() {
     // Pagination
     $total_pages = ceil($total_items / $items_per_page);
     
-    // Start output
-    echo '<div class="wrap">';
-    
-    // Display admin notices - nur wenn tatsächlich Erfolge vorhanden sind
-    if ((isset($_GET['message']) && $_GET['message'] === 'feeds-fetched' && isset($_GET['success']) && $_GET['success'] > 0) || 
-        ($show_success_message && $fetch_result && $fetch_result['success'] > 0)) {
-        
-        echo '<div class="notice notice-success is-dismissible"><p>' . 
-            sprintf(
-                esc_html__('Feeds fetched successfully: %d feeds processed, %d new items added.', 'athena-ai'),
-                $fetch_result ? $fetch_result['success'] : (isset($_GET['success']) ? intval($_GET['success']) : 0),
-                $fetch_result ? $fetch_result['new_items'] : (isset($_GET['new_items']) ? intval($_GET['new_items']) : 0)
-            ) . 
-            '</p></div>';
-    }
-    
-    if ($show_error_message && $fetch_result) {
-        echo '<div class="notice notice-warning is-dismissible"><p>' . 
-            sprintf(
-                esc_html__('Some feeds failed to fetch: %d errors occurred.', 'athena-ai'),
-                $fetch_result['error']
-            ) . 
-            '</p></div>';
-            
-        if (!empty($fetch_result['details'])) {
-            echo '<div class="notice notice-warning is-dismissible"><ul>';
-            foreach (array_slice($fetch_result['details'], 0, 5) as $error_message) {
-                echo '<li>' . esc_html($error_message) . '</li>';
-            }
-            if (count($fetch_result['details']) > 5) {
-                echo '<li>' . esc_html__('...and more errors. Check the error log for details.', 'athena-ai') . '</li>';
-            }
-            echo '</ul></div>';
-        }
-    }
-    
-    echo '<h1 class="wp-heading-inline">' . esc_html__('Feed Items', 'athena-ai') . '</h1>';
-    
-    // Add fetch button
-    echo '<form method="post" style="display:inline;">';
-    wp_nonce_field('athena_fetch_feeds_nonce');
-    echo '<input type="submit" name="athena_fetch_feeds" class="page-title-action" value="' . esc_attr__('Fetch Feeds Now', 'athena-ai') . '">';
-    echo '</form>';
-    
-    // Add debug button
-    echo ' <a href="' . esc_url(admin_url('admin-post.php?action=athena_debug_fetch_feeds')) . '" class="page-title-action">' . esc_html__('Debug Cron Fetch', 'athena-ai') . '</a>';
-    
-    // Display stats
-    echo '<div class="athena-feed-stats" style="margin: 15px 0; padding: 10px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">';
-    echo '<p>';
-    echo '<strong>' . esc_html__('Feed Statistics:', 'athena-ai') . '</strong> ';
-    echo sprintf(
-        esc_html__('Active Feeds: %1$s | Total Items: %2$s | Last Fetch: %3$s | Next Scheduled Fetch: %4$s', 'athena-ai'),
-        '<strong>' . esc_html($feed_count) . '</strong>',
-        '<strong>' . esc_html($total_items) . '</strong>',
-        '<strong>' . esc_html($last_fetch_text) . '</strong>',
-        '<strong>' . (wp_next_scheduled('athena_fetch_feeds') ? human_time_diff(time(), wp_next_scheduled('athena_fetch_feeds')) . ' ' . __('from now', 'athena-ai') : __('Not scheduled', 'athena-ai')) . '</strong>'
-    );
-    echo '</p>';
-    
-    if ($fetch_stats) {
-        echo '<p>';
-        // Use null coalescing operator to safely handle potentially missing properties
-        $total_fetches = isset($fetch_stats->total_fetches) ? intval($fetch_stats->total_fetches) : 0;
-        $items_per_feed = ($feed_count > 0) ? round($total_items / $feed_count, 1) : 0;
-        
-        // Hole die Anzahl der neuen Items aus dem letzten Fetch
-        $last_new_items = get_option('athena_last_feed_new_items', 0);
-        
-        echo sprintf(
-            esc_html__('Total Fetches: %1$s | Items Per Feed: %2$s | New Items from Last Fetch: %3$s', 'athena-ai'),
-            '<strong>' . esc_html($total_fetches) . '</strong>',
-            '<strong>' . esc_html($items_per_feed) . '</strong>',
-            '<strong>' . esc_html($last_new_items) . '</strong>'
-        );
-        echo '</p>';
-    }
-    
-    echo '</div>';
-    
-    // Display filters
-    echo '<div class="athena-feed-filters" style="margin: 15px 0; padding: 10px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">';
-    echo '<form method="get">';
-    echo '<input type="hidden" name="page" value="athena-feed-items">';
-    
-    // Feed filter
-    echo '<label for="feed_id" style="margin-right: 10px;">' . esc_html__('Filter by Feed:', 'athena-ai') . '</label>';
-    echo '<select name="feed_id" id="feed_id" style="margin-right: 15px;">';
-    echo '<option value="0">' . esc_html__('All Feeds', 'athena-ai') . '</option>';
-    
-    foreach ($feeds as $feed) {
-        $selected = $feed_filter == $feed->ID ? 'selected' : '';
-        echo '<option value="' . esc_attr($feed->ID) . '" ' . $selected . '>' . esc_html($feed->post_title) . '</option>';
-    }
-    
-    echo '</select>';
-    
-    // Date filter
-    echo '<label for="date_filter" style="margin-right: 10px;">' . esc_html__('Filter by Date:', 'athena-ai') . '</label>';
-    echo '<select name="date_filter" id="date_filter" style="margin-right: 15px;">';
-    echo '<option value="">' . esc_html__('All Dates', 'athena-ai') . '</option>';
-    echo '<option value="today" ' . selected($date_filter, 'today', false) . '>' . esc_html__('Today', 'athena-ai') . '</option>';
-    echo '<option value="yesterday" ' . selected($date_filter, 'yesterday', false) . '>' . esc_html__('Yesterday', 'athena-ai') . '</option>';
-    echo '<option value="this_week" ' . selected($date_filter, 'this_week', false) . '>' . esc_html__('This Week', 'athena-ai') . '</option>';
-    echo '<option value="last_week" ' . selected($date_filter, 'last_week', false) . '>' . esc_html__('Last Week', 'athena-ai') . '</option>';
-    echo '<option value="this_month" ' . selected($date_filter, 'this_month', false) . '>' . esc_html__('This Month', 'athena-ai') . '</option>';
-    echo '<option value="last_month" ' . selected($date_filter, 'last_month', false) . '>' . esc_html__('Last Month', 'athena-ai') . '</option>';
-    echo '</select>';
-    
-    echo '<input type="submit" class="button" value="' . esc_attr__('Apply Filters', 'athena-ai') . '">';
-    
-    // Reset filters
-    if ($feed_filter || $date_filter) {
-        echo ' <a href="' . esc_url(admin_url('admin.php?page=athena-feed-items')) . '" class="button">' . esc_html__('Reset Filters', 'athena-ai') . '</a>';
-    }
-    
-    echo '</form>';
-    echo '</div>';
-    
-    // Display feed items
-    if (empty($items)) {
-        echo '<div class="notice notice-warning"><p>' . esc_html__('No feed items found. Try fetching feeds or add new feeds.', 'athena-ai') . '</p></div>';
-    } else {
-        echo '<table class="wp-list-table widefat fixed striped">';
-        echo '<thead><tr>';
-        echo '<th>' . esc_html__('Title', 'athena-ai') . '</th>';
-        echo '<th>' . esc_html__('Feed', 'athena-ai') . '</th>';
-        echo '<th>' . esc_html__('Date', 'athena-ai') . '</th>';
-        echo '<th>' . esc_html__('Actions', 'athena-ai') . '</th>';
-        echo '</tr></thead>';
-        echo '<tbody>';
-        
-        foreach ($items as $item) {
-            // Ensure raw_content is a string before decoding
-            if (!isset($item->raw_content) || !is_string($item->raw_content)) {
-                continue; // Skip this item if raw_content is missing or not a string
-            }
-            
-            // Safely decode JSON with error handling
-            $raw_content = json_decode($item->raw_content);
-            if (json_last_error() !== JSON_ERROR_NONE || !is_object($raw_content)) {
-                // Log the error and skip this item
-                error_log('Athena AI: JSON decode error for feed item: ' . json_last_error_msg());
-                continue;
-            }
-            
-            // Safely extract and convert properties to strings
-            $title = '';
-            if (isset($raw_content->title)) {
-                $title = is_scalar($raw_content->title) ? (string)$raw_content->title : '';
-            }
-            
-            $link = '';
-            if (isset($raw_content->link)) {
-                $link = is_scalar($raw_content->link) ? (string)$raw_content->link : '';
-            }
-            
-            $description = '';
-            if (isset($raw_content->description)) {
-                $description = is_scalar($raw_content->description) ? (string)$raw_content->description : '';
-            }
-            
-            // Handle different feed formats
-            if (empty($link) && isset($raw_content->guid) && is_scalar($raw_content->guid)) {
-                $link = (string)$raw_content->guid;
-            }
-            
-            if (empty($title) && !empty($description)) {
-                $title = wp_trim_words($description, 10, '...');
-            } elseif (empty($title)) {
-                $title = __('(No Title)', 'athena-ai');
-            }
-            
-            echo '<tr>';
-            echo '<td>' . ($link ? '<a href="' . esc_url($link) . '" target="_blank">' . esc_html($title) . '</a>' : esc_html($title)) . '</td>';
-            echo '<td>' . esc_html($item->feed_title) . '</td>';
-            echo '<td>' . esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($item->pub_date))) . '</td>';
-            echo '<td>';
-            if ($link) {
-                echo '<a href="' . esc_url($link) . '" target="_blank" class="button button-small">' . esc_html__('View', 'athena-ai') . '</a> ';
-            }
-            echo '</td>';
-            echo '</tr>';
-        }
-        
-        echo '</tbody></table>';
-        
-        // Pagination
-        if ($total_pages > 1) {
-            $page_links = paginate_links([
-                'base' => add_query_arg('paged', '%#%'),
-                'format' => '',
-                'prev_text' => __('&laquo;'),
-                'next_text' => __('&raquo;'),
-                'total' => $total_pages,
-                'current' => $current_page,
-            ]);
-            
-            if ($page_links) {
-                echo '<div class="tablenav"><div class="tablenav-pages">' . $page_links . '</div></div>';
-            }
-        }
-    }
-    
-    // Add link to manage feeds
-    echo '<p><a href="' . esc_url(admin_url('edit.php?post_type=athena-feed')) . '" class="button">' . esc_html__('Manage Feeds', 'athena-ai') . '</a></p>';
-    
-    echo '</div>';
+    // Render the new Tailwind CSS template
+    include ATHENA_AI_PLUGIN_DIR . 'templates/admin/feed-items.php';
 }
