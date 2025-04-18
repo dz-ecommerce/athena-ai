@@ -109,6 +109,24 @@ class Feed {
             $request_args['redirection'] = 5; // Mehr Weiterleitungen erlauben
         }
         
+        // Spezielle URL-Behandlung für Gütersloh-Feed
+        if ($is_guetersloh) {
+            // Prüfen, ob die URL korrekt formatiert ist
+            if (strpos($fetch_url, 'https://www.guetersloh.de/rss') !== false) {
+                // URL ist korrekt
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Using standard Gütersloh feed URL: ' . esc_js($fetch_url) . '");</script>';
+                }
+            } else {
+                // Versuche, die URL zu korrigieren
+                $corrected_url = 'https://www.guetersloh.de/rss';
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Correcting Gütersloh feed URL from ' . esc_js($fetch_url) . ' to ' . esc_js($corrected_url) . '");</script>';
+                }
+                $fetch_url = $corrected_url;
+            }
+        }
+        
         // Feed abrufen mit angepassten Parametern
         $response = wp_safe_remote_get($fetch_url, $request_args);
 
@@ -242,8 +260,29 @@ class Feed {
         // Versuche, ungültige Zeichen zu entfernen
         $content = preg_replace('/[^\x{0009}\x{000A}\x{000D}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $content);
         
+        // Spezielle Behandlung für Gütersloh-Feed
+        if ($is_guetersloh && $verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Applying special handling for Gütersloh XML feed...");</script>';
+            
+            // Entferne BOM (Byte Order Mark) falls vorhanden
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+            
+            // Entferne ungültige Steuerzeichen
+            $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $content);
+            
+            // Ersetze HTML-Entities in XML-Tags
+            $content = preg_replace_callback('/<([^>]*)>/', function($matches) {
+                return '<' . html_entity_decode($matches[1]) . '>';
+            }, $content);
+        }
+        
         // Attempt to load XML with error suppression
         $xml = @simplexml_load_string($content);
+        
+        // Wenn das Laden fehlschlägt, versuche es mit der LIBXML_NOWARNING-Option
+        if ($xml === false) {
+            $xml = @simplexml_load_string($content, \SimpleXMLElement::class, LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA);
+        }
         
         if ($xml === false) {
             $errors = libxml_get_errors();
@@ -260,6 +299,41 @@ class Feed {
                 }
             }
             
+            // Versuche einen letzten Rettungsversuch mit DOMDocument für problematische Feeds
+            if ($is_guetersloh || $verbose_console) {
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed: Attempting to load XML with DOMDocument as fallback...");</script>';
+                }
+                
+                $dom = new \DOMDocument();
+                $dom->recover = true; // Versuche, fehlerhafte XML zu reparieren
+                $dom->strictErrorChecking = false;
+                $dom->validateOnParse = false;
+                
+                // Fehler unterdrücken während des Ladens
+                $success = @$dom->loadXML($content);
+                
+                if ($success) {
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed: Successfully loaded XML with DOMDocument");</script>';
+                    }
+                    
+                    // Konvertiere DOMDocument zu SimpleXML
+                    $xml = simplexml_import_dom($dom);
+                    
+                    if ($xml !== false) {
+                        if ($verbose_console) {
+                            echo '<script>console.log("Athena AI Feed: Successfully converted DOMDocument to SimpleXML");</script>';
+                        }
+                        // Wenn die Konvertierung erfolgreich war, fahre fort mit der Verarbeitung
+                        libxml_clear_errors();
+                    }
+                }
+            }
+            
+            // Wenn immer noch kein gültiges XML, gib Fehler zurück
+            if ($xml === false) {
+            
             if ($verbose_console) {
                 echo '<script>console.error("Athena AI Feed: XML parse error: ' . esc_js($error_msg) . '");</script>';
                 if (!empty($errors)) {
@@ -273,11 +347,12 @@ class Feed {
                 }
             }
             
-            $this->last_error = 'XML parse error: ' . $error_msg;
-            $this->log_error('xml_parse_error', $error_msg);
-            $this->update_feed_error('xml_parse_error', $error_msg);
-            libxml_clear_errors();
-            return false;
+                $this->last_error = 'XML parse error: ' . $error_msg;
+                $this->log_error('xml_parse_error', $error_msg);
+                $this->update_feed_error('xml_parse_error', $error_msg);
+                libxml_clear_errors();
+                return false;
+            }
         }
         
         if ($debug_mode) {
@@ -288,7 +363,46 @@ class Feed {
         $items = [];
         $feed_type = 'unknown';
         
-        if (isset($xml->channel) && isset($xml->channel->item)) {
+        // Spezielle Behandlung für Gütersloh-Feed
+        if ($is_guetersloh) {
+            if ($verbose_console) {
+                echo '<script>console.log("Athena AI Feed: Applying special item detection for Gütersloh feed...");</script>';
+                
+                // Debugging der XML-Struktur
+                $xml_keys = get_object_vars($xml);
+                echo '<script>console.log("Gütersloh XML root elements: ", ' . json_encode(array_keys($xml_keys)) . ');</script>';
+                
+                if (isset($xml->channel)) {
+                    echo '<script>console.log("Gütersloh channel elements: ", ' . json_encode(array_keys(get_object_vars($xml->channel))) . ');</script>';
+                }
+            }
+            
+            // Gütersloh verwendet manchmal eine nicht-standard RSS-Struktur
+            if (isset($xml->channel) && isset($xml->channel->item)) {
+                $items = $xml->channel->item;
+                $feed_type = 'Gütersloh RSS';
+                
+                if ($verbose_console) {
+                    echo '<script>console.log("Found Gütersloh items under channel->item, count: ' . count($items) . '");</script>';
+                }
+            } elseif (isset($xml->channel) && isset($xml->channel->entry)) {
+                $items = $xml->channel->entry;
+                $feed_type = 'Gütersloh RSS variant';
+                
+                if ($verbose_console) {
+                    echo '<script>console.log("Found Gütersloh items under channel->entry, count: ' . count($items) . '");</script>';
+                }
+            } elseif (isset($xml->item)) {
+                $items = $xml->item;
+                $feed_type = 'Gütersloh RSS direct';
+                
+                if ($verbose_console) {
+                    echo '<script>console.log("Found Gütersloh items directly under root->item, count: ' . count($items) . '");</script>';
+                }
+            }
+        }
+        // Standard-Feed-Formate prüfen, wenn noch keine Items gefunden wurden
+        else if (isset($xml->channel) && isset($xml->channel->item)) {
             // RSS format
             $items = $xml->channel->item;
             $feed_type = 'RSS';
