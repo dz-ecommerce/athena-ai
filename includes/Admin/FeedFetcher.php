@@ -89,8 +89,17 @@ class FeedFetcher {
             
             // Statt Weiterleitung mit wp_redirect, die JavaScript-Weiterleitung verwenden
             // Dies vermeidet das "Headers already sent"-Problem
+            // Parameter für Erfolg und neue Items hinzufügen
+            $redirect_url = add_query_arg([
+                'page' => 'athena-feed-items',
+                'feed_fetched' => 1,
+                'success' => $result['success'],
+                'error' => $result['error'],
+                'new_items' => $result['new_items']
+            ], admin_url('admin.php'));
+            
             echo '<html><head>';
-            echo '<meta http-equiv="refresh" content="0;URL=\'' . admin_url('admin.php?page=athena-feed-items&feed_fetched=1') . '\'" />';
+            echo '<meta http-equiv="refresh" content="0;URL=\'' . esc_url($redirect_url) . '\" />';
             echo '</head><body>';
             echo '<p>' . __('Feed fetch completed. Redirecting...', 'athena-ai') . '</p>';
             echo '</body></html>';

@@ -170,7 +170,8 @@ function athena_ai_render_feed_items_page() {
     $show_error_message = false;
     
     // Check for feed_fetched parameter (from debug action)
-    if (isset($_GET['feed_fetched']) && $_GET['feed_fetched'] == 1) {
+    // Nur anzeigen, wenn es auch tatsächlich Erfolge gab
+    if (isset($_GET['feed_fetched']) && $_GET['feed_fetched'] == 1 && isset($_GET['success']) && $_GET['success'] > 0) {
         $show_success_message = true;
     }
     
@@ -191,8 +192,11 @@ function athena_ai_render_feed_items_page() {
         $wpdb->show_errors = $show_errors;
         $wpdb->suppress_errors(false);
         
+        // Nur Erfolgsmeldung anzeigen, wenn tatsächlich Feeds erfolgreich abgerufen wurden
         if ($fetch_result['success'] > 0) {
             $show_success_message = true;
+        } else {
+            $show_success_message = false; // Explizit auf false setzen, falls keine Erfolge
         }
         
         if ($fetch_result['error'] > 0) {
@@ -309,21 +313,17 @@ function athena_ai_render_feed_items_page() {
     // Start output
     echo '<div class="wrap">';
     
-    // Display admin notices
-    if (isset($_GET['message']) && $_GET['message'] === 'feeds-fetched' || $show_success_message) {
-        if ($fetch_result) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . 
-                sprintf(
-                    esc_html__('Feeds fetched successfully: %d feeds processed, %d new items added.', 'athena-ai'),
-                    $fetch_result['success'],
-                    $fetch_result['new_items']
-                ) . 
-                '</p></div>';
-        } else {
-            echo '<div class="notice notice-success is-dismissible"><p>' . 
-                esc_html__('Feeds fetched successfully.', 'athena-ai') . 
-                '</p></div>';
-        }
+    // Display admin notices - nur wenn tatsächlich Erfolge vorhanden sind
+    if ((isset($_GET['message']) && $_GET['message'] === 'feeds-fetched' && isset($_GET['success']) && $_GET['success'] > 0) || 
+        ($show_success_message && $fetch_result && $fetch_result['success'] > 0)) {
+        
+        echo '<div class="notice notice-success is-dismissible"><p>' . 
+            sprintf(
+                esc_html__('Feeds fetched successfully: %d feeds processed, %d new items added.', 'athena-ai'),
+                $fetch_result ? $fetch_result['success'] : (isset($_GET['success']) ? intval($_GET['success']) : 0),
+                $fetch_result ? $fetch_result['new_items'] : (isset($_GET['new_items']) ? intval($_GET['new_items']) : 0)
+            ) . 
+            '</p></div>';
     }
     
     if ($show_error_message && $fetch_result) {
