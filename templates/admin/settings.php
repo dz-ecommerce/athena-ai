@@ -712,11 +712,28 @@ jQuery(document).ready(function($) {
         // Show target content
         $('.tab-content').removeClass('active');
         $('#' + target).addClass('active');
+        
+        // Speichere den aktiven Tab im localStorage
+        localStorage.setItem('athena_active_tab', target);
     });
+    
+    // Aktiven Tab beim Laden der Seite wiederherstellen
+    var activeTab = localStorage.getItem('athena_active_tab');
+    if (activeTab) {
+        $('.nav-tab[data-tab="' + activeTab + '"]').trigger('click');
+    }
 
     // Temperature slider value display
     $('#athena_ai_openai_temperature').on('input', function() {
         $(this).next('.temperature-value').text($(this).val());
+    });
+    
+    // Füge ein verstecktes Feld hinzu, um den aktiven Tab beim Formular-Submit zu übergeben
+    $('form').append('<input type="hidden" name="active_tab" id="active_tab" value="' + (activeTab || 'github-settings') + '">');
+    
+    // Aktualisiere den Wert des versteckten Felds bei Tab-Wechsel
+    $('.nav-tab').on('click', function() {
+        $('#active_tab').val($(this).data('tab'));
     });
 });
 </script>

@@ -149,7 +149,14 @@ class Settings extends BaseAdmin {
         
         // Maintenance Settings
         $settings['athena_ai_enable_debug_mode'] = isset($_POST['athena_ai_enable_debug_mode']) ? '1' : '0';
-        $settings['athena_ai_feed_cron_interval'] = sanitize_text_field($_POST['athena_ai_feed_cron_interval'] ?? 'hourly');
+        
+        // Feed-Abrufintervall korrekt speichern
+        $feed_cron_interval = sanitize_text_field($_POST['athena_ai_feed_cron_interval'] ?? 'hourly');
+        $settings['athena_ai_feed_cron_interval'] = $feed_cron_interval;
+        
+        if (WP_DEBUG) {
+            error_log("Athena AI: Saving feed cron interval: {$feed_cron_interval}");
+        }
 
         foreach ($settings as $key => $value) {
             update_option($key, $value);
@@ -230,6 +237,7 @@ class Settings extends BaseAdmin {
 
         // Maintenance Settings
         $settings['enable_debug_mode'] = get_option('athena_ai_enable_debug_mode', $this->default_settings['enable_debug_mode']);
+        // Feed-Cron-Intervall korrekt abrufen
         $settings['feed_cron_interval'] = get_option('athena_ai_feed_cron_interval', $this->default_settings['feed_cron_interval']);
 
         return $settings;

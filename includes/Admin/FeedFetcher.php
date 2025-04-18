@@ -18,7 +18,14 @@ class FeedFetcher {
      * Initialize the FeedFetcher
      */
     public static function init(): void {
-        // Register the cron hook
+        // Füge benutzerdefinierte Cron-Zeitpläne hinzu
+        add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
+        
+        // Add ajax handler for debugging cron fetch
+        add_action('wp_ajax_athena_debug_cron_fetch', [self::class, 'debug_cron_fetch']);
+        add_action('wp_ajax_nopriv_athena_debug_cron_fetch', [self::class, 'debug_cron_fetch']);
+        
+        // Füge den Event-Hook hinzu
         add_action('athena_fetch_feeds', [self::class, 'fetch_all_feeds']);
         
         // Holen des konfigurierten Intervalls
@@ -41,9 +48,6 @@ class FeedFetcher {
                 error_log("Athena AI: Feed fetch cron job scheduled with interval: {$interval}");
             }
         }
-        
-        // Add custom cron schedules
-        add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
         
         // Check and update database schema if needed - use init hook to run before headers are sent
         add_action('init', [self::class, 'check_and_update_schema'], 5);
@@ -114,34 +118,52 @@ class FeedFetcher {
      * @return array Modified cron schedules
      */
     public static function add_cron_schedules(array $schedules): array {
+        // Add a 1-minute schedule
+        $schedules['athena_1min'] = [
+            'interval' => MINUTE_IN_SECONDS,
+            'display' => __('Every Minute', 'athena-ai')
+        ];
+        
+        // Add a 5-minute schedule
+        $schedules['athena_5min'] = [
+            'interval' => 5 * MINUTE_IN_SECONDS,
+            'display' => __('Every 5 Minutes', 'athena-ai')
+        ];
+        
         // Add a 15-minute schedule
         $schedules['athena_15min'] = [
             'interval' => 15 * MINUTE_IN_SECONDS,
-            'display' => __('Every 15 minutes', 'athena-ai')
+            'display' => __('Every 15 Minutes', 'athena-ai')
         ];
         
         // Add a 30-minute schedule
         $schedules['athena_30min'] = [
             'interval' => 30 * MINUTE_IN_SECONDS,
-            'display' => __('Every 30 minutes', 'athena-ai')
+            'display' => __('Every 30 Minutes', 'athena-ai')
+        ];
+        
+        // Add a 45-minute schedule
+        $schedules['athena_45min'] = [
+            'interval' => 45 * MINUTE_IN_SECONDS,
+            'display' => __('Every 45 Minutes', 'athena-ai')
         ];
         
         // Add a 2-hour schedule
         $schedules['athena_2hours'] = [
             'interval' => 2 * HOUR_IN_SECONDS,
-            'display' => __('Every 2 hours', 'athena-ai')
+            'display' => __('Every 2 Hours', 'athena-ai')
         ];
         
         // Add a 6-hour schedule
         $schedules['athena_6hours'] = [
             'interval' => 6 * HOUR_IN_SECONDS,
-            'display' => __('Every 6 hours', 'athena-ai')
+            'display' => __('Every 6 Hours', 'athena-ai')
         ];
         
         // Add a 12-hour schedule
         $schedules['athena_12hours'] = [
             'interval' => 12 * HOUR_IN_SECONDS,
-            'display' => __('Every 12 hours', 'athena-ai')
+            'display' => __('Every 12 Hours', 'athena-ai')
         ];
         
         return $schedules;
