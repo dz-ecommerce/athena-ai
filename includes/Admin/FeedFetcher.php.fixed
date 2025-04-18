@@ -441,99 +441,40 @@ class FeedFetcher {
     }
     
     /**
-     * Check and update the database schema if needed
-     */
-    public static function check_and_update_schema(): void {
-        global $wpdb;
-        
-        // Debug-Logging aktivieren
-        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
-        $verbose_console = true; // Immer Konsolenausgaben aktivieren für diese kritische Funktion
-        
-        // Fehlerausgabe unterdrücken, um "Headers already sent"-Probleme zu vermeiden
-        $wpdb->suppress_errors(true);
         $show_errors = $wpdb->show_errors;
         $wpdb->show_errors = false;
         
-        try {
-            // Prüfen, ob die Tabelle existiert
-            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'") === $wpdb->prefix . 'feed_metadata';
-            
-            if (!$table_exists) {
-                // Tabelle existiert nicht, daher nichts zu aktualisieren
-                if ($debug_mode) {
-                    error_log('Athena AI: feed_metadata table does not exist, cannot update schema');
-                }
-                if ($verbose_console) {
-                    echo '<script>console.warn("Athena AI Feed Fetcher: feed_metadata table does not exist, cannot update schema");</script>';
-                }
-                return;
+        // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
+        if (!in_array('last_fetched', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
+            if (get_option('athena_ai_enable_debug_mode', false)) {
+                error_log('Athena AI: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
             }
-            
-            // Alle Spalten abrufen, um den aktuellen Zustand der Tabelle zu prüfen
-            $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
-            
-            if ($columns === false || $columns === null) {
-                if ($debug_mode) {
-                    error_log('Athena AI: Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
-                }
-                if ($verbose_console) {
-                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to get columns from feed_metadata table. Error: ' . esc_js($wpdb->last_error) . '");</script>';
-                }
-                return;
-            }
-            
-            $column_names = array_map(function($col) { return $col->Field; }, $columns);
-            
-            if ($debug_mode) {
-                error_log('Athena AI: Current feed_metadata table columns: ' . implode(', ', $column_names));
-            }
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed Fetcher: Current feed_metadata table columns: ' . implode(', ', $column_names) . '");</script>';
-            }
-            
-            // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
-            if (!in_array('last_fetched', $column_names)) {
-                $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
-                if ($debug_mode) {
-                    error_log('Athena AI: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
-                }
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed Fetcher: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed') . '");</script>';
-                }
-            }
-            
-            // Add missing columns one by one without referencing other columns
-            if (!in_array('fetch_interval', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_interval INT DEFAULT 3600");
-            }
-            
-            if (!in_array('fetch_count', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0");
-            }
-            
-            if (!in_array('last_error_date', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL");
-            }
-            
-            if (!in_array('last_error_message', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT");
-            }
-            
-            if (!in_array('created_at', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-            }
-            
-            if (!in_array('updated_at', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-            }
-        } catch (\Exception $e) {
-            if ($debug_mode) {
-                error_log('Athena AI: Exception in check_and_update_schema: ' . $e->getMessage());
-            }
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed Fetcher: Exception in check_and_update_schema: ' . esc_js($e->getMessage()) . '");</script>';
-            }
+        }
+        
+        // Add missing columns one by one without referencing other columns
+        if (!in_array('fetch_interval', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_interval INT DEFAULT 3600");
+        }
+        
+        if (!in_array('fetch_count', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0");
+        }
+        
+        if (!in_array('last_error_date', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL");
+        }
+        
+        if (!in_array('last_error_message', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT");
+        }
+        
+        if (!in_array('created_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+        
+        if (!in_array('updated_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
         }
         
         // Restore error display settings

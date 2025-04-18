@@ -162,6 +162,9 @@ class Feed {
         // Use libxml internal errors for better error handling
         libxml_use_internal_errors(true);
         
+        // Versuche, ungültige Zeichen zu entfernen
+        $content = preg_replace('/[^\x{0009}\x{000A}\x{000D}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $content);
+        
         // Attempt to load XML with error suppression
         $xml = @simplexml_load_string($content);
         
@@ -246,7 +249,21 @@ class Feed {
             
             if ($verbose_console) {
                 echo '<script>console.error("Athena AI Feed: Unknown feed format - neither RSS nor Atom detected");</script>';
-                echo '<script>console.log("Athena AI Feed: XML structure: ", ' . json_encode(array_keys($xml_keys)) . ');</script>';
+                echo '<script>console.group("Athena AI Feed: XML Structure Details");</script>';
+                echo '<script>console.log("XML Root Elements: ", ' . json_encode(array_keys(get_object_vars($xml))) . ');</script>';
+                
+                // Detailliertere Struktur ausgeben
+                if (isset($xml->channel)) {
+                    echo '<script>console.log("Channel Elements: ", ' . json_encode(array_keys(get_object_vars($xml->channel))) . ');</script>';
+                }
+                
+                // Versuche, die ersten 10 Zeichen des XML-Inhalts zu zeigen
+                $content_preview = substr($content, 0, 500);
+                $content_preview = str_replace(["\n", "\r"], "", $content_preview);
+                $content_preview = htmlspecialchars($content_preview, ENT_QUOTES, 'UTF-8');
+                echo '<script>console.log("Content Preview: ", "' . esc_js($content_preview) . '");</script>';
+                
+                echo '<script>console.groupEnd();</script>';
             }
             
             $this->last_error = 'Unknown feed format - neither RSS nor Atom detected';
