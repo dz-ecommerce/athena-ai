@@ -37,17 +37,58 @@ class Feed {
      * @return bool Whether the fetch was successful
      */
     public function fetch(): bool {
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        
+        if ($debug_mode) {
+            error_log("Athena AI: Fetching feed from URL: {$this->url}");
+        }
+        
         $response = wp_safe_remote_get($this->url, [
             'timeout' => 15,
             'headers' => ['Accept' => 'application/rss+xml, application/atom+xml']
         ]);
 
         if (is_wp_error($response)) {
-            $this->log_error($response->get_error_code(), $response->get_error_message());
+            $error_code = $response->get_error_code();
+            $error_message = $response->get_error_message();
+            
+            if ($debug_mode) {
+                error_log("Athena AI: Error fetching feed: {$error_code} - {$error_message}");
+            }
+            
+            $this->log_error($error_code, $error_message);
+            return false;
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        if ($status_code !== 200) {
+            $error_message = "HTTP error: Status code {$status_code}";
+            
+            if ($debug_mode) {
+                error_log("Athena AI: {$error_message}");
+            }
+            
+            $this->log_error('http_error', $error_message);
             return false;
         }
 
         $body = wp_remote_retrieve_body($response);
+        
+        if (empty($body)) {
+            if ($debug_mode) {
+                error_log("Athena AI: Feed response body is empty");
+            }
+            
+            $this->log_error('empty_response', 'Feed response body is empty');
+            return false;
+        }
+        
+        if ($debug_mode) {
+            $body_length = strlen($body);
+            error_log("Athena AI: Received feed content (length: {$body_length} bytes)");
+        }
+        
         return $this->process_feed_content($body);
     }
 
@@ -59,9 +100,15 @@ class Feed {
      */
     private function process_feed_content(string $content): bool {
         global $wpdb;
+        
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
 
         // Validate content
         if (empty($content)) {
+            if ($debug_mode) {
+                error_log("Athena AI: Feed content is empty");
+            }
             $this->log_error('empty_content', 'Feed content is empty');
             return false;
         }
@@ -75,36 +122,97 @@ class Feed {
         if ($xml === false) {
             $errors = libxml_get_errors();
             $error_msg = !empty($errors) ? $errors[0]->message : 'Failed to parse feed XML';
+            
+            if ($debug_mode) {
+                error_log("Athena AI: XML parse error: {$error_msg}");
+                if (!empty($errors)) {
+                    foreach ($errors as $index => $error) {
+                        if ($index < 3) { // Limit to first 3 errors to avoid log spam
+                            error_log("Athena AI: XML Error {$index}: Line {$error->line}, Column {$error->column}: {$error->message}");
+                        }
+                    }
+                }
+            }
+            
             $this->log_error('xml_parse_error', $error_msg);
             libxml_clear_errors();
             return false;
         }
+        
+        if ($debug_mode) {
+            error_log("Athena AI: XML parsed successfully");
+        }
 
         // Handle different feed formats (RSS, Atom, etc.)
         $items = [];
+        $feed_type = 'unknown';
+        
         if (isset($xml->channel) && isset($xml->channel->item)) {
             // RSS format
             $items = $xml->channel->item;
+            $feed_type = 'RSS';
+            
+            if ($debug_mode) {
+                $feed_title = isset($xml->channel->title) ? (string)$xml->channel->title : 'Unknown';
+                error_log("Athena AI: Detected RSS feed: '{$feed_title}'");
+            }
         } elseif (isset($xml->entry)) {
             // Atom format
             $items = $xml->entry;
+            $feed_type = 'Atom';
+            
+            if ($debug_mode) {
+                $feed_title = isset($xml->title) ? (string)$xml->title : 'Unknown';
+                error_log("Athena AI: Detected Atom feed: '{$feed_title}'");
+            }
         } elseif (isset($xml->item)) {
             // Some RSS variants
             $items = $xml->item;
+            $feed_type = 'RSS variant';
+            
+            if ($debug_mode) {
+                error_log("Athena AI: Detected RSS variant feed");
+            }
         }
         
         if (empty($items)) {
+            if ($debug_mode) {
+                error_log("Athena AI: No items found in feed");
+                // Dump the first level of XML structure for debugging
+                $xml_keys = get_object_vars($xml);
+                error_log("Athena AI: XML structure: " . print_r(array_keys($xml_keys), true));
+            }
+            
             $this->log_error('no_items_found', 'No items found in feed');
             return false;
+        }
+        
+        if ($debug_mode) {
+            $item_count = count($items);
+            error_log("Athena AI: Found {$item_count} items in {$feed_type} feed");
         }
 
         $processed = 0;
         $errors = 0;
+        $new_items = 0;
+        $existing_items = 0;
 
         // Begin transaction for better database consistency
         $wpdb->query('START TRANSACTION');
 
         try {
+            // Debug-Logging aktivieren
+            $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+            
+            // Prüfen, ob bereits Items für diesen Feed existieren
+            if ($debug_mode) {
+                $existing_count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d",
+                    $this->post_id
+                ));
+                error_log("Athena AI: Feed ID {$this->post_id} already has {$existing_count} items in database");
+            }
+            
             foreach ($items as $item) {
                 // Extract GUID - handle different feed formats with type safety
                 $guid = '';
@@ -131,6 +239,9 @@ class Feed {
                 
                 // Skip items without required data
                 if (empty($guid)) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Skipping item without GUID");
+                    }
                     $errors++;
                     continue;
                 }
@@ -138,15 +249,33 @@ class Feed {
                 // If no publication date is found, use current time
                 if (empty($pub_date)) {
                     $pub_date = current_time('mysql');
+                    if ($debug_mode) {
+                        error_log("Athena AI: No publication date found, using current time");
+                    }
                 }
                 
                 // Create a unique hash for the item
                 $item_hash = md5($guid . $pub_date);
                 
+                // Check if item already exists
+                if ($debug_mode) {
+                    $exists = $wpdb->get_var($wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE item_hash = %s",
+                        $item_hash
+                    ));
+                    
+                    if ($exists) {
+                        error_log("Athena AI: Item with hash {$item_hash} already exists in database");
+                    }
+                }
+                
                 // Safely encode item to JSON with error handling
                 $raw_content = wp_json_encode($item);
                 if ($raw_content === false) {
                     // Log JSON encoding error and skip this item
+                    if ($debug_mode) {
+                        error_log("Athena AI: Failed to encode feed item to JSON");
+                    }
                     $this->log_error('json_encode_error', 'Failed to encode feed item to JSON');
                     $errors++;
                     continue;
@@ -157,21 +286,39 @@ class Feed {
                 if ($timestamp === false) {
                     // Use current time if date parsing fails
                     $formatted_date = current_time('mysql');
+                    if ($debug_mode) {
+                        error_log("Athena AI: Failed to parse date '{$pub_date}', using current time");
+                    }
                 } else {
                     $formatted_date = date('Y-m-d H:i:s', $timestamp);
+                    if ($debug_mode) {
+                        error_log("Athena AI: Parsed date '{$pub_date}' to '{$formatted_date}'");
+                    }
                 }
                 
                 // Ensure the feed_id exists before inserting
                 if (!$this->post_id) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Invalid feed ID");
+                    }
                     throw new \Exception('Invalid feed ID');
                 }
 
                 // Validate data before inserting
                 if (empty($item_hash) || empty($guid) || empty($raw_content)) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Invalid or incomplete feed item data");
+                    }
                     $this->log_error('invalid_item_data', 'Invalid or incomplete feed item data');
                     $errors++;
                     continue;
                 }
+                
+                // Check if item already exists before inserting
+                $item_exists = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE item_hash = %s",
+                    $item_hash
+                ));
                 
                 // Store raw item using replace to handle duplicates with error handling
                 try {
@@ -188,15 +335,39 @@ class Feed {
                     );
                     
                     if ($result === false) {
+                        if ($debug_mode) {
+                            error_log("Athena AI: Database error: " . ($wpdb->last_error ?: 'Failed to insert feed item'));
+                        }
                         $this->log_error('db_insert_error', $wpdb->last_error ?: 'Failed to insert feed item');
                         $errors++;
                     } else {
                         $processed++;
+                        
+                        // Track if this was a new item or an existing one
+                        if ($item_exists) {
+                            $existing_items++;
+                            if ($debug_mode) {
+                                error_log("Athena AI: Updated existing item with GUID: {$guid}");
+                            }
+                        } else {
+                            $new_items++;
+                            if ($debug_mode) {
+                                error_log("Athena AI: Inserted new item with GUID: {$guid}");
+                            }
+                        }
                     }
                 } catch (\Exception $e) {
+                    if ($debug_mode) {
+                        error_log("Athena AI: Exception during database operation: " . $e->getMessage());
+                    }
                     $this->log_error('db_exception', $e->getMessage());
                     $errors++;
                 }
+            }
+            
+            // Log summary of processing
+            if ($debug_mode) {
+                error_log("Athena AI: Feed processing summary - Processed: {$processed}, New items: {$new_items}, Updated items: {$existing_items}, Errors: {$errors}");
             }
             
             // Update feed metadata
@@ -207,6 +378,9 @@ class Feed {
         } catch (\Exception $e) {
             // Rollback on error
             $wpdb->query('ROLLBACK');
+            if ($debug_mode) {
+                error_log("Athena AI: Transaction rolled back due to error: " . $e->getMessage());
+            }
             $this->log_error('db_error', $e->getMessage());
             return false;
         }

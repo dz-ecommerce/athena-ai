@@ -100,8 +100,16 @@ class FeedFetcher {
     public static function fetch_all_feeds(bool $force_fetch = false): array {
         global $wpdb;
         
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        
+        if ($debug_mode) {
+            error_log('Athena AI: Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
+        }
+        
         // Ensure required tables exist
         if (!self::ensure_required_tables()) {
+            error_log('Athena AI: Required tables do not exist, aborting feed fetch');
             return ['success' => 0, 'error' => 0, 'message' => 'Required tables do not exist'];
         }
         
@@ -120,28 +128,68 @@ class FeedFetcher {
                     ]
                 ]
             ]);
+            
+            if ($debug_mode) {
+                error_log('Athena AI: Force fetching all active feeds. Found ' . count($feeds) . ' feeds.');
+            }
         } else {
             // Get only feeds that need updating based on their interval
             $feeds = self::get_feeds_due_for_update();
+            
+            if ($debug_mode) {
+                error_log('Athena AI: Fetching feeds due for update. Found ' . count($feeds) . ' feeds.');
+            }
+        }
+        
+        if (empty($feeds)) {
+            error_log('Athena AI: No feeds to fetch. Check if feeds exist and are active.');
+            return ['success' => 0, 'error' => 0, 'message' => 'No feeds to fetch'];
         }
         
         $success_count = 0;
         $error_count = 0;
         $messages = [];
+        $processed_items = 0;
         
         // Process each feed
         foreach ($feeds as $feed_post) {
+            if ($debug_mode) {
+                error_log('Athena AI: Processing feed: ' . get_the_title($feed_post->ID) . ' (ID: ' . $feed_post->ID . ')');
+            }
+            
             // Ensure feed metadata exists
             self::ensure_feed_metadata_exists($feed_post->ID);
+            
+            // Get feed URL for logging
+            $feed_url = get_post_meta($feed_post->ID, '_athena_feed_url', true);
+            
+            if ($debug_mode) {
+                error_log('Athena AI: Fetching feed URL: ' . $feed_url);
+            }
             
             // Get feed object and fetch content
             $feed = Feed::get_by_id($feed_post->ID);
             
             if ($feed && $feed->fetch()) {
                 $success_count++;
+                
+                // Get the number of items processed from the feed
+                $feed_items_count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d",
+                    $feed_post->ID
+                ));
+                
+                if ($debug_mode) {
+                    error_log('Athena AI: Successfully fetched feed: ' . get_the_title($feed_post->ID) . '. Total items: ' . $feed_items_count);
+                }
+                
+                $processed_items += $feed_items_count;
             } else {
                 $error_count++;
-                $messages[] = sprintf('Failed to fetch feed: %s', get_the_title($feed_post->ID));
+                $error_message = sprintf('Failed to fetch feed: %s (URL: %s)', get_the_title($feed_post->ID), $feed_url);
+                $messages[] = $error_message;
+                
+                error_log('Athena AI: ' . $error_message);
             }
             
             // Add a small delay to prevent overwhelming external servers
@@ -153,9 +201,10 @@ class FeedFetcher {
         
         // Log the results
         $log_message = sprintf(
-            'Athena AI: Fetched %d feeds successfully, %d failed.',
+            'Athena AI: Fetched %d feeds successfully, %d failed. Total items processed: %d.',
             $success_count,
-            $error_count
+            $error_count,
+            $processed_items
         );
         error_log($log_message);
         
@@ -163,7 +212,8 @@ class FeedFetcher {
             'success' => $success_count,
             'error' => $error_count,
             'message' => $log_message,
-            'details' => $messages
+            'details' => $messages,
+            'items_processed' => $processed_items
         ];
     }
     
@@ -355,10 +405,73 @@ class FeedFetcher {
     private static function get_feeds_due_for_update(): array {
         global $wpdb;
         
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        
         // Get current time
         $now = current_time('mysql');
         
+        if ($debug_mode) {
+            error_log('Athena AI: Checking for feeds due for update at ' . $now);
+            
+            // Zähle alle aktiven Feeds
+            $total_feeds = $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->posts} p 
+                LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_active' 
+                WHERE p.post_type = 'athena-feed' 
+                AND p.post_status = 'publish' 
+                AND (pm.meta_value = '1' OR pm.meta_value IS NULL)"
+            );
+            
+            error_log('Athena AI: Total active feeds: ' . $total_feeds);
+            
+            // Prüfe, ob die Metadaten-Tabelle existiert
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'") === $wpdb->prefix . 'feed_metadata';
+            if (!$table_exists) {
+                error_log('Athena AI: Feed metadata table does not exist!');
+            }
+        }
+        
         // Find feeds that need updating
+        $query = $wpdb->prepare(
+            "SELECT f.feed_id, f.last_fetched, f.fetch_interval, 
+                   TIMESTAMPDIFF(SECOND, f.last_fetched, %s) as seconds_since_last_fetch
+            FROM {$wpdb->prefix}feed_metadata f
+            JOIN {$wpdb->posts} p ON f.feed_id = p.ID
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_active'
+            WHERE p.post_type = 'athena-feed'
+            AND p.post_status = 'publish'
+            AND (pm.meta_value = '1' OR pm.meta_value IS NULL)",
+            $now
+        );
+        
+        if ($debug_mode) {
+            // Hole alle Feeds mit ihren Zeitintervallen
+            $all_feeds = $wpdb->get_results($query);
+            
+            if (!empty($all_feeds)) {
+                error_log('Athena AI: Found ' . count($all_feeds) . ' feeds in metadata table');
+                
+                foreach ($all_feeds as $feed) {
+                    $feed_title = get_the_title($feed->feed_id);
+                    $is_due = ($feed->last_fetched === null || $feed->seconds_since_last_fetch > $feed->fetch_interval);
+                    
+                    error_log(sprintf(
+                        'Athena AI: Feed "%s" (ID: %d) - Last fetched: %s, Interval: %d seconds, Time since last fetch: %d seconds, Due for update: %s',
+                        $feed_title,
+                        $feed->feed_id,
+                        $feed->last_fetched ?: 'never',
+                        $feed->fetch_interval,
+                        $feed->seconds_since_last_fetch ?: 0,
+                        $is_due ? 'YES' : 'NO'
+                    ));
+                }
+            } else {
+                error_log('Athena AI: No feeds found in metadata table');
+            }
+        }
+        
+        // Jetzt die eigentliche Abfrage für fällige Feeds
         $query = $wpdb->prepare(
             "SELECT f.feed_id 
             FROM {$wpdb->prefix}feed_metadata f
@@ -376,16 +489,32 @@ class FeedFetcher {
         
         $feed_ids = $wpdb->get_col($query);
         
+        if ($debug_mode) {
+            if (empty($feed_ids)) {
+                error_log('Athena AI: No feeds are due for update');
+            } else {
+                error_log('Athena AI: ' . count($feed_ids) . ' feeds are due for update');
+            }
+        }
+        
         if (empty($feed_ids)) {
             return [];
         }
         
         // Get the actual feed posts
-        return get_posts([
+        $feeds = get_posts([
             'post_type' => 'athena-feed',
             'post_status' => 'publish',
             'numberposts' => -1,
             'include' => $feed_ids
         ]);
+        
+        if ($debug_mode && !empty($feeds)) {
+            foreach ($feeds as $feed) {
+                error_log('Athena AI: Feed due for update: ' . $feed->post_title . ' (ID: ' . $feed->ID . ')');
+            }
+        }
+        
+        return $feeds;
     }
 }
