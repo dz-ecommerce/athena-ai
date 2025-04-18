@@ -74,8 +74,8 @@ class FeedFetcher {
             $show_errors = $wpdb->show_errors;
             $wpdb->show_errors = false;
             
-            // Feeds mit Force-Flag abrufen
-            $result = self::fetch_all_feeds(true);
+            // Feeds mit Force-Flag abrufen und erweiterte Fehlerausgabe aktivieren
+            $result = self::fetch_all_feeds(true, true);
             
             // Fehlerausgabe wiederherstellen
             $wpdb->show_errors = $show_errors;
@@ -151,9 +151,10 @@ class FeedFetcher {
      * Fetch all feeds
      * 
      * @param bool $force_fetch Whether to force fetch all feeds regardless of their update interval
+     * @param bool $verbose_console Whether to output verbose debugging information to the JavaScript console
      * @return array Array with success, error, and new items counts
      */
-    public static function fetch_all_feeds(bool $force_fetch = false): array {
+    public static function fetch_all_feeds(bool $force_fetch = false, bool $verbose_console = false): array {
         global $wpdb;
         
         $results = [
@@ -166,6 +167,11 @@ class FeedFetcher {
         // Enable debug logging if debug mode is enabled
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
+        // Wenn verbose_console aktiviert ist, JavaScript-Debugging-Ausgabe vorbereiten
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed Fetcher: Starting feed fetch process...");</script>';
+        }
+        
         if ($debug_mode) {
             error_log('Athena AI: Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
         }
@@ -174,6 +180,9 @@ class FeedFetcher {
         if (!self::ensure_required_tables()) {
             if ($debug_mode) {
                 error_log('Athena AI: Required tables do not exist. Aborting feed fetch.');
+            }
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed Fetcher: Required database tables do not exist. Aborting feed fetch.");</script>';
             }
             $results['error']++;
             $results['details'][] = 'Required database tables do not exist';
@@ -193,9 +202,16 @@ class FeedFetcher {
             error_log('Athena AI: Found ' . count($feeds) . ' feeds to process');
         }
         
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed Fetcher: Found ' . count($feeds) . ' feeds to process");</script>';
+        }
+        
         if (empty($feeds)) {
             if ($debug_mode) {
                 error_log('Athena AI: No feeds to process. Exiting.');
+            }
+            if ($verbose_console) {
+                echo '<script>console.warn("Athena AI Feed Fetcher: No feeds to process. Exiting.");</script>';
             }
             return $results;
         }
@@ -210,6 +226,9 @@ class FeedFetcher {
                     if ($debug_mode) {
                         error_log('Athena AI: Failed to ensure feed metadata for feed ID ' . $feed_post->ID);
                     }
+                    if ($verbose_console) {
+                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to ensure feed metadata for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
+                    }
                     $results['error']++;
                     $results['details'][] = 'Failed to ensure feed metadata for feed: ' . $feed_post->post_title;
                     continue;
@@ -222,6 +241,9 @@ class FeedFetcher {
                     if ($debug_mode) {
                         error_log('Athena AI: Feed URL is empty for feed ID ' . $feed_post->ID);
                     }
+                    if ($verbose_console) {
+                        echo '<script>console.error("Athena AI Feed Fetcher: Feed URL is empty for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
+                    }
                     $results['error']++;
                     $results['details'][] = 'Feed URL is empty for feed: ' . $feed_post->post_title;
                     continue;
@@ -229,6 +251,10 @@ class FeedFetcher {
                 
                 if ($debug_mode) {
                     error_log('Athena AI: Processing feed: ' . $feed_post->post_title . ' (ID: ' . $feed_post->ID . ', URL: ' . $feed_url . ')');
+                }
+                
+                if ($verbose_console) {
+                    echo '<script>console.log("Athena AI Feed Fetcher: Processing feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ', URL: ' . esc_js($feed_url) . ')");</script>';
                 }
                 
                 // Zähle die aktuellen Feed-Items vor dem Abruf
@@ -245,10 +271,14 @@ class FeedFetcher {
                 $feed = new Feed($feed_post->ID);
                 
                 // Fetch feed content
-                $fetch_result = $feed->fetch($feed_url);
+                $fetch_result = $feed->fetch($feed_url, $verbose_console);
                 
                 if ($fetch_result) {
                     $results['success']++;
+                    
+                    if ($verbose_console) {
+                        echo '<script>console.log("Athena AI Feed Fetcher: Successfully fetched feed: ' . esc_js($feed_post->post_title) . '");</script>';
+                    }
                     
                     // Zähle die Feed-Items nach dem Abruf
                     $after_count = (int)$wpdb->get_var($wpdb->prepare(
@@ -277,6 +307,13 @@ class FeedFetcher {
                     if ($debug_mode) {
                         error_log('Athena AI: Failed to fetch feed: ' . $feed_post->post_title);
                     }
+                    
+                    if ($verbose_console) {
+                        // Hole den letzten Fehler aus der Feed-Klasse
+                        $last_error = $feed->get_last_error();
+                        $error_message = !empty($last_error) ? $last_error : 'Unknown error';
+                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . esc_js($feed_post->post_title) . ' - Error: ' . esc_js($error_message) . '");</script>';
+                    }
                 }
             } catch (\Exception $e) {
                 $results['error']++;
@@ -284,6 +321,10 @@ class FeedFetcher {
                 
                 if ($debug_mode) {
                     error_log('Athena AI: Exception while processing feed: ' . $e->getMessage());
+                }
+                
+                if ($verbose_console) {
+                    echo '<script>console.error("Athena AI Feed Fetcher: Exception while processing feed ' . esc_js($feed_post->post_title) . ': ' . esc_js($e->getMessage()) . '");</script>';
                 }
             }
             
@@ -298,6 +339,19 @@ class FeedFetcher {
         
         if ($debug_mode) {
             error_log("Athena AI: Feed fetch process completed. Success: {$results['success']}, Errors: {$results['error']}, New items: {$total_new_items}");
+        }
+        
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed Fetcher: Feed fetch process completed. Success: ' . $results['success'] . ', Errors: ' . $results['error'] . ', New items: ' . $total_new_items . '");</script>';
+            
+            // Detaillierte Fehlerinformationen in die Konsole ausgeben
+            if (!empty($results['details'])) {
+                echo '<script>console.group("Athena AI Feed Fetcher: Error Details");</script>';
+                foreach ($results['details'] as $index => $error_message) {
+                    echo '<script>console.error("Error ' . ($index + 1) . ': ' . esc_js($error_message) . '");</script>';
+                }
+                echo '<script>console.groupEnd();</script>';
+            }
         }
         
         return $results;

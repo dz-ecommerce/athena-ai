@@ -9,10 +9,11 @@ if (!defined('ABSPATH')) {
 
 class Feed {
     private ?int $post_id = null;
-    private string $url;
+    private ?string $url = null;
+    private string $last_error = '';
     private ?\DateTime $last_checked = null;
-    private int $update_interval;
-    private bool $active;
+    private int $update_interval = 3600; // Standard: 1 Stunde
+    private bool $active = true;
 
     /**
      * Constructor for the Feed class
@@ -32,12 +33,22 @@ class Feed {
     }
 
     /**
+     * Get the last error message
+     * 
+     * @return string The last error message
+     */
+    public function get_last_error(): string {
+        return $this->last_error;
+    }
+    
+    /**
      * Fetch feed content from the URL
      * 
      * @param string|null $url Optional URL to override the stored feed URL
+     * @param bool $verbose_console Whether to output verbose debugging information to the JavaScript console
      * @return bool Whether the fetch was successful
      */
-    public function fetch(?string $url = null): bool {
+    public function fetch(?string $url = null, bool $verbose_console = false): bool {
         // Debug-Logging aktivieren
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
@@ -48,7 +59,11 @@ class Feed {
             if ($debug_mode) {
                 error_log("Athena AI: Feed URL is empty for feed ID: {$this->post_id}");
             }
-            $this->log_error('empty_url', 'Feed URL is empty');
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Feed URL is empty for feed ID: ' . $this->post_id . '");</script>';
+            }
+            $this->last_error = 'Feed URL is empty';
+            $this->log_error('empty_url', $this->last_error);
             return false;
         }
         
@@ -69,6 +84,11 @@ class Feed {
                 error_log("Athena AI: Error fetching feed: {$error_code} - {$error_message}");
             }
             
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Error fetching feed: ' . esc_js($error_code) . ' - ' . esc_js($error_message) . '");</script>';
+            }
+            
+            $this->last_error = "HTTP error: {$error_code} - {$error_message}";
             $this->log_error($error_code, $error_message);
             $this->update_feed_error($error_message);
             return false;
@@ -82,6 +102,11 @@ class Feed {
                 error_log("Athena AI: {$error_message}");
             }
             
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: ' . esc_js($error_message) . '");</script>';
+            }
+            
+            $this->last_error = $error_message;
             $this->log_error('http_error', $error_message);
             $this->update_feed_error($error_message);
             return false;
@@ -94,8 +119,13 @@ class Feed {
                 error_log("Athena AI: Feed response body is empty");
             }
             
-            $this->log_error('empty_response', 'Feed response body is empty');
-            $this->update_feed_error('Feed response body is empty');
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Feed response body is empty");</script>';
+            }
+            
+            $this->last_error = 'Feed response body is empty';
+            $this->log_error('empty_response', $this->last_error);
+            $this->update_feed_error($this->last_error);
             return false;
         }
         
@@ -149,8 +179,22 @@ class Feed {
                 }
             }
             
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: XML parse error: ' . esc_js($error_msg) . '");</script>';
+                if (!empty($errors)) {
+                    echo '<script>console.group("Athena AI Feed: XML Parse Errors");</script>';
+                    foreach ($errors as $index => $error) {
+                        if ($index < 3) { // Limit to first 3 errors to avoid console spam
+                            echo '<script>console.error("XML Error ' . $index . ': Line ' . $error->line . ', Column ' . $error->column . ': ' . esc_js($error->message) . '");</script>';
+                        }
+                    }
+                    echo '<script>console.groupEnd();</script>';
+                }
+            }
+            
+            $this->last_error = 'XML parse error: ' . $error_msg;
             $this->log_error('xml_parse_error', $error_msg);
-            $this->update_feed_error('XML parse error: ' . $error_msg);
+            $this->update_feed_error($this->last_error);
             libxml_clear_errors();
             return false;
         }
@@ -199,8 +243,14 @@ class Feed {
                 error_log("Athena AI: XML structure: " . print_r(array_keys($xml_keys), true));
             }
             
+            if ($verbose_console) {
+                echo '<script>console.error("Athena AI Feed: Unknown feed format - neither RSS nor Atom detected");</script>';
+                echo '<script>console.log("Athena AI Feed: XML structure: ", ' . json_encode(array_keys($xml_keys)) . ');</script>';
+            }
+            
+            $this->last_error = 'Unknown feed format - neither RSS nor Atom detected';
             $this->log_error('unknown_feed_format', 'Unknown feed format');
-            $this->update_feed_error('Unknown feed format - neither RSS nor Atom detected');
+            $this->update_feed_error($this->last_error);
             return false;
         }
         

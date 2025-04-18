@@ -186,7 +186,8 @@ function athena_ai_render_feed_items_page() {
         $wpdb->show_errors = false;
         
         // Fetch feeds manually with force flag set to true
-        $fetch_result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true);
+        // Aktiviere die erweiterte Fehlerausgabe in der Konsole
+        $fetch_result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true, true);
         
         // Fehlerausgabe wiederherstellen
         $wpdb->show_errors = $show_errors;
