@@ -155,6 +155,8 @@ class FeedFetcher {
      * @return array Array with success, error, and new items counts
      */
     public static function fetch_all_feeds(bool $force_fetch = false, bool $verbose_console = false): array {
+        global $wpdb;
+        
         $debug_mode = get_option('athena_ai_enable_debug_mode', false);
         
         if ($debug_mode) {
@@ -205,6 +207,9 @@ class FeedFetcher {
         $total_new_items = 0;
         
         foreach ($feeds as $feed_post) {
+            // Stelle sicher, dass $wpdb auch in diesem Kontext verfügbar ist
+            global $wpdb;
+            
             try {
                 // Ensure feed metadata exists
                 if (!self::ensure_feed_metadata_exists($feed_post->ID)) {
