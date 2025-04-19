@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace AthenaAI\Models;
 
-use AthenaAI\Models\GueterslohFeedProcessor;
+use AthenaAI\Models\FeedProcessor\FeedProcessorFactory;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -228,9 +228,9 @@ class Feed {
             $this->update_feed_error('process_error', $this->last_error);
         }
         
-        return $result;
+        return false;
     }
-
+    
     /**
      * Process the feed content
      * 
@@ -258,439 +258,61 @@ class Feed {
             return false;
         }
 
-        // Prüfen, ob es sich um einen speziellen Feed-Typ handelt
-        $is_hubspot = strpos($this->url, 'hubspot.com') !== false;
-        $is_guetersloh = strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false;
-        
-        // Spezielle Vorverarbeitung für Gütersloh-Feed
-        if ($is_guetersloh) {
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Applying special preprocessing for Gütersloh content...");</script>';
-                
-                // Zeige ersten Teil des Inhalts für Debugging
-                $preview = substr($content, 0, 200);
-                $safe_preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
-                echo '<script>console.log("Original content preview: ' . esc_js($safe_preview) . '");</script>';
-            }
-            
-            // Entferne BOM und normalisiere Zeilenumbrüche
-            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-            $content = str_replace("\r\n", "\n", $content);
-            
-            // Konvertiere ISO-8859-1 nach UTF-8 falls notwendig
-            if (!mb_check_encoding($content, 'UTF-8')) {
-                $content = mb_convert_encoding($content, 'UTF-8', 'ISO-8859-1');
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Converted encoding from ISO-8859-1 to UTF-8");</script>';
-                }
-            }
-            
-            // Ersetze kritische Umlaute in XML-Tags (aber nicht im Content)
-            $content = preg_replace_callback('/<([^>]*)>/', function($matches) {
-                return '<' . str_replace(
-                    ['ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'], 
-                    ['ae', 'oe', 'ue', 'Ae', 'Oe', 'Ue', 'ss'], 
-                    $matches[1]
-                ) . '>';
-            }, $content);
-            
-            // Stelle sicher, dass XML-Header korrekt ist
-            if (strpos($content, '<?xml') === false) {
-                $content = '<?xml version="1.0" encoding="UTF-8"?>' . $content;
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Added missing XML header");</script>';
-                }
-            }
-            
-            if ($verbose_console) {
-                // Zeige bearbeiteten Inhalt für Debugging
-                $preview = substr($content, 0, 200);
-                $safe_preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
-                echo '<script>console.log("Processed content preview: ' . esc_js($safe_preview) . '");</script>';
-            }
+        // Log feed URL for debugging
+        if ($verbose_console) {
+            echo '<script>console.log("Athena AI Feed: Processing content from URL: ' . esc_js($this->url) . '");</script>';
         }
         
-        // Use libxml internal errors for better error handling
-        libxml_use_internal_errors(true);
-        
-        // Versuche, ungültige Zeichen zu entfernen
-        $content = preg_replace('/[^\x{0009}\x{000A}\x{000D}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $content);
-        
-        // XML-Optionen anpassen für bessere Feed-Kompatibilität
-        $xml_options = LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA;
-        
-        // Bei Gütersloh-Feed zusätzliche Optionen nutzen
-        if ($is_guetersloh) {
+        try {
+            // Use our new FeedProcessorFactory to determine and create the appropriate processor
             if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Using extended XML options for Gütersloh feed");</script>';
+                echo '<script>console.log("Athena AI Feed: Using feed processor factory to determine feed type");</script>';
             }
-            $xml_options |= LIBXML_PARSEHUGE | LIBXML_BIGLINES | LIBXML_NOBLANKS;
             
-            // Versuche, das Format zu reparieren wenn nötig
-            if (strpos($content, '<rss') === false && strpos($content, '<feed') === false) {
-                if (strpos($content, '<item') !== false) {
-                    // Entdecktes Format: <item>-Tags ohne <rss>-Wrapper
-                    if ($verbose_console) {
-                        echo '<script>console.log("Athena AI Feed: Gütersloh feed appears to be missing RSS container tags, adding wrapper");</script>';
-                    }
-                    $content = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>' . $content . '</channel></rss>';
+            // Process the feed content with the appropriate processor
+            $items = FeedProcessorFactory::process($content, $this->url, $verbose_console);
+            
+            if ($items === false || empty($items)) {
+                $this->last_error = 'No items found in feed';
+                if ($debug_mode) {
+                    error_log("Athena AI: No items found in feed: {$this->url}");
                 }
-            }
-        }
-        
-        // Mehrere Parsing-Optionen versuchen
-        $xml = false;
-        
-        // Versuch 1: Normales Laden
-        if ($xml === false) {
-            $xml = @simplexml_load_string($content);
-        }
-        
-        // Versuch 2: Mit Optionen laden
-        if ($xml === false) {
-            $xml = @simplexml_load_string($content, \SimpleXMLElement::class, $xml_options);
-        }
-        
-        // Versuch 3: Für Gütersloh vereinfachten XML-Parser versuchen
-        if ($xml === false && $is_guetersloh) {
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Attempting simplified XML parsing for Gütersloh feed");</script>';
-            }
-            
-            // SimpleXML-Fehler zurücksetzen
-            libxml_clear_errors();
-            
-            // Vereinfachte Extraktion von <item>-Tags mit RegEx
-            if (preg_match_all('/<item[^>]*>(.*?)<\/item>/is', $content, $matches)) {
                 if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Extracted ' . count($matches[0]) . ' items with regex");</script>';
+                    echo '<script>console.error("Athena AI Feed: No items found in feed: ' . esc_js($this->url) . '");</script>';
                 }
-                
-                // Manuell ein SimpleXML-Objekt erstellen
-                $xml_template = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Gütersloh Feed</title>';
-                foreach ($matches[0] as $item) {
-                    $xml_template .= $item;
-                }
-                $xml_template .= '</channel></rss>';
-                
-                // Nochmals versuchen mit dem bereinigten XML
-                $xml = @simplexml_load_string($xml_template, \SimpleXMLElement::class, $xml_options);
-            }
-            
-            // Wenn auch das nicht funktioniert, versuche manuelle Item-Extraktion
-            if ($xml === false) {
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Attempting manual item extraction for Gütersloh feed");</script>';
-                }
-                
-                $items = $this->extract_items_manually($content, $verbose_console);
-                
-                if (!empty($items)) {
-                    if ($verbose_console) {
-                        echo '<script>console.log("Athena AI Feed: Successfully extracted ' . count($items) . ' items manually");</script>';
-                    }
-                    
-                    // Verarbeite die extrahierten Items
-                    $new_items_count = $this->process_feed_items($items, $verbose_console);
-                    
-                    // Aktualisiere den letzten Abrufzeitpunkt
-                    $this->update_feed_metadata();
-                    
-                    return true;
-                }
-            }
-        }
-        
-        if ($xml === false) {
-            $errors = libxml_get_errors();
-            $error_msg = !empty($errors) ? $errors[0]->message : 'Failed to parse feed XML';
-            
-            if ($debug_mode) {
-                error_log("Athena AI: XML parse error: {$error_msg}");
-                if (!empty($errors)) {
-                    foreach ($errors as $index => $error) {
-                        if ($index < 3) { // Limit to first 3 errors to avoid log spam
-                            error_log("Athena AI: XML Error {$index}: Line {$error->line}, Column {$error->column}: {$error->message}");
-                        }
-                    }
-                }
-            }
-            
-            // Versuche einen letzten Rettungsversuch mit DOMDocument für problematische Feeds
-            if ($is_guetersloh || $verbose_console) {
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Attempting to load XML with DOMDocument as fallback...");</script>';
-                }
-                
-                $dom = new \DOMDocument();
-                $dom->recover = true; // Versuche, fehlerhafte XML zu reparieren
-                $dom->strictErrorChecking = false;
-                $dom->validateOnParse = false;
-                
-                // Fehler unterdrücken während des Ladens
-                $success = @$dom->loadXML($content);
-                
-                if ($success) {
-                    if ($verbose_console) {
-                        echo '<script>console.log("Athena AI Feed: Successfully loaded XML with DOMDocument");</script>';
-                    }
-                    
-                    // Konvertiere DOMDocument zu SimpleXML
-                    $xml = simplexml_import_dom($dom);
-                    
-                    if ($xml !== false) {
-                        if ($verbose_console) {
-                            echo '<script>console.log("Athena AI Feed: Successfully converted DOMDocument to SimpleXML");</script>';
-                        }
-                        // Wenn die Konvertierung erfolgreich war, fahre fort mit der Verarbeitung
-                        libxml_clear_errors();
-                    }
-                }
-            }
-            
-            // Wenn immer noch kein gültiges XML, gib Fehler zurück
-            if ($xml === false) {
-            
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: XML parse error: ' . esc_js($error_msg) . '");</script>';
-                if (!empty($errors)) {
-                    echo '<script>console.group("Athena AI Feed: XML Parse Errors");</script>';
-                    foreach ($errors as $index => $error) {
-                        if ($index < 3) { // Limit to first 3 errors to avoid console spam
-                            echo '<script>console.error("XML Error ' . $index . ': Line ' . $error->line . ', Column ' . $error->column . ': ' . esc_js($error->message) . '");</script>';
-                        }
-                    }
-                    echo '<script>console.groupEnd();</script>';
-                }
-            }
-            
-                $this->last_error = 'XML parse error: ' . $error_msg;
-                $this->log_error('xml_parse_error', $error_msg);
-                $this->update_feed_error('xml_parse_error', $error_msg);
-                libxml_clear_errors();
+                $this->log_error('no_items', $this->last_error);
+                $this->update_feed_error('no_items', $this->last_error);
                 return false;
             }
-        }
-        
-        if ($debug_mode) {
-            error_log("Athena AI: XML parsed successfully");
-        }
-
-        // Handle different feed formats (RSS, Atom, etc.)
-        $items = [];
-        $feed_type = 'unknown';
-        
-        // Spezielle Behandlung für Gütersloh-Feed
-        if ($is_guetersloh) {
+            
+            // Process the extracted feed items
+            return $this->process_feed_items($items, $verbose_console);
+        } catch (\Exception $e) {
+            $this->last_error = 'Feed processing error: ' . $e->getMessage();
+            if ($debug_mode) {
+                error_log("Athena AI: Feed processing error: {$e->getMessage()} - URL: {$this->url}");
+            }
             if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Applying special item detection for Gütersloh feed...");</script>';
-                
-                // Debugging der XML-Struktur
-                $xml_keys = get_object_vars($xml);
-                echo '<script>console.log("Gütersloh XML root elements: ", ' . json_encode(array_keys($xml_keys)) . ');</script>';
-                
-                if (isset($xml->channel)) {
-                    echo '<script>console.log("Gütersloh channel elements: ", ' . json_encode(array_keys(get_object_vars($xml->channel))) . ');</script>';
-                }
+                echo '<script>console.error("Athena AI Feed: Processing error: ' . esc_js($e->getMessage()) . ' - URL: ' . esc_js($this->url) . '");</script>';
             }
-            
-            // Gütersloh verwendet manchmal eine nicht-standard RSS-Struktur
-            if (isset($xml->channel) && isset($xml->channel->item)) {
-                $items = $xml->channel->item;
-                $feed_type = 'Gütersloh RSS';
-                
-                if ($verbose_console) {
-                    echo '<script>console.log("Found Gütersloh items under channel->item, count: ' . count($items) . '");</script>';
-                }
-            } elseif (isset($xml->channel) && isset($xml->channel->entry)) {
-                $items = $xml->channel->entry;
-                $feed_type = 'Gütersloh RSS variant';
-                
-                if ($verbose_console) {
-                    echo '<script>console.log("Found Gütersloh items under channel->entry, count: ' . count($items) . '");</script>';
-                }
-            } elseif (isset($xml->item)) {
-                $items = $xml->item;
-                $feed_type = 'Gütersloh RSS direct';
-                
-                if ($verbose_console) {
-                    echo '<script>console.log("Found Gütersloh items directly under root->item, count: ' . count($items) . '");</script>';
-                }
-            }
+            $this->log_error('processing_error', $this->last_error);
+            $this->update_feed_error('processing_error', $this->last_error);
+            return false;
         }
-        // Standard-Feed-Formate prüfen, wenn noch keine Items gefunden wurden
-        else if (isset($xml->channel) && isset($xml->channel->item)) {
-            // RSS format
-            $items = $xml->channel->item;
-            $feed_type = 'RSS';
-            
-            if ($debug_mode) {
-                $feed_title = isset($xml->channel->title) ? (string)$xml->channel->title : 'Unknown';
-                error_log("Athena AI: Detected RSS feed: '{$feed_title}'");
-            }
-        } elseif (isset($xml->entry)) {
-            // Atom format
-            $items = $xml->entry;
-            $feed_type = 'Atom';
-            
-            if ($debug_mode) {
-                $feed_title = isset($xml->title) ? (string)$xml->title : 'Unknown';
-                error_log("Athena AI: Detected Atom feed: '{$feed_title}'");
-            }
-        } elseif (isset($xml->item)) {
-            // Some RSS variants
-            $items = $xml->item;
-            $feed_type = 'RSS variant';
-            
-            if ($debug_mode) {
-                error_log("Athena AI: Detected RSS variant feed");
-            }
-        }
-        
-        if (empty($items)) {
-            if ($debug_mode) {
-                error_log("Athena AI: No items found in feed");
-                // Dump the first level of XML structure for debugging
-                $xml_keys = get_object_vars($xml);
-                error_log("Athena AI: XML structure: " . print_r(array_keys($xml_keys), true));
-            }
-            
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Unknown feed format - neither RSS nor Atom detected");</script>';
-                echo '<script>console.group("Athena AI Feed: XML Structure Details");</script>';
-                echo '<script>console.log("XML Root Elements: ", ' . json_encode(array_keys(get_object_vars($xml))) . ');</script>';
-                
-                // Detailliertere Struktur ausgeben
-                if (isset($xml->channel)) {
-                    echo '<script>console.log("Channel Elements: ", ' . json_encode(array_keys(get_object_vars($xml->channel))) . ');</script>';
-                    
-                    // Prüfen, ob es ein HubSpot-Feed ist, der eine besondere Struktur haben könnte
-                    if (strpos($this->url, 'hubspot.com') !== false) {
-                        echo '<script>console.log("HubSpot Feed detected, checking special structure...");</script>';
-                        
-                        // Prüfen, ob es Items unter einem anderen Namen gibt
-                        if (isset($xml->channel->entry)) {
-                            echo '<script>console.log("Found entries under channel->entry");</script>';
-                            $items = $xml->channel->entry;
-                        } elseif (isset($xml->entry)) {
-                            echo '<script>console.log("Found entries under entry");</script>';
-                            $items = $xml->entry;
-                        } elseif (isset($xml->channel->post)) {
-                            echo '<script>console.log("Found entries under channel->post");</script>';
-                            $items = $xml->channel->post;
-                        }
-                    }
-                }
-                
-                // Versuche, die ersten 500 Zeichen des XML-Inhalts zu zeigen
-                $content_preview = substr($content, 0, 500);
-                $content_preview = str_replace(["\n", "\r"], "", $content_preview);
-                $content_preview = htmlspecialchars($content_preview, ENT_QUOTES, 'UTF-8');
-                echo '<script>console.log("Content Preview: ", "' . esc_js($content_preview) . '");</script>';
-                
-                echo '<script>console.groupEnd();</script>';
-            }
-            
-            // Versuche, den Feed als JSON zu parsen, falls es kein gültiges XML ist
-            if (strpos($content, '{') === 0 || strpos($content, '[') === 0) {
-                if ($verbose_console) {
-                    echo '<script>console.log("Attempting to parse content as JSON...");</script>';
-                }
-                
-                // Versuche, den JSON-Inhalt zu decodieren
-                $json_data = json_decode($content, false);
-                $json_error = json_last_error();
-                
-                if ($json_error !== JSON_ERROR_NONE) {
-                    $error_msg = json_last_error_msg();
-                    if ($verbose_console) {
-                        echo '<script>console.error("JSON parse error: ' . esc_js($error_msg) . '");</script>';
-                    }
-                    if ($debug_mode) {
-                        error_log("Athena AI: JSON parse error: {$error_msg}");
-                    }
-                    $this->last_error = 'JSON parse error: ' . $error_msg;
-                    $this->log_error('json_parse_error', $error_msg);
-                    $this->update_feed_error('json_parse_error', $error_msg);
-                } else if ($json_data !== null) {
-                    if ($verbose_console) {
-                        echo '<script>console.log("Successfully parsed JSON content");</script>';
-                        echo '<script>console.log("JSON structure: ", ' . json_encode(array_keys(get_object_vars($json_data))) . ');</script>';
-                    }
-                    
-                    // Spezielle Behandlung für Hubspot-Feeds
-                    if ($is_hubspot) {
-                        if ($verbose_console) {
-                            echo '<script>console.log("Applying special handling for Hubspot JSON feed...");</script>';
-                        }
-                        
-                        // Hubspot-spezifische JSON-Struktur prüfen
-                        if (isset($json_data->objects) && is_array($json_data->objects)) {
-                            $items = $json_data->objects;
-                            if ($verbose_console) {
-                                echo '<script>console.log("Found Hubspot objects array with " + ' . count($items) . ' + " items");</script>';
-                            }
-                        }
-                    }
-                    
-                    // Spezielle Behandlung für Gütersloh-Feeds
-                    if ($is_guetersloh) {
-                        if ($verbose_console) {
-                            echo '<script>console.log("Applying special handling for Gütersloh JSON feed...");</script>';
-                        }
-                        
-                        // Gütersloh-spezifische JSON-Struktur prüfen
-                        if (isset($json_data->data) && is_array($json_data->data)) {
-                            $items = $json_data->data;
-                            if ($verbose_console) {
-                                echo '<script>console.log("Found Gütersloh data array with " + ' . count($items) . ' + " items");</script>';
-                            }
-                        }
-                    }
-                    
-                    // Standard-JSON-Strukturen prüfen
-                    if (empty($items)) {
-                        // Versuche, Items aus dem JSON zu extrahieren
-                        if (isset($json_data->items) && is_array($json_data->items)) {
-                            $items = $json_data->items;
-                        } elseif (isset($json_data->entries) && is_array($json_data->entries)) {
-                            $items = $json_data->entries;
-                        } elseif (isset($json_data->posts) && is_array($json_data->posts)) {
-                            $items = $json_data->posts;
-                        } elseif (isset($json_data->feed) && isset($json_data->feed->entry) && is_array($json_data->feed->entry)) {
-                            $items = $json_data->feed->entry;
-                        } elseif (is_array($json_data)) {
-                            // Der Feed selbst ist ein Array von Items
-                            $items = $json_data;
-                        }
-                        
-                        if (!empty($items)) {
-                            if ($verbose_console) {
-                                echo '<script>console.log("Found " + ' . count($items) . ' + " items in standard JSON structure");</script>';
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Wenn immer noch keine Items gefunden wurden, geben wir einen Fehler zurück
-            if (empty($items)) {
-                $this->last_error = 'Unknown feed format - neither RSS, Atom nor JSON detected';
-                $this->log_error('unknown_feed_format', 'Unknown feed format');
-                $this->update_feed_error('unknown_feed_format', 'Unknown feed format');
-                return false;
-            }
-        }
-        
-        if ($debug_mode) {
-            $item_count = count($items);
-            error_log("Athena AI: Found {$item_count} items in {$feed_type} feed");
-        }
+    }
 
-        $processed = 0;
-        $errors = 0;
-        $new_items = 0;
-        $existing_items = 0;
+    /**
+     * Process the extracted feed items
+     * 
+     * @param array $items The extracted feed items
+     * @param bool $verbose_console Whether to output verbose debugging information to the JavaScript console
+     * @return bool True on success, false on failure
+     */
+    private function process_feed_items(array $items, bool $verbose_console = false): bool {
+        global $wpdb;
+        
+        // Debug-Logging aktivieren
+        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
 
         // Begin transaction for better database consistency
         $wpdb->query('START TRANSACTION');
@@ -706,8 +328,6 @@ class Feed {
                 }
                 throw new \Exception('Failed to ensure feed metadata exists');
             }
-            // Debug-Logging aktivieren
-            $debug_mode = get_option('athena_ai_enable_debug_mode', false);
             
             // Prüfen, ob bereits Items für diesen Feed existieren
             if ($debug_mode) {
@@ -718,12 +338,17 @@ class Feed {
                 error_log("Athena AI: Feed ID {$this->post_id} already has {$existing_count} items in database");
             }
             
+            $processed = 0;
+            $errors = 0;
+            $new_items = 0;
+            $existing_items = 0;
+
             foreach ($items as $item) {
                 // Extract GUID - handle different feed formats with type safety
                 $guid = '';
                 
                 // Spezielle Behandlung für Gütersloh-Feed
-                if ($is_guetersloh) {
+                if (strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false) {
                     if ($verbose_console) {
                         echo '<script>console.log("Athena AI Feed: Extracting GUID for Gütersloh item...");</script>';
                     }
@@ -776,7 +401,7 @@ class Feed {
                 $pub_date = '';
                 
                 // Spezielle Behandlung für Gütersloh-Feed
-                if ($is_guetersloh) {
+                if (strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false) {
                     if ($verbose_console) {
                         echo '<script>console.log("Athena AI Feed: Extracting publication date for Gütersloh item...");</script>';
                     }
@@ -899,7 +524,7 @@ class Feed {
                 // Store raw item using replace to handle duplicates with error handling
                 try {
                     // Spezielle Behandlung für Gütersloh-Feed
-                    if ($is_guetersloh && $verbose_console) {
+                    if (strpos($this->url, 'guetersloh') !== false || strpos($this->url, 'gütersloh') !== false && $verbose_console) {
                         echo '<script>console.log("Athena AI Feed: Preparing to store Gütersloh item in database...");</script>';
                         echo '<script>console.log("Athena AI Feed: Item hash: ' . esc_js($item_hash) . '");</script>';
                         echo '<script>console.log("Athena AI Feed: Feed ID: ' . esc_js($this->post_id) . '");</script>';
@@ -1013,6 +638,12 @@ class Feed {
             
             // Commit transaction
             $wpdb->query('COMMIT');
+            
+            // Update the last checked timestamp
+            $this->update_last_checked();
+            
+            // Return true if items were processed, false otherwise
+            return $processed > 0;
         } catch (\Exception $e) {
             // Rollback on error
             $wpdb->query('ROLLBACK');
@@ -1022,9 +653,6 @@ class Feed {
             $this->log_error('db_error', $e->getMessage());
             return false;
         }
-
-        $this->update_last_checked();
-        return $processed > 0;
     }
     
     /**
