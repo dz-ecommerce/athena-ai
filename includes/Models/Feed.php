@@ -539,7 +539,6 @@ class Feed {
                             'raw_content' => wp_json_encode($item),
                             'pub_date' => $formatted_date ?? current_time('mysql'),
                             'guid' => $guid,
-                            'updated_at' => current_time('mysql'),
                         ],
                         [
                             'id' => $existing_item
@@ -571,8 +570,6 @@ class Feed {
                             'guid' => $guid,
                             'raw_content' => wp_json_encode($item),
                             'pub_date' => $formatted_date ?? current_time('mysql'),
-                            'created_at' => current_time('mysql'),
-                            'updated_at' => current_time('mysql'),
                         ]
                     );
                     
