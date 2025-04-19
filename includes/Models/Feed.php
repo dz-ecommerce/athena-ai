@@ -530,16 +530,16 @@ class Feed {
                     }
                     
                     // Item aktualisieren
+                    // Erstelle einen eindeutigen item_hash (Kombination aus GUID und Datum)
+                    $item_hash = md5($guid . ($pub_date ?? date('Y-m-d H:i:s')));
+                    
                     $result = $wpdb->update(
                         $wpdb->prefix . 'feed_raw_items',
                         [
-                            'title' => $title ?? '',
-                            'link' => $link ?? '',
-                            'description' => $description ?? '',
-                            'content' => $content ?? '',
-                            'pub_date' => $pub_date ?? date('Y-m-d H:i:s'),
+                            'raw_content' => wp_json_encode($item),
+                            'pub_date' => $formatted_date ?? current_time('mysql'),
+                            'guid' => $guid,
                             'updated_at' => current_time('mysql'),
-                            'raw_data' => json_encode($item),
                         ],
                         [
                             'id' => $existing_item
@@ -560,19 +560,19 @@ class Feed {
                         echo '<script>console.log("Inserting new item with GUID ' . esc_js($guid) . '");</script>';
                     }
                     
+                    // Erstelle einen eindeutigen item_hash (Kombination aus GUID und Datum)
+                    $item_hash = md5($guid . ($pub_date ?? date('Y-m-d H:i:s')));
+                    
                     $result = $wpdb->insert(
                         $wpdb->prefix . 'feed_raw_items',
                         [
                             'feed_id' => $this->post_id,
+                            'item_hash' => $item_hash,
                             'guid' => $guid,
-                            'title' => $title ?? '',
-                            'link' => $link ?? '',
-                            'description' => $description ?? '',
-                            'content' => $content ?? '',
-                            'pub_date' => $pub_date ?? date('Y-m-d H:i:s'),
+                            'raw_content' => wp_json_encode($item),
+                            'pub_date' => $formatted_date ?? current_time('mysql'),
                             'created_at' => current_time('mysql'),
                             'updated_at' => current_time('mysql'),
-                            'raw_data' => json_encode($item),
                         ]
                     );
                     
