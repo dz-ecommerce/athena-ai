@@ -17,8 +17,8 @@ class AdminBootstrap {
      * @return void
      */
     public static function init(): void {
-        // Admin-Menüs registrieren
-        add_action('admin_menu', [self::class, 'register_admin_menus'], 99);
+        // Admin-Menüs registrieren - mit früher Priorität
+        add_action('admin_menu', [self::class, 'register_admin_menus'], 9);
         
         // Admin-Klassen initialisieren
         self::init_admin_classes();
@@ -42,6 +42,16 @@ class AdminBootstrap {
             [FeedItemsPage::class, 'render_page'],
             'dashicons-rss',
             31
+        );
+        
+        // Maintenance-Seite als Untermenü
+        add_submenu_page(
+            'athena-feed-items',
+            __('Feed Maintenance', 'athena-ai'),
+            __('Maintenance', 'athena-ai'),
+            'manage_options',
+            'athena-feed-maintenance',
+            [Maintenance::class, 'render_maintenance_page']
         );
     }
     

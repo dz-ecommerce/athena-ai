@@ -16,8 +16,8 @@ class Maintenance {
      * Initialize the Maintenance page
      */
     public static function init(): void {
-        // Register admin page
-        add_action('admin_menu', [self::class, 'register_maintenance_page']);
+        // Menü wird jetzt in AdminBootstrap registriert
+        // add_action('admin_menu', [self::class, 'register_maintenance_page']);
         
         // Register AJAX handlers
         add_action('wp_ajax_athena_ai_truncate_feed_items', [self::class, 'ajax_truncate_feed_items']);
