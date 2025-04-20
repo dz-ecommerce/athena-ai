@@ -323,8 +323,8 @@ class Settings extends BaseAdmin {
      * Erstellt die erforderlichen Datenbanktabellen für das Feed-System
      */
     private function create_database_tables() {
-        // Verwende die FeedFetcher-Klasse, um die Tabellen zu erstellen
-        $result = \AthenaAI\Admin\FeedFetcher::ensure_required_tables();
+        // Verwende die SchemaManager-Klasse, um die Tabellen zu erstellen
+        $result = \AthenaAI\Repositories\SchemaManager::setup_tables();
         
         if ($result) {
             // Erfolgsmeldung anzeigen

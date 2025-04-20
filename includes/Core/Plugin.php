@@ -62,11 +62,14 @@ class Plugin {
         // Initialize the Feed Items page
         FeedItemsPage::init();
 
-        // Initialize Database Setup
-        \AthenaAI\Database\DatabaseSetup::init();
+        // Initialize DB Schema Manager
+        \AthenaAI\Repositories\SchemaManager::init();
 
         // Initialize Feed Processor
         \AthenaAI\Background\FeedProcessor::init();
+
+        // Initialize Cron Scheduler service
+        \AthenaAI\Services\CronScheduler::init();
     }
 
     /**

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace AthenaAI\Admin;
 
-use AthenaAI\Database\DatabaseSetup;
+use AthenaAI\Repositories\SchemaManager;
 
 /**
  * Admin page for feed items
@@ -36,12 +36,12 @@ class FeedItemsPage {
         }
         
         // Check if tables exist
-        if (!DatabaseSetup::tables_exist()) {
+        if (!SchemaManager::tables_exist()) {
             // Try to create tables
-            DatabaseSetup::setup_tables();
+            SchemaManager::setup_tables();
             
             // Check again
-            if (!DatabaseSetup::tables_exist()) {
+            if (!SchemaManager::tables_exist()) {
                 wp_die(__('Database tables could not be created. Please check your database permissions.', 'athena-ai'));
             }
         }
@@ -249,12 +249,12 @@ class FeedItemsPage {
         }
         
         // Check if tables exist
-        if (!\AthenaAI\Database\DatabaseSetup::tables_exist()) {
+        if (!\AthenaAI\Repositories\SchemaManager::tables_exist()) {
             // Try to create tables
-            \AthenaAI\Database\DatabaseSetup::setup_tables();
+            \AthenaAI\Repositories\SchemaManager::setup_tables();
             
             // Check again
-            if (!\AthenaAI\Database\DatabaseSetup::tables_exist()) {
+            if (!\AthenaAI\Repositories\SchemaManager::tables_exist()) {
                 wp_send_json_error(['message' => __('Database tables could not be created. Please check your database permissions.', 'athena-ai')]);
                 return;
             }

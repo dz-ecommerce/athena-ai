@@ -18,49 +18,14 @@ class FeedFetcher {
      * Initialize the FeedFetcher
      */
     public static function init(): void {
-        // Füge benutzerdefinierte Cron-Zeitpläne hinzu
-        add_filter('cron_schedules', [self::class, 'add_cron_schedules']);
+        // Cron‑Handling in dedizierten Service ausgelagert
+        \AthenaAI\Services\CronScheduler::init();
         
-        // Add ajax handler for debugging cron fetch
-        add_action('wp_ajax_athena_debug_cron_fetch', [self::class, 'debug_cron_fetch']);
-        add_action('wp_ajax_nopriv_athena_debug_cron_fetch', [self::class, 'debug_cron_fetch']);
-        
-        // Füge den Event-Hook hinzu
+        // Füge den Event-Hook zum eigentlichen Fetch hinzu
         add_action('athena_fetch_feeds', [self::class, 'fetch_all_feeds']);
         
-        // Holen des konfigurierten Intervalls
-        $interval = get_option('athena_ai_feed_cron_interval', 'hourly');
-        
-        // Schedule the event if it's not already scheduled or if the interval has changed
-        $timestamp = wp_next_scheduled('athena_fetch_feeds');
-        $current_interval = wp_get_schedule('athena_fetch_feeds');
-        
-        if (!$timestamp || $current_interval !== $interval) {
-            // Bestehenden Cron-Job entfernen, falls vorhanden
-            if ($timestamp) {
-                wp_unschedule_event($timestamp, 'athena_fetch_feeds');
-            }
-            
-            // Neuen Cron-Job mit dem konfigurierten Intervall planen
-            wp_schedule_event(time(), $interval, 'athena_fetch_feeds');
-            
-            if (WP_DEBUG) {
-                error_log("Athena AI: Feed fetch cron job scheduled with interval: {$interval}");
-            }
-        }
-        
-        // Check and update database schema if needed - use init hook to run before headers are sent
+        // Check and update database schema if needed – use init hook before headers
         add_action('init', [self::class, 'check_and_update_schema'], 5);
-        
-        // Add a manual check on admin_init to ensure the cron is registered
-        // This helps in cases where the cron might have been unregistered
-        add_action('admin_init', function() {
-            if (!wp_next_scheduled('athena_fetch_feeds')) {
-                $interval = get_option('athena_ai_feed_cron_interval', 'hourly');
-                wp_schedule_event(time(), $interval, 'athena_fetch_feeds');
-                error_log('Athena AI: Rescheduled missing feed fetch cron event with interval: ' . $interval);
-            }
-        });
         
         // Add debug action to manually trigger feed fetch (for testing)
         add_action('admin_post_athena_debug_fetch_feeds', function() {
@@ -117,56 +82,10 @@ class FeedFetcher {
      * @param array $schedules Existing cron schedules
      * @return array Modified cron schedules
      */
+    // Cron‑Schedules now registered in CronScheduler service – keep method for
+    // BC but delegate.
     public static function add_cron_schedules(array $schedules): array {
-        // Add a 1-minute schedule
-        $schedules['athena_1min'] = [
-            'interval' => MINUTE_IN_SECONDS,
-            'display' => __('Every Minute', 'athena-ai')
-        ];
-        
-        // Add a 5-minute schedule
-        $schedules['athena_5min'] = [
-            'interval' => 5 * MINUTE_IN_SECONDS,
-            'display' => __('Every 5 Minutes', 'athena-ai')
-        ];
-        
-        // Add a 15-minute schedule
-        $schedules['athena_15min'] = [
-            'interval' => 15 * MINUTE_IN_SECONDS,
-            'display' => __('Every 15 Minutes', 'athena-ai')
-        ];
-        
-        // Add a 30-minute schedule
-        $schedules['athena_30min'] = [
-            'interval' => 30 * MINUTE_IN_SECONDS,
-            'display' => __('Every 30 Minutes', 'athena-ai')
-        ];
-        
-        // Add a 45-minute schedule
-        $schedules['athena_45min'] = [
-            'interval' => 45 * MINUTE_IN_SECONDS,
-            'display' => __('Every 45 Minutes', 'athena-ai')
-        ];
-        
-        // Add a 2-hour schedule
-        $schedules['athena_2hours'] = [
-            'interval' => 2 * HOUR_IN_SECONDS,
-            'display' => __('Every 2 Hours', 'athena-ai')
-        ];
-        
-        // Add a 6-hour schedule
-        $schedules['athena_6hours'] = [
-            'interval' => 6 * HOUR_IN_SECONDS,
-            'display' => __('Every 6 Hours', 'athena-ai')
-        ];
-        
-        // Add a 12-hour schedule
-        $schedules['athena_12hours'] = [
-            'interval' => 12 * HOUR_IN_SECONDS,
-            'display' => __('Every 12 Hours', 'athena-ai')
-        ];
-        
-        return $schedules;
+        return \AthenaAI\Services\CronScheduler::add_cron_schedules($schedules);
     }
     
     /**
@@ -850,7 +769,6 @@ class FeedFetcher {
         }
     }
     
-    
     /**
      * Get feeds that are due for an update based on their fetch interval
      * 
@@ -931,8 +849,8 @@ class FeedFetcher {
             FROM {$wpdb->prefix}feed_metadata f
             JOIN {$wpdb->posts} p ON f.feed_id = p.ID
             LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_active'
-            WHERE p.post_type = 'athena-feed'
-            AND p.post_status = 'publish'
+            WHERE p.post_type = 'athena-feed' 
+            AND p.post_status = 'publish' 
             AND (pm.meta_value = '1' OR pm.meta_value IS NULL)
             AND (
                 f.last_fetched IS NULL
