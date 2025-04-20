@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace AthenaAI\Models;
 
-use AthenaAI\Models\FeedProcessor\FeedProcessorFactory;
+use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -51,8 +52,10 @@ class Feed {
      * @return bool Whether the fetch was successful
      */
     public function fetch(?string $url = null, bool $verbose_console = false): bool {
-        // Activate debug mode if needed
-        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        // Logger für konsistentes Logging konfigurieren
+        $logger = LoggerService::getInstance()
+            ->setComponent('Feed')
+            ->setVerboseMode($verbose_console);
         
         // Clear any existing errors
         $this->last_error = '';
@@ -61,174 +64,45 @@ class Feed {
         $fetch_url = $url ?? $this->url;
         if (empty($fetch_url)) {
             $this->last_error = 'No feed URL provided';
-            if ($debug_mode) {
-                error_log("Athena AI: No feed URL provided");
-            }
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: No feed URL provided");</script>';
-            }
+            $logger->error("No feed URL provided");
             $this->log_error('no_url', $this->last_error);
             $this->update_feed_error('no_url', $this->last_error);
             return false;
         }
         
-        // Prüfen, ob es sich um einen speziellen Feed-Typ handelt
-        $is_hubspot = strpos($fetch_url, 'hubspot.com') !== false;
-        $is_guetersloh = strpos($fetch_url, 'guetersloh') !== false || strpos($fetch_url, 'gütersloh') !== false;
+        // HTTP-Client aus dem Services-Namespace verwenden
+        $http_client = new \AthenaAI\Services\FeedHttpClient();
+        $http_client->setVerboseMode($verbose_console);
+        $logger->info("Fetching feed from URL: {$fetch_url}");
         
-        if ($verbose_console) {
-            echo '<script>console.log("Athena AI Feed: Fetching feed from URL: ' . esc_js($fetch_url) . '");</script>';
-            if ($is_hubspot) {
-                echo '<script>console.log("Athena AI Feed: Detected Hubspot feed");</script>';
-            }
-            if ($is_guetersloh) {
-                echo '<script>console.log("Athena AI Feed: Detected Gütersloh feed");</script>';
-            }
-        }
+        // HTTP-Anfrage durchführen
+        $content = $http_client->fetch($fetch_url);
         
-        // Set up request arguments
-        $args = [
-            'timeout' => 30,
-            'redirection' => 5,
-            'sslverify' => false
-        ];
-        
-        // Spezielle URL-Behandlung für Gütersloh-Feed
-        if ($is_guetersloh) {
-            // Prüfen, ob die URL korrekt formatiert ist
-            if (strpos($fetch_url, 'https://www.guetersloh.de/rss') !== false) {
-                // URL ist korrekt
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Using standard Gütersloh feed URL: ' . esc_js($fetch_url) . '");</script>';
-                }
-            } else {
-                // Versuche, die URL zu korrigieren
-                $corrected_url = 'https://www.guetersloh.de/rss';
-                if ($verbose_console) {
-                    echo '<script>console.log("Athena AI Feed: Correcting Gütersloh feed URL from ' . esc_js($fetch_url) . ' to ' . esc_js($corrected_url) . '");</script>';
-                }
-                $fetch_url = $corrected_url;
-            }
-            
-            // Spezifische Header für den Gütersloh-Feed
-            $args['headers'] = [
-                'Accept' => 'application/xml, application/rss+xml, text/xml, */*',
-                'Accept-Charset' => 'utf-8, iso-8859-1;q=0.8, *;q=0.7',
-                'User-Agent' => 'Mozilla/5.0 (compatible; Athena AI Feed Fetcher/1.0; +https://athena-ai.com)'
-            ];
-            
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Using special headers for Gütersloh feed");</script>';
-            }
-            
-            // Sicherstellen, dass die Feed-Metadaten existieren
-            $this->ensure_feed_metadata_exists();
-        }
-        // Special handling for Hubspot feed
-        elseif ($is_hubspot) {
-            $args['headers'] = [
-                'Accept' => 'application/xml, application/rss+xml, text/xml, application/json, */*'
-            ];
-            
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Using special headers for Hubspot feed");</script>';
-            }
-        }
-        
-        // Use WordPress HTTP API to fetch the content
-        $response = wp_remote_get($fetch_url, $args);
-        
-        if (is_wp_error($response)) {
-            $error_code = $response->get_error_code();
-            $error_message = $response->get_error_message();
-            
-            if ($debug_mode) {
-                error_log("Athena AI: Error fetching feed: {$error_code} - {$error_message}");
-            }
-            
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Error fetching feed: ' . esc_js($error_code) . ' - ' . esc_js($error_message) . '");</script>';
-            }
-            
-            $this->last_error = "HTTP error: {$error_code} - {$error_message}";
-            $this->log_error($error_code, $error_message);
-            $this->update_feed_error($error_code, $error_message);
+        // Prüfen, ob die Anfrage erfolgreich war
+        if ($content === false) {
+            $this->last_error = 'HTTP request failed';
+            $logger->error("HTTP request failed - URL: {$fetch_url}");
+            $this->log_error('http_request_failed', $this->last_error);
+            $this->update_feed_error('http_request_failed', $this->last_error);
             return false;
         }
         
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code !== 200) {
-            $error_message = "HTTP error: Status code {$status_code}";
-            
-            if ($debug_mode) {
-                error_log("Athena AI: {$error_message}");
-            }
-            
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: ' . esc_js($error_message) . '");</script>';
-            }
-            
-            $this->last_error = $error_message;
-            $this->log_error('http_error', $error_message);
-            $this->update_feed_error('http_error', $error_message);
+        // Prüfen, ob der Inhalt leer ist
+        if (empty($content)) {
+            $this->last_error = 'Feed content is empty';
+            $logger->error("Feed content is empty - URL: {$fetch_url}");
+            $this->log_error('empty_content', $this->last_error);
+            $this->update_feed_error('empty_content', $this->last_error);
             return false;
         }
 
-        $body = wp_remote_retrieve_body($response);
-        
-        if (empty($body)) {
-            if ($debug_mode) {
-                error_log("Athena AI: Feed response body is empty");
-            }
-            
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Feed response body is empty");</script>';
-            }
-            
-            $this->last_error = 'Feed response body is empty';
-            $this->log_error('empty_response', $this->last_error);
-            $this->update_feed_error('empty_response', $this->last_error);
+        // Process the feed content
+        if (!$this->process_feed_content($content, $verbose_console)) {
             return false;
         }
         
-        if ($debug_mode) {
-            $body_length = strlen($body);
-            error_log("Athena AI: Received feed content (length: {$body_length} bytes)");
-        }
-        
-        // Ausgabe von Feed-Informationen für Debugging
-        if ($verbose_console) {
-            // Prüfe die ersten Zeichen des Inhalts, um zu sehen, ob es JSON sein könnte
-            $content_start = substr($body, 0, 10);
-            $content_type = wp_remote_retrieve_header($response, 'content-type');
-            
-            echo '<script>console.log("Athena AI Feed: Content-Type from header: ' . esc_js($content_type) . '");</script>';
-            
-            if (strpos($content_start, '{') === 0 || strpos($content_start, '[') === 0) {
-                echo '<script>console.log("Athena AI Feed: Content appears to be JSON format");</script>';
-            } else if (strpos($content_start, '<?xml') !== false || strpos($body, '<?xml') !== false) {
-                echo '<script>console.log("Athena AI Feed: Content appears to be XML format");</script>';
-            } else {
-                echo '<script>console.log("Athena AI Feed: Content format could not be determined");</script>';
-            }
-            
-            // Zeige die ersten 200 Zeichen des Inhalts
-            $preview = substr($body, 0, 200);
-            $preview = str_replace(["\n", "\r"], " ", $preview);
-            $preview = htmlspecialchars($preview, ENT_QUOTES, 'UTF-8');
-            echo '<script>console.log("Athena AI Feed: Content preview: ' . esc_js($preview) . '...");</script>';
-        }
-        
-        // Versuche, den Feed-Inhalt zu verarbeiten
-        $result = $this->process_feed_content($body, $verbose_console);
-        
-        if (!$result && empty($this->last_error)) {
-            $this->last_error = 'Failed to process feed content';
-            $this->log_error('process_error', $this->last_error);
-            $this->update_feed_error('process_error', $this->last_error);
-        }
-        
-        return false;
+        $logger->info("Successfully fetched and processed feed from URL: {$fetch_url}");
+        return true;
     }
     
     /**
@@ -241,60 +115,48 @@ class Feed {
     private function process_feed_content(string $content, bool $verbose_console = false): bool {
         global $wpdb;
         
-        // Debug-Logging aktivieren
-        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
-
+        // Logger für konsistentes Logging
+        $logger = LoggerService::getInstance()
+            ->setComponent('Feed')
+            ->setVerboseMode($verbose_console);
+        
         // Validate content
         if (empty($content)) {
-            if ($debug_mode) {
-                error_log("Athena AI: Feed content is empty");
-            }
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Feed content is empty");</script>';
-            }
             $this->last_error = 'Feed content is empty';
+            $logger->error("Feed content is empty - URL: {$this->url}");
             $this->log_error('empty_content', $this->last_error);
             $this->update_feed_error('empty_content', $this->last_error);
             return false;
         }
 
-        // Log feed URL for debugging
-        if ($verbose_console) {
-            echo '<script>console.log("Athena AI Feed: Processing content from URL: ' . esc_js($this->url) . '");</script>';
-        }
-        
         try {
-            // Use our new FeedProcessorFactory to determine and create the appropriate processor
-            if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed: Using feed processor factory to determine feed type");</script>';
-            }
-            
-            // Process the feed content with the appropriate processor
-            $items = FeedProcessorFactory::process($content, $this->url, $verbose_console);
-            
-            if ($items === false || empty($items)) {
-                $this->last_error = 'No items found in feed';
-                if ($debug_mode) {
-                    error_log("Athena AI: No items found in feed: {$this->url}");
-                }
-                if ($verbose_console) {
-                    echo '<script>console.error("Athena AI Feed: No items found in feed: ' . esc_js($this->url) . '");</script>';
-                }
-                $this->log_error('no_items', $this->last_error);
-                $this->update_feed_error('no_items', $this->last_error);
+            // Initialize database if not already done
+            if (!$this->ensure_feed_metadata_exists()) {
+                $this->last_error = 'Failed to initialize feed metadata';
+                $logger->error("Failed to initialize feed metadata - URL: {$this->url}");
+                $this->log_error('metadata_init_failed', $this->last_error);
+                $this->update_feed_error('metadata_init_failed', $this->last_error);
                 return false;
             }
             
-            // Process the extracted feed items
+            // Instanz der FeedProcessorFactory erstellen und konfigurieren
+            $factory = new FeedProcessorFactory($verbose_console);
+            
+            // Feed-Content verarbeiten
+            $items = $factory->process($content);
+            
+            if (!$items || !is_array($items)) {
+                $this->last_error = 'Failed to extract feed items';
+                $logger->error("Failed to extract feed items - URL: {$this->url}");
+                $this->log_error('item_extraction_failed', $this->last_error);
+                $this->update_feed_error('item_extraction_failed', $this->last_error);
+                return false;
+            }
+            
             return $this->process_feed_items($items, $verbose_console);
         } catch (\Exception $e) {
-            $this->last_error = 'Feed processing error: ' . $e->getMessage();
-            if ($debug_mode) {
-                error_log("Athena AI: Feed processing error: {$e->getMessage()} - URL: {$this->url}");
-            }
-            if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed: Processing error: ' . esc_js($e->getMessage()) . ' - URL: ' . esc_js($this->url) . '");</script>';
-            }
+            $this->last_error = $e->getMessage();
+            $logger->error("Feed processing error: {$e->getMessage()} - URL: {$this->url}");
             $this->log_error('processing_error', $this->last_error);
             $this->update_feed_error('processing_error', $this->last_error);
             return false;
@@ -751,7 +613,7 @@ class Feed {
                 echo '<script>console.error("Athena AI Feed: Error checking feed metadata: ' . esc_js($wpdb->last_error) . '");</script>';
             }
             
-            // Trotz Fehler versuchen, das Update durchzuführen
+            // Trotz Fehler versuchen wir es trotzdem mit einem INSERT
             $exists = false;
         }
         
@@ -816,7 +678,7 @@ class Feed {
                     }
                 }
                 
-                // Vor dem Insert Fehler löschen
+                // Vor dem Einfügen Fehler löschen
                 $wpdb->last_error = '';
                 
                 // Insert new metadata with error information
