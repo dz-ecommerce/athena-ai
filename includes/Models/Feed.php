@@ -203,7 +203,7 @@ class Feed {
      * @return string Der generierte Titel
      */
     public function generate_title(): string {
-        $host = parse_url($this->url, PHP_URL_HOST);
+        $host = \parse_url($this->url, PHP_URL_HOST);
         return $host ?: $this->url;
     }
 }
