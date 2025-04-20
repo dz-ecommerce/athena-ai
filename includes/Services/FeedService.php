@@ -225,12 +225,12 @@ class FeedService {
     private function saveItems(Feed $feed, array $items): bool {
         global $wpdb;
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             $this->error_handler->logError($feed, 'no_feed_id', 'Feed has no ID');
             return false;
         }
         
-        $feed_id = $feed->get_id();
+        $feed_id = $feed->get_post_id();
         $new_items_count = 0;
         $items_table = $wpdb->prefix . 'feed_raw_items';
         
@@ -241,7 +241,7 @@ class FeedService {
             }
             
             // Generate a unique key for the item - preferring guid, falling back to link+title hash
-            $item_key = isset($item['guid']) ? md5($item['guid']) : md5(($item['link'] ?? '') . ($item['title'] ?? ''));
+            $item_key = isset($item['guid']) ? \md5($item['guid']) : \md5(($item['link'] ?? '') . ($item['title'] ?? ''));
             
             // Check if the item already exists
             $exists = $wpdb->get_var(
@@ -256,7 +256,7 @@ class FeedService {
             }
             
             // Format date properly
-            $pub_date = isset($item['pub_date']) ? $item['pub_date'] : current_time('mysql');
+            $pub_date = isset($item['pub_date']) ? $item['pub_date'] : date('Y-m-d H:i:s');
             
             // Prepare the data
             $data = [
@@ -265,8 +265,8 @@ class FeedService {
                 'title' => $item['title'] ?? '',
                 'link' => $item['link'] ?? '',
                 'pub_date' => $pub_date,
-                'raw_content' => wp_json_encode($item),
-                'fetched_date' => current_time('mysql')
+                'raw_content' => json_encode($item, JSON_UNESCAPED_UNICODE),
+                'fetched_date' => date('Y-m-d H:i:s')
             ];
             
             // Insert the item

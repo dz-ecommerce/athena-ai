@@ -11,10 +11,22 @@ namespace AthenaAI\Repositories;
 
 use AthenaAI\Models\Feed;
 use AthenaAI\Services\LoggerService;
+use DateTime;
+use Exception;
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+/**
+ * FeedRepository-Klasse für die Verwaltung von Feed-Datensätzen
+ *
+ * Diese Klasse stellt Methoden zum Speichern, Aktualisieren, Abrufen und Entfernen von
+ * Feed-Einträgen in der WordPress-Datenbank bereit. Sie verwendet WordPress-Funktionen
+ * aus dem globalen Namespace, was durch den führenden Backslash (\) gekennzeichnet ist.
+ *
+ * @since 1.0.0
+ */
 
 /**
  * Repository class for Feed data access operations.
@@ -119,9 +131,9 @@ class FeedRepository {
         $last_checked = \get_post_meta($post_id, '_athena_feed_last_checked', true);
         if ($last_checked) {
             try {
-                $datetime = new \DateTime($last_checked);
+                $datetime = new DateTime($last_checked);
                 $feed->set_last_checked($datetime);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Invalid datetime format, ignore
             }
         }
@@ -295,8 +307,8 @@ class FeedRepository {
             ['%d']
         );
         
-        // Update post meta for last checked time
-        $now = new \DateTime();
+        // Get current time as MySQL timestamp
+        $now = new DateTime(\current_time('mysql'));
         $feed->set_last_checked($now);
         \update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
         
@@ -351,8 +363,8 @@ class FeedRepository {
             ['%d']
         );
         
-        // Update post meta for last checked time
-        $now = new \DateTime();
+        // Get current time as MySQL timestamp
+        $now = new DateTime(\current_time('mysql'));
         $feed->set_last_checked($now);
         \update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
         
