@@ -20,9 +20,12 @@ class FeedItemsPage {
     const NONCE_ACTION = 'athena_feed_items_nonce';
     
     /**
-     * Initialize the class
+     * Initialize the FeedItemsPage
      */
     public static function init(): void {
+        // Handle the fetch feeds action
+        add_action('admin_post_athena_fetch_feeds', [self::class, 'handle_fetch_feeds']);
+        
         // Add AJAX handlers
         add_action('wp_ajax_athena_fetch_feeds', [self::class, 'handle_manual_fetch']);
     }
@@ -235,6 +238,30 @@ class FeedItemsPage {
                 update_post_meta($post->ID, '_athena_feed_active', '1'); // Active by default
             }
         }
+    }
+    
+    /**
+     * Handle the feed fetch action (non-AJAX).     
+     * 
+     * @return void
+     */
+    public static function handle_fetch_feeds(): void {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
+        }
+        
+        // Fetch feeds
+        $result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true, true);
+        
+        // Redirect back with results
+        wp_redirect(add_query_arg([
+            'page' => 'athena-feed-items',
+            'feed_fetched' => 1,
+            'success' => $result['success'],
+            'error' => $result['error'],
+            'new_items' => $result['new_items']
+        ], admin_url('admin.php')));
+        exit;
     }
     
     /**

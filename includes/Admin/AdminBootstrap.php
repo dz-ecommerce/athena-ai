@@ -1,0 +1,74 @@
+<?php
+/**
+ * Admin-Bootstrap-Klasse für das Athena AI Plugin.
+ *
+ * @package AthenaAI\Admin
+ */
+
+namespace AthenaAI\Admin;
+
+/**
+ * Initialisiert alle Admin-spezifischen Komponenten.
+ */
+class AdminBootstrap {
+    /**
+     * Admin-Komponenten initialisieren.
+     *
+     * @return void
+     */
+    public static function init(): void {
+        // Admin-Menüs registrieren
+        add_action('admin_menu', [self::class, 'register_admin_menus'], 99);
+        
+        // Admin-Klassen initialisieren
+        self::init_admin_classes();
+        
+        // Admin-Assets
+        add_action('admin_enqueue_scripts', [self::class, 'enqueue_admin_assets']);
+    }
+    
+    /**
+     * Admin-Menüs registrieren.
+     *
+     * @return void
+     */
+    public static function register_admin_menus(): void {
+        // Feed-Items-Seite als Hauptmenü
+        add_menu_page(
+            __('Feed Items', 'athena-ai'),
+            __('Feed Items', 'athena-ai'),
+            'manage_options',
+            'athena-feed-items',
+            [FeedItemsPage::class, 'render_page'],
+            'dashicons-rss',
+            31
+        );
+    }
+    
+    /**
+     * Admin-Klassen initialisieren.
+     *
+     * @return void
+     */
+    private static function init_admin_classes(): void {
+        // Admin-Kernklassen initialisieren
+        new Settings();
+        new FeedManager();
+        new StylesManager();
+        new FeedItemsManager();
+        
+        // Feed-Klassen initialisieren - diese sollten eventuell in Services verschoben werden
+        FeedFetcher::init();
+        Maintenance::init();
+    }
+    
+    /**
+     * Admin-Assets laden.
+     *
+     * @param string $hook Der aktuelle Admin-Hook.
+     * @return void
+     */
+    public static function enqueue_admin_assets($hook): void {
+        // Diese Methode kann später aus Plugin::enqueue_admin_assets hierher verschoben werden
+    }
+}
