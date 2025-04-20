@@ -284,6 +284,266 @@ class FeedRepository {
         $feed->set_last_checked($now);
         update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
         
+        // Also log the error to the feed_errors table
+        $this->log_error($feed, $code, $message);
+        
         return $result !== false;
+    }
+
+    /**
+     * Log an error for a feed
+     * 
+     * @param Feed   $feed    The feed to log an error for
+     * @param string $code    The error code
+     * @param string $message The error message
+     * @return void
+     */
+    public function log_error(Feed $feed, string $code, string $message): void {
+        global $wpdb;
+        
+        // First check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
+        if (!$table_exists) {
+            // Log to WordPress error log instead
+            error_log("Athena AI Feed Error ({$code}): {$message}");
+            return;
+        }
+        
+        try {
+            // Nur in die Datenbank schreiben, wenn feed ID gesetzt ist
+            if ($feed->get_id() !== null) {
+                $data = [
+                    'feed_id' => $feed->get_id(),
+                    'error_code' => $code,
+                    'error_message' => $message,
+                    'created_at' => current_time('mysql')
+                ];
+                $formats = ['%d', '%s', '%s', '%s'];
+                
+                $wpdb->insert($wpdb->prefix . 'feed_errors', $data, $formats);
+                
+                if ($wpdb->last_error) {
+                    error_log("Athena AI: Error logging feed error: {$wpdb->last_error}");
+                    error_log("Athena AI Feed Error ({$code}): {$message}");
+                }
+            }
+        } catch (\Exception $e) {
+            // Log exception to WordPress error log
+            error_log("Athena AI: Exception logging feed error: {$e->getMessage()}");
+            error_log("Athena AI Feed Error ({$code}): {$message}");
+        }
+        
+        // Always log to WordPress error log
+        $feed_id_info = $feed->get_id() !== null ? "(Feed ID: {$feed->get_id()})" : "(URL: {$feed->get_url()})"; 
+        error_log(sprintf(
+            'Athena AI Feed Error [%s]: %s %s',
+            $code,
+            $message,
+            $feed_id_info
+        ));
+    }
+
+    /**
+     * Save a feed item to the database
+     * 
+     * @param Feed $feed The feed the item belongs to
+     * @param array $item The feed item data
+     * @param string $guid The item's unique identifier
+     * @param string $pub_date The item's publication date
+     * @return bool Whether the save was successful
+     */
+    public function save_feed_item(Feed $feed, array $item, string $guid, string $pub_date): bool {
+        global $wpdb;
+        
+        if (!$feed->get_id()) {
+            return false;
+        }
+        
+        // Check if the table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
+        if (!$table_exists) {
+            return false;
+        }
+        
+        // Check if an item with this GUID already exists for this feed
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
+            $feed->get_id(),
+            $guid
+        ));
+        
+        // If it exists, we'll consider it a success but not insert it again
+        if ($existing) {
+            return true;
+        }
+        
+        // Prepare JSON content with error handling
+        $json_content = wp_json_encode($item);
+        if ($json_content === false) {
+            return false;
+        }
+        
+        // Insert the data
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'feed_raw_items',
+            [
+                'feed_id' => $feed->get_id(),
+                'guid' => $guid,
+                'pub_date' => $pub_date,
+                'content' => $json_content,
+                'created_at' => current_time('mysql')
+            ],
+            [
+                '%d',
+                '%s',
+                '%s',
+                '%s',
+                '%s'
+            ]
+        );
+        
+        return $result !== false;
+    }
+    
+    /**
+     * Process and save multiple feed items
+     * 
+     * @param Feed $feed The feed the items belong to
+     * @param array $items Array of feed items
+     * @return array Returns statistics about the operation: ['processed' => int, 'new_items' => int, 'existing_items' => int, 'errors' => int]
+     */
+    public function process_feed_items(Feed $feed, array $items): array {
+        global $wpdb;
+        
+        $stats = [
+            'processed' => 0,
+            'new_items' => 0,
+            'existing_items' => 0,
+            'errors' => 0
+        ];
+        
+        if (!$feed->get_id()) {
+            return $stats;
+        }
+        
+        // Ensure feed metadata exists before processing items
+        if (!$this->ensure_feed_metadata_exists($feed)) {
+            return $stats;
+        }
+        
+        // Check if the feed_raw_items table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
+        if (!$table_exists) {
+            return $stats;
+        }
+        
+        // Begin transaction for better database consistency
+        $wpdb->query('START TRANSACTION');
+        
+        try {
+            foreach ($items as $item) {
+                $stats['processed']++;
+                
+                // Extract GUID - handle different feed formats with type safety
+                $guid = '';
+                
+                // Try to find the GUID in the item
+                if (isset($item['guid']) && !empty($item['guid'])) {
+                    $guid = (string) $item['guid'];
+                } elseif (isset($item['id']) && !empty($item['id'])) {
+                    $guid = (string) $item['id'];
+                } elseif (isset($item['link']) && !empty($item['link'])) {
+                    $guid = (string) $item['link'];
+                } elseif (isset($item['title']) && !empty($item['title'])) {
+                    // Generate a GUID from the title if we can't find anything else
+                    $guid = 'title-' . md5((string) $item['title']);
+                } else {
+                    // Generate a random GUID as a last resort
+                    $guid = 'feed-item-' . uniqid();
+                }
+                
+                // Extract publication date with a safe default
+                $pub_date = current_time('mysql');
+                
+                // Try to find the publication date in the item
+                if (isset($item['pubDate']) && !empty($item['pubDate'])) {
+                    $pub_date = (string) $item['pubDate'];
+                } elseif (isset($item['published']) && !empty($item['published'])) {
+                    $pub_date = (string) $item['published'];
+                } elseif (isset($item['date']) && !empty($item['date'])) {
+                    $pub_date = (string) $item['date'];
+                }
+                
+                // Try to format the date properly
+                try {
+                    $date = new \DateTime($pub_date);
+                    $pub_date = $date->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    // If we can't parse the date, use the current time
+                    $pub_date = current_time('mysql');
+                }
+                
+                // Check if an item with this GUID already exists for this feed
+                $existing = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
+                    $feed->get_id(),
+                    $guid
+                ));
+                
+                if ($existing) {
+                    $stats['existing_items']++;
+                    continue;
+                }
+                
+                // Prepare JSON content with error handling
+                $json_content = wp_json_encode($item);
+                if ($json_content === false) {
+                    $stats['errors']++;
+                    continue;
+                }
+                
+                // Insert the data
+                $result = $wpdb->insert(
+                    $wpdb->prefix . 'feed_raw_items',
+                    [
+                        'feed_id' => $feed->get_id(),
+                        'guid' => $guid,
+                        'pub_date' => $pub_date,
+                        'content' => $json_content,
+                        'created_at' => current_time('mysql')
+                    ],
+                    [
+                        '%d',
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s'
+                    ]
+                );
+                
+                if ($result === false) {
+                    $stats['errors']++;
+                } else {
+                    $stats['new_items']++;
+                }
+            }
+            
+            // Update feed metadata
+            $this->update_feed_metadata($feed, $stats['new_items']);
+            
+            // Commit the transaction
+            $wpdb->query('COMMIT');
+        } catch (\Exception $e) {
+            // Rollback transaction on error
+            $wpdb->query('ROLLBACK');
+            
+            // Log the error
+            $this->log_error($feed, 'process_items_error', $e->getMessage());
+            $this->update_feed_error($feed, 'process_items_error', $e->getMessage());
+            
+            return $stats;
+        }
+        
+        return $stats;
     }
 }
