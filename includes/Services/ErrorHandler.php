@@ -13,6 +13,7 @@ namespace AthenaAI\Services;
 
 use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -30,18 +31,11 @@ class ErrorHandler {
     private FeedRepository $repository;
     
     /**
-     * Whether to output verbose debugging information.
+     * Logger service instance.
      *
-     * @var bool
+     * @var LoggerService
      */
-    private bool $verbose_console = false;
-    
-    /**
-     * Debug mode flag.
-     *
-     * @var bool
-     */
-    private bool $debug_mode = false;
+    private LoggerService $logger;
     
     /**
      * Constructor.
@@ -51,8 +45,9 @@ class ErrorHandler {
      */
     public function __construct(FeedRepository $repository, bool $verbose_console = false) {
         $this->repository = $repository;
-        $this->verbose_console = $verbose_console;
-        $this->debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        $this->logger = LoggerService::getInstance()
+            ->setComponent('Error Handler')
+            ->setVerboseMode($verbose_console);
     }
     
     /**
@@ -62,7 +57,7 @@ class ErrorHandler {
      * @return self
      */
     public function setVerboseMode(bool $verbose): self {
-        $this->verbose_console = $verbose;
+        $this->logger->setVerboseMode($verbose);
         return $this;
     }
     
@@ -85,13 +80,8 @@ class ErrorHandler {
             $this->repository->update_feed_error($feed, $code, $message);
         }
         
-        // Console output if verbose mode is enabled
-        $this->consoleLog("Error ({$code}): {$message}", 'error');
-        
-        // Log to error log if debug is enabled
-        if ($this->debug_mode || (defined('WP_DEBUG') && WP_DEBUG)) {
-            error_log("Athena AI Feed Error ({$code}): {$message}");
-        }
+        // Logger handles console output and error logging as needed
+        $this->logger->error($message, $code);
     }
     
     /**
@@ -102,30 +92,18 @@ class ErrorHandler {
      * @return void
      */
     public function logGeneralError(string $code, string $message): void {
-        // Console output if verbose mode is enabled
-        $this->consoleLog("Error ({$code}): {$message}", 'error');
-        
-        // Log to error log if debug is enabled
-        if ($this->debug_mode || (defined('WP_DEBUG') && WP_DEBUG)) {
-            error_log("Athena AI Error ({$code}): {$message}");
-        }
+        // Logger handles both console and error_log output
+        $this->logger->error($message, $code);
     }
     
     /**
-     * Output a console log message if verbose mode is enabled.
+     * Output a console log message.
      *
      * @param string $message The message to log.
      * @param string $type    The type of log message (log, info, warn, error, group, groupEnd).
      * @return void
      */
     public function consoleLog(string $message, string $type = 'log'): void {
-        if (!$this->verbose_console) {
-            return;
-        }
-
-        $valid_types = ['log', 'info', 'warn', 'error', 'group', 'groupEnd'];
-        $type = in_array($type, $valid_types) ? $type : 'log';
-        
-        echo '<script>console.' . $type . '("Athena AI: ' . esc_js($message) . '");</script>';
+        $this->logger->console($message, $type);
     }
 }

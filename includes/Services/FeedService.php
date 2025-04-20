@@ -12,6 +12,7 @@ namespace AthenaAI\Services;
 use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
 use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -43,11 +44,11 @@ class FeedService {
     private FeedProcessorFactory $processor_factory;
     
     /**
-     * Whether to output verbose console logs.
+     * Logger service.
      *
-     * @var bool
+     * @var LoggerService
      */
-    private bool $verbose_console = false;
+    private LoggerService $logger;
     
     /**
      * Error handler instance.
@@ -63,17 +64,20 @@ class FeedService {
      * @param FeedHttpClient      $http_client       HTTP client.
      * @param FeedProcessorFactory $processor_factory Feed processor factory.
      * @param ErrorHandler        $error_handler     Error handler.
+     * @param LoggerService       $logger            Logger service.
      */
     public function __construct(
         FeedRepository $repository,
         FeedHttpClient $http_client,
         FeedProcessorFactory $processor_factory,
-        ErrorHandler $error_handler
+        ErrorHandler $error_handler,
+        ?LoggerService $logger = null
     ) {
         $this->repository = $repository;
         $this->http_client = $http_client;
         $this->processor_factory = $processor_factory;
         $this->error_handler = $error_handler;
+        $this->logger = $logger ?? LoggerService::getInstance()->setComponent('Feed Service');
     }
     
     /**
@@ -83,11 +87,13 @@ class FeedService {
      */
     public static function create(): self {
         $repository = new FeedRepository();
+        $logger = LoggerService::getInstance()->setComponent('Feed Service');
         return new self(
             $repository,
             new FeedHttpClient(),
             new FeedProcessorFactory(),
-            new ErrorHandler($repository)
+            new ErrorHandler($repository),
+            $logger
         );
     }
     
@@ -98,7 +104,7 @@ class FeedService {
      * @return self
      */
     public function setVerboseMode(bool $verbose): self {
-        $this->verbose_console = $verbose;
+        $this->logger->setVerboseMode($verbose);
         $this->http_client->setVerboseMode($verbose);
         $this->error_handler->setVerboseMode($verbose);
         
@@ -117,21 +123,21 @@ class FeedService {
      * @return bool Whether the processing was successful.
      */
     public function processFeed(Feed $feed): bool {
-        $this->error_handler->consoleLog("Processing feed: " . $feed->get_url(), 'group');
+        $this->logger->group("Processing feed: " . $feed->get_url());
         
         // Fetch the feed content
         $content = $this->fetchFeed($feed);
         if (!$content) {
-            $this->error_handler->consoleLog("Failed to fetch feed content", 'error');
-            $this->error_handler->consoleLog('', 'groupEnd');
+            $this->logger->error("Failed to fetch feed content");
+            $this->logger->groupEnd();
             return false;
         }
         
         // Process the feed content
         $items = $this->processFeedContent($content);
         if (empty($items)) {
-            $this->error_handler->consoleLog("No items found in feed", 'warn');
-            $this->error_handler->consoleLog('', 'groupEnd');
+            $this->logger->warn("No items found in feed");
+            $this->logger->groupEnd();
             
             // Update feed metadata to record the attempt
             $this->repository->update_feed_metadata($feed, 0);
@@ -140,8 +146,8 @@ class FeedService {
         
         // Save the items
         $result = $this->saveItems($feed, $items);
-        $this->error_handler->consoleLog("Saved " . count($items) . " items", 'info');
-        $this->error_handler->consoleLog('', 'groupEnd');
+        $this->logger->info("Saved " . count($items) . " items");
+        $this->logger->groupEnd();
         
         return $result;
     }
@@ -187,7 +193,7 @@ class FeedService {
             return false;
         }
         
-        $this->error_handler->consoleLog("Fetching feed from URL: {$url}", 'info');
+        $this->logger->info("Fetching feed from URL: {$url}");
         
         $content = $this->http_client->fetch($url);
         if (!$content) {
@@ -281,7 +287,7 @@ class FeedService {
             if ($result) {
                 $new_items_count++;
             } else {
-                $this->error_handler->consoleLog("Failed to insert item: " . $wpdb->last_error, 'error');
+                $this->logger->error("Failed to insert item: " . $wpdb->last_error);
             }
         }
         

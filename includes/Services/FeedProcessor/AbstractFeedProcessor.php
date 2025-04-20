@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace AthenaAI\Services\FeedProcessor;
 
 use AthenaAI\Interfaces\FeedProcessorInterface;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -22,18 +23,11 @@ if (!defined('ABSPATH')) {
  */
 abstract class AbstractFeedProcessor implements FeedProcessorInterface {
     /**
-     * Whether to output verbose debugging information.
+     * Logger service instance.
      *
-     * @var bool
+     * @var LoggerService
      */
-    protected bool $verbose_console = false;
-    
-    /**
-     * Debug mode enabled.
-     *
-     * @var bool
-     */
-    protected bool $debug_mode = false;
+    protected LoggerService $logger;
     
     /**
      * Constructor.
@@ -41,38 +35,31 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
      * @param bool $verbose_console Whether to output verbose debugging to console.
      */
     public function __construct(bool $verbose_console = false) {
-        $this->verbose_console = $verbose_console;
-        $this->debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        $this->logger = LoggerService::getInstance()
+            ->setComponent('Feed Processor')
+            ->setVerboseMode($verbose_console);
     }
     
     /**
-     * Output a message to the console if verbose mode is enabled.
+     * Log a message to the console.
      *
      * @param string $message The message to output.
      * @param string $level   Log level: log, info, warn, or error.
      * @return void
      */
     protected function consoleLog(string $message, string $level = 'log'): void {
-        if (!$this->verbose_console) {
-            return;
-        }
-        
-        $allowed_levels = ['log', 'info', 'warn', 'error'];
-        $level = in_array($level, $allowed_levels) ? $level : 'log';
-        
-        echo '<script>console.' . $level . '("Athena AI Feed Processor: ' . esc_js($message) . '");</script>';
+        $this->logger->console($message, $level);
     }
     
     /**
-     * Log an error message to the error log if debug mode is enabled.
+     * Log an error message.
      *
      * @param string $message The error message.
+     * @param string $code    Optional error code.
      * @return void
      */
-    protected function logError(string $message): void {
-        if ($this->debug_mode) {
-            error_log("Athena AI Feed Processor: {$message}");
-        }
+    protected function logError(string $message, string $code = ''): void {
+        $this->logger->error($message, $code);
     }
     
     /**
