@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AthenaAI\Repositories;
 
 use AthenaAI\Models\Feed;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -19,6 +20,77 @@ if (!defined('ABSPATH')) {
  * Repository class for Feed data access operations.
  */
 class FeedRepository {
+    private $logger;
+    
+    /**
+     * Konstruktor
+     */
+    public function __construct() {
+        $this->logger = LoggerService::getInstance()->setComponent('FeedRepository');
+    }
+    
+    /**
+     * Speichert einen Feed in der Datenbank
+     * 
+     * @param Feed $feed Der zu speichernde Feed
+     * @return bool|int Bei Erfolg die Post-ID, sonst false
+     */
+    public function save(Feed $feed) {
+        // Sanitize URL
+        $url = \esc_url_raw($feed->get_url());
+        
+        // Erstelle einen neuen Post
+        $post_id = \wp_insert_post([
+            'post_title' => $feed->generate_title(),
+            'post_type' => 'athena-feed',
+            'post_status' => 'publish'
+        ]);
+        
+        if (\is_wp_error($post_id)) {
+            $this->logger->error(sprintf('Failed to create feed post: %s', $post_id->get_error_message()));
+            return false;
+        }
+        
+        // Setze Post-Meta
+        \update_post_meta($post_id, '_athena_feed_url', $url);
+        \update_post_meta($post_id, '_athena_feed_update_interval', $feed->get_update_interval());
+        \update_post_meta($post_id, '_athena_feed_active', $feed->is_active() ? '1' : '0');
+        
+        // Aktualisiere die post_id im Feed-Objekt
+        $feed->set_post_id($post_id);
+        
+        $this->logger->info(sprintf('Created new feed with ID %d: %s', $post_id, $url));
+        
+        return $post_id;
+    }
+    
+    /**
+     * Aktualisiert einen bestehenden Feed in der Datenbank
+     * 
+     * @param Feed $feed Der zu aktualisierende Feed
+     * @return bool Erfolg oder Misserfolg
+     */
+    public function update(Feed $feed): bool {
+        $post_id = $feed->get_post_id();
+        
+        if (empty($post_id)) {
+            $this->logger->error('Cannot update feed - no post ID provided');
+            return false;
+        }
+        
+        // Sanitize URL
+        $url = \esc_url_raw($feed->get_url());
+        
+        // Aktualisiere Post-Meta
+        \update_post_meta($post_id, '_athena_feed_url', $url);
+        \update_post_meta($post_id, '_athena_feed_update_interval', $feed->get_update_interval());
+        \update_post_meta($post_id, '_athena_feed_active', $feed->is_active() ? '1' : '0');
+        
+        $this->logger->info(sprintf('Updated feed with ID %d', $post_id));
+        
+        return true;
+    }
+    
     /**
      * Get a feed by its post ID
      * 
@@ -26,25 +98,25 @@ class FeedRepository {
      * @return Feed|null The feed object or null if not found
      */
     public function get_by_id(int $post_id): ?Feed {
-        $post = get_post($post_id);
+        $post = \get_post($post_id);
         
         if (!$post || $post->post_type !== 'athena-feed') {
             return null;
         }
         
-        $url = get_post_meta($post_id, '_athena_feed_url', true);
+        $url = \get_post_meta($post_id, '_athena_feed_url', true);
         if (empty($url)) {
             return null;
         }
         
-        $update_interval = (int) get_post_meta($post_id, '_athena_feed_update_interval', true);
-        $active = get_post_meta($post_id, '_athena_feed_active', true) !== '0';
+        $update_interval = (int) \get_post_meta($post_id, '_athena_feed_update_interval', true);
+        $active = \get_post_meta($post_id, '_athena_feed_active', true) !== '0';
         
         $feed = new Feed($url, $update_interval, $active);
-        $feed->set_id($post_id);
+        $feed->set_post_id($post_id);
         
         // Load last checked time if available
-        $last_checked = get_post_meta($post_id, '_athena_feed_last_checked', true);
+        $last_checked = \get_post_meta($post_id, '_athena_feed_last_checked', true);
         if ($last_checked) {
             try {
                 $datetime = new \DateTime($last_checked);
@@ -65,7 +137,7 @@ class FeedRepository {
     public function get_all_active(): array {
         $feeds = [];
         
-        $posts = get_posts([
+        $posts = \get_posts([
             'post_type' => 'athena-feed',
             'post_status' => 'publish',
             'numberposts' => -1,
@@ -95,9 +167,9 @@ class FeedRepository {
      */
     public function get_feeds_to_update(): array {
         $feeds = [];
-        $current_time = current_time('timestamp');
+        $current_time = \current_time('timestamp');
         
-        $posts = get_posts([
+        $posts = \get_posts([
             'post_type' => 'athena-feed',
             'post_status' => 'publish',
             'numberposts' => -1,
@@ -116,7 +188,7 @@ class FeedRepository {
                     ],
                     [
                         'key' => '_athena_feed_last_checked',
-                        'value' => date('Y-m-d H:i:s', $current_time - 3600), // Default 1 hour
+                        'value' => \date('Y-m-d H:i:s', \current_time('timestamp') - 3600), // Default 1 hour
                         'compare' => '<',
                         'type' => 'DATETIME'
                     ]
@@ -143,11 +215,11 @@ class FeedRepository {
     public function ensure_feed_metadata_exists(Feed $feed): bool {
         global $wpdb;
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             return false;
         }
         
-        $feed_id = $feed->get_id();
+        $feed_id = $feed->get_post_id();
         $metadata_table = $wpdb->prefix . 'feed_metadata';
         
         // Check if the feed metadata already exists
@@ -192,7 +264,7 @@ class FeedRepository {
     public function update_feed_metadata(Feed $feed, int $new_items): bool {
         global $wpdb;
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             return false;
         }
         
@@ -201,14 +273,14 @@ class FeedRepository {
             return false;
         }
         
-        $feed_id = $feed->get_id();
+        $feed_id = $feed->get_post_id();
         $metadata_table = $wpdb->prefix . 'feed_metadata';
         
         // Update the metadata
         $result = $wpdb->update(
             $metadata_table,
             [
-                'last_fetched' => current_time('mysql'),
+                'last_fetched' => \current_time('mysql'),
                 'error' => false,
                 'last_error' => '',
                 'last_fetch_items_count' => $new_items
@@ -226,7 +298,7 @@ class FeedRepository {
         // Update post meta for last checked time
         $now = new \DateTime();
         $feed->set_last_checked($now);
-        update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
+        \update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
         
         return $result !== false;
     }
@@ -242,7 +314,7 @@ class FeedRepository {
     public function update_feed_error(Feed $feed, string $code, string $message): bool {
         global $wpdb;
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             return false;
         }
         
@@ -251,14 +323,14 @@ class FeedRepository {
             return false;
         }
         
-        $feed_id = $feed->get_id();
+        $feed_id = $feed->get_post_id();
         $metadata_table = $wpdb->prefix . 'feed_metadata';
         
         // Create an error message with code and timestamp
         $error_message = sprintf(
             '[%s] %s - %s',
             $code,
-            current_time('mysql'),
+            \current_time('mysql'),
             $message
         );
         
@@ -266,7 +338,7 @@ class FeedRepository {
         $result = $wpdb->update(
             $metadata_table,
             [
-                'last_fetched' => current_time('mysql'),
+                'last_fetched' => \current_time('mysql'),
                 'error' => true,
                 'last_error' => $error_message
             ],
@@ -282,7 +354,7 @@ class FeedRepository {
         // Update post meta for last checked time
         $now = new \DateTime();
         $feed->set_last_checked($now);
-        update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
+        \update_post_meta($feed_id, '_athena_feed_last_checked', $now->format('Y-m-d H:i:s'));
         
         // Also log the error to the feed_errors table
         $this->log_error($feed, $code, $message);
@@ -305,37 +377,37 @@ class FeedRepository {
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
         if (!$table_exists) {
             // Log to WordPress error log instead
-            error_log("Athena AI Feed Error ({$code}): {$message}");
+            \error_log("Athena AI Feed Error ({$code}): {$message}");
             return;
         }
         
         try {
             // Nur in die Datenbank schreiben, wenn feed ID gesetzt ist
-            if ($feed->get_id() !== null) {
+            if ($feed->get_post_id() !== null) {
                 $data = [
-                    'feed_id' => $feed->get_id(),
+                    'feed_id' => $feed->get_post_id(),
                     'error_code' => $code,
                     'error_message' => $message,
-                    'created_at' => current_time('mysql')
+                    'created_at' => \current_time('mysql')
                 ];
                 $formats = ['%d', '%s', '%s', '%s'];
                 
                 $wpdb->insert($wpdb->prefix . 'feed_errors', $data, $formats);
                 
                 if ($wpdb->last_error) {
-                    error_log("Athena AI: Error logging feed error: {$wpdb->last_error}");
-                    error_log("Athena AI Feed Error ({$code}): {$message}");
+                    \error_log("Athena AI: Error logging feed error: {$wpdb->last_error}");
+                    \error_log("Athena AI Feed Error ({$code}): {$message}");
                 }
             }
         } catch (\Exception $e) {
             // Log exception to WordPress error log
-            error_log("Athena AI: Exception logging feed error: {$e->getMessage()}");
-            error_log("Athena AI Feed Error ({$code}): {$message}");
+            \error_log("Athena AI: Exception logging feed error: {$e->getMessage()}");
+            \error_log("Athena AI Feed Error ({$code}): {$message}");
         }
         
         // Always log to WordPress error log
-        $feed_id_info = $feed->get_id() !== null ? "(Feed ID: {$feed->get_id()})" : "(URL: {$feed->get_url()})"; 
-        error_log(sprintf(
+        $feed_id_info = $feed->get_post_id() !== null ? "(Feed ID: {$feed->get_post_id()})" : "(URL: {$feed->get_url()})"; 
+        \error_log(sprintf(
             'Athena AI Feed Error [%s]: %s %s',
             $code,
             $message,
@@ -355,7 +427,7 @@ class FeedRepository {
     public function save_feed_item(Feed $feed, array $item, string $guid, string $pub_date): bool {
         global $wpdb;
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             return false;
         }
         
@@ -368,7 +440,7 @@ class FeedRepository {
         // Check if an item with this GUID already exists for this feed
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
-            $feed->get_id(),
+            $feed->get_post_id(),
             $guid
         ));
         
@@ -378,7 +450,7 @@ class FeedRepository {
         }
         
         // Prepare JSON content with error handling
-        $json_content = wp_json_encode($item);
+        $json_content = \wp_json_encode($item, JSON_UNESCAPED_UNICODE);
         if ($json_content === false) {
             return false;
         }
@@ -387,11 +459,11 @@ class FeedRepository {
         $result = $wpdb->insert(
             $wpdb->prefix . 'feed_raw_items',
             [
-                'feed_id' => $feed->get_id(),
+                'feed_id' => $feed->get_post_id(),
                 'guid' => $guid,
                 'pub_date' => $pub_date,
                 'content' => $json_content,
-                'created_at' => current_time('mysql')
+                'created_at' => \current_time('mysql')
             ],
             [
                 '%d',
@@ -422,7 +494,7 @@ class FeedRepository {
             'errors' => 0
         ];
         
-        if (!$feed->get_id()) {
+        if (!$feed->get_post_id()) {
             return $stats;
         }
         
@@ -456,14 +528,14 @@ class FeedRepository {
                     $guid = (string) $item['link'];
                 } elseif (isset($item['title']) && !empty($item['title'])) {
                     // Generate a GUID from the title if we can't find anything else
-                    $guid = 'title-' . md5((string) $item['title']);
+                    $guid = 'title-' . \md5((string) $item['title']);
                 } else {
                     // Generate a random GUID as a last resort
-                    $guid = 'feed-item-' . uniqid();
+                    $guid = 'feed-item-' . \uniqid();
                 }
                 
                 // Extract publication date with a safe default
-                $pub_date = current_time('mysql');
+                $pub_date = \current_time('mysql');
                 
                 // Try to find the publication date in the item
                 if (isset($item['pubDate']) && !empty($item['pubDate'])) {
@@ -480,13 +552,13 @@ class FeedRepository {
                     $pub_date = $date->format('Y-m-d H:i:s');
                 } catch (\Exception $e) {
                     // If we can't parse the date, use the current time
-                    $pub_date = current_time('mysql');
+                    $pub_date = \current_time('mysql');
                 }
                 
                 // Check if an item with this GUID already exists for this feed
                 $existing = $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
-                    $feed->get_id(),
+                    $feed->get_post_id(),
                     $guid
                 ));
                 
@@ -496,7 +568,7 @@ class FeedRepository {
                 }
                 
                 // Prepare JSON content with error handling
-                $json_content = wp_json_encode($item);
+                $json_content = \wp_json_encode($item, JSON_UNESCAPED_UNICODE);
                 if ($json_content === false) {
                     $stats['errors']++;
                     continue;
@@ -506,11 +578,11 @@ class FeedRepository {
                 $result = $wpdb->insert(
                     $wpdb->prefix . 'feed_raw_items',
                     [
-                        'feed_id' => $feed->get_id(),
+                        'feed_id' => $feed->get_post_id(),
                         'guid' => $guid,
                         'pub_date' => $pub_date,
                         'content' => $json_content,
-                        'created_at' => current_time('mysql')
+                        'created_at' => \current_time('mysql')
                     ],
                     [
                         '%d',

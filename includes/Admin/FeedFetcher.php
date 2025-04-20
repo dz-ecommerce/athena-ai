@@ -8,6 +8,8 @@
 namespace AthenaAI\Admin;
 
 use AthenaAI\Models\Feed;
+use AthenaAI\Services\LoggerService;
+use AthenaAI\Services\FeedService;
 
 /**
  * FeedFetcher class
@@ -51,10 +53,13 @@ class FeedFetcher {
             $wpdb->suppress_errors(false);
             
             // Debug-Informationen protokollieren
-            if (get_option('athena_ai_enable_debug_mode', false)) {
-                error_log('Athena AI: Manual feed fetch triggered via admin-post.php');
-                error_log('Athena AI: Fetch result - Success: ' . $result['success'] . ', Errors: ' . $result['error']);
-            }
+            $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+            $logger->info('Manual feed fetch triggered via admin-post.php');
+            $logger->info(sprintf('Fetch result - Success: %d, Errors: %d, New items: %d', 
+                $result['success'], 
+                $result['error'],
+                $result['new_items']
+            ));
             
             // Statt Weiterleitung mit wp_redirect, die JavaScript-Weiterleitung verwenden
             // Dies vermeidet das "Headers already sent"-Problem
@@ -106,11 +111,15 @@ class FeedFetcher {
             'details' => []
         ];
         
-        $debug_mode = get_option('athena_ai_enable_debug_mode', false);
+        // Debug mode aktivieren, falls eingestellt
+        $debug_mode = \get_option('athena_ai_enable_debug_mode', false);
         
-        if ($debug_mode) {
-            error_log('Athena AI: Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
-        }
+        // Logger initialisieren
+        $logger = LoggerService::getInstance()
+            ->setComponent('FeedFetcher')
+            ->setVerboseMode($verbose_console);
+            
+        $logger->info('Starting feed fetch process. Force fetch: ' . ($force_fetch ? 'Yes' : 'No'));
         
         // Wenn verbose_console aktiviert ist, JavaScript-Debugging-Ausgabe vorbereiten
         if ($verbose_console) {
@@ -123,9 +132,7 @@ class FeedFetcher {
         
         // Ensure required tables exist
         if (!self::ensure_required_tables()) {
-            if ($debug_mode) {
-                error_log('Athena AI: Required tables do not exist. Aborting feed fetch.');
-            }
+            $logger->error('Required tables do not exist. Aborting feed fetch.');
             if ($verbose_console) {
                 echo '<script>console.error("Athena AI Feed Fetcher: Required database tables do not exist. Aborting feed fetch.");</script>';
             }
@@ -143,18 +150,14 @@ class FeedFetcher {
             ]) : 
             self::get_feeds_due_for_update();
         
-        if ($debug_mode) {
-            error_log('Athena AI: Found ' . count($feeds) . ' feeds to process');
-        }
+        $logger->info('Found ' . count($feeds) . ' feeds to process');
         
         if ($verbose_console) {
             echo '<script>console.log("Athena AI Feed Fetcher: Found ' . count($feeds) . ' feeds to process");</script>';
         }
         
         if (empty($feeds)) {
-            if ($debug_mode) {
-                error_log('Athena AI: No feeds to process. Exiting.');
-            }
+            $logger->info('No feeds to process. Exiting.');
             if ($verbose_console) {
                 echo '<script>console.warn("Athena AI Feed Fetcher: No feeds to process. Exiting.");</script>';
             }
@@ -171,9 +174,7 @@ class FeedFetcher {
             try {
                 // Ensure feed metadata exists
                 if (!self::ensure_feed_metadata_exists($feed_post->ID)) {
-                    if ($debug_mode) {
-                        error_log('Athena AI: Failed to ensure feed metadata for feed ID ' . $feed_post->ID);
-                    }
+                    $logger->error('Failed to ensure feed metadata for feed ID ' . $feed_post->ID);
                     if ($verbose_console) {
                         echo '<script>console.error("Athena AI Feed Fetcher: Failed to ensure feed metadata for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
                     }
@@ -195,9 +196,7 @@ class FeedFetcher {
                 $feed_url = get_post_meta($feed_post->ID, '_athena_feed_url', true);
                 
                 if (empty($feed_url)) {
-                    if ($debug_mode) {
-                        error_log('Athena AI: Feed URL is empty for feed ID ' . $feed_post->ID);
-                    }
+                    $logger->error('Feed URL is empty for feed ID ' . $feed_post->ID);
                     if ($verbose_console) {
                         echo '<script>console.error("Athena AI Feed Fetcher: Feed URL is empty for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
                     }
@@ -260,10 +259,11 @@ class FeedFetcher {
                     }
                 }
                 
-                if ($debug_mode) {
-                    error_log('Athena AI: Processing feed: ' . $feed_post->post_title . ' (ID: ' . $feed_post->ID . ', URL: ' . $feed_url . ')');
-                }
-                
+                $logger->info(sprintf('Processing feed: %s (ID: %d, URL: %s)', 
+                    $feed_post->post_title, 
+                    $feed_post->ID, 
+                    $feed_url
+                ));              
                 if ($verbose_console) {
                     echo '<script>console.log("Athena AI Feed Fetcher: Processing feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ', URL: ' . esc_js($feed_url) . ')");</script>';
                 }
@@ -274,17 +274,15 @@ class FeedFetcher {
                     $feed_post->ID
                 ));
                 
-                if ($debug_mode) {
-                    error_log("Athena AI: Feed {$feed_post->post_title} has {$before_count} items before fetch");
-                }
-                
+                $logger->debug(sprintf('Feed %s has %d items before fetch', 
+                    $feed_post->post_title, 
+                    $before_count
+                ));              
                 // Create feed model
                 $feed = Feed::get_by_id($feed_post->ID);
                 
                 if (!$feed) {
-                    if ($debug_mode) {
-                        error_log('Athena AI: Failed to create Feed object for feed ID ' . $feed_post->ID);
-                    }
+                    $logger->error('Failed to create Feed object for feed ID ' . $feed_post->ID);
                     if ($verbose_console) {
                         echo '<script>console.error("Athena AI Feed Fetcher: Failed to create Feed object for feed: ' . esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ')");</script>';
                     }
@@ -330,10 +328,10 @@ class FeedFetcher {
                         $feed_post->ID
                     ));
                     
-                    if ($debug_mode) {
-                        error_log("Athena AI: Feed {$feed_post->post_title} has {$after_count} items after fetch");
-                    }
-                    
+                    $logger->debug(sprintf('Feed %s has %d items after fetch', 
+                        $feed_post->post_title, 
+                        $after_count
+                    ));                  
                     // Berechne die Anzahl der neuen Items
                     $new_items = max(0, $after_count - $before_count);
                     $total_new_items += $new_items;
@@ -341,10 +339,10 @@ class FeedFetcher {
                     // Speichere die Anzahl der neuen Items für diesen Feed
                     update_post_meta($feed_post->ID, '_athena_feed_last_new_items', $new_items);
                     
-                    if ($debug_mode) {
-                        error_log("Athena AI: Successfully fetched feed: {$feed_post->post_title}. New items: {$new_items}");
-                    }
-                } else {
+                    $logger->info(sprintf('Successfully fetched feed: %s. New items: %d', 
+                        $feed_post->post_title, 
+                        $new_items
+                    ));              } else {
                     // Stelle sicher, dass die Array-Indizes existieren
                     if (!isset($results['error'])) {
                         $results['error'] = 0;
@@ -356,10 +354,7 @@ class FeedFetcher {
                     $results['error']++;
                     $results['details'][] = 'Failed to fetch feed: ' . $feed_post->post_title;
                     
-                    if ($debug_mode) {
-                        error_log('Athena AI: Failed to fetch feed: ' . $feed_post->post_title);
-                    }
-                    
+                    $logger->error(sprintf('Failed to fetch feed: %s', $feed_post->post_title));                  
                     if ($verbose_console) {
                         // Hole den letzten Fehler aus der Feed-Klasse
                         $last_error = $feed->get_last_error();
@@ -379,10 +374,7 @@ class FeedFetcher {
                 $results['error']++;
                 $results['details'][] = 'Error processing feed ' . $feed_post->post_title . ': ' . $e->getMessage();
                 
-                if ($debug_mode) {
-                    error_log('Athena AI: Exception while processing feed: ' . $e->getMessage());
-                }
-                
+                $logger->error(sprintf('Exception while processing feed: %s', $e->getMessage()));              
                 if ($verbose_console) {
                     echo '<script>console.error("Athena AI Feed Fetcher: Exception while processing feed ' . esc_js($feed_post->post_title) . ': ' . esc_js($e->getMessage()) . '");</script>';
                 }
@@ -403,7 +395,11 @@ class FeedFetcher {
         update_option('athena_last_feed_fetch', time());
         
         if ($debug_mode) {
-            error_log("Athena AI: Feed fetch process completed. Success: {$results['success']}, Errors: {$results['error']}, New items: {$total_new_items}");
+            $logger->info(sprintf('Feed fetch process completed. Success: %d, Errors: %d, New items: %d',
+                $results['success'], 
+                $results['error'],
+                $total_new_items
+            ));
         }
         
         if ($verbose_console) {
@@ -524,7 +520,8 @@ class FeedFetcher {
             if (!$table_exists) {
                 // Tabelle existiert nicht, daher nichts zu aktualisieren
                 if ($debug_mode) {
-                    error_log('Athena AI: feed_metadata table does not exist, cannot update schema');
+                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                    $logger->error('feed_metadata table does not exist, cannot update schema');
                 }
                 // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
                 return;
@@ -535,7 +532,8 @@ class FeedFetcher {
             
             if ($columns === false || $columns === null) {
                 if ($debug_mode) {
-                    error_log('Athena AI: Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
+                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                    $logger->error('Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
                 }
                 // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
                 return;
@@ -544,7 +542,8 @@ class FeedFetcher {
             $column_names = array_map(function($col) { return $col->Field; }, $columns);
             
             if ($debug_mode) {
-                error_log('Athena AI: Current feed_metadata table columns: ' . implode(', ', $column_names));
+                $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                $logger->debug('Current feed_metadata table columns: ' . implode(', ', $column_names));
             }
             // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
             
@@ -552,7 +551,8 @@ class FeedFetcher {
             if (!in_array('last_fetched', $column_names)) {
                 $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
                 if ($debug_mode) {
-                    error_log('Athena AI: Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
+                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                    $logger->info('Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
                 }
                 // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
             }
@@ -583,7 +583,8 @@ class FeedFetcher {
             }
         } catch (\Exception $e) {
             if ($debug_mode) {
-                error_log('Athena AI: Exception in check_and_update_schema: ' . $e->getMessage());
+                $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                $logger->error('Exception in check_and_update_schema: ' . $e->getMessage());
             }
             // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
         }

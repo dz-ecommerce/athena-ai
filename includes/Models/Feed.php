@@ -72,7 +72,7 @@ class Feed {
         int $update_interval = 3600,
         bool $active = true
     ) {
-        $this->url = esc_url_raw($url);
+        $this->url = $url;
         $this->update_interval = $update_interval;
         $this->active = $active;
     }
@@ -113,28 +113,28 @@ class Feed {
      * @return self
      */
     public function set_url(string $url): self {
-        $this->url = esc_url_raw($url);
+        $this->url = $url;
         return $this;
     }
 
     /**
-     * Set the feed ID (post ID)
+     * Get the feed's post ID
      *
-     * @param int $id The post ID to set
+     * @return int|null The feed's post ID
+     */
+    public function get_post_id(): ?int {
+        return $this->post_id;
+    }
+    
+    /**
+     * Set the feed's post ID
+     *
+     * @param int $post_id The feed's post ID
      * @return self
      */
-    public function set_id(int $id): self {
-        $this->post_id = $id;
+    public function set_post_id(int $post_id): self {
+        $this->post_id = $post_id;
         return $this;
-    }
-
-    /**
-     * Get the feed ID (post ID)
-     *
-     * @return int|null The post ID or null if not set
-     */
-    public function get_id(): ?int {
-        return $this->post_id;
     }
     
     /**
@@ -198,40 +198,12 @@ class Feed {
     }
     
     /**
-     * Save the feed to the database
-     * This is a simple persistence method that relies on WP functions
-     * More complex operations are handled by the FeedRepository
-     *
-     * @return bool Whether the save was successful
+     * Generiert einen Titel für den Feed basierend auf der URL
+     * 
+     * @return string Der generierte Titel
      */
-    public function save(): bool {
-        // If we have a post_id, update the existing post
-        if (isset($this->post_id)) {
-            // Update post meta
-            update_post_meta($this->post_id, '_athena_feed_url', $this->url);
-            update_post_meta($this->post_id, '_athena_feed_update_interval', $this->update_interval);
-            update_post_meta($this->post_id, '_athena_feed_active', $this->active ? '1' : '0');
-            
-            return true;
-        } else {
-            // Create a new post
-            $post_id = wp_insert_post([
-                'post_title' => parse_url($this->url, PHP_URL_HOST) ?: $this->url,
-                'post_type' => 'athena-feed',
-                'post_status' => 'publish'
-            ]);
-            
-            if (is_wp_error($post_id)) {
-                return false;
-            }
-            
-            // Set post meta
-            update_post_meta($post_id, '_athena_feed_url', $this->url);
-            update_post_meta($post_id, '_athena_feed_update_interval', $this->update_interval);
-            update_post_meta($post_id, '_athena_feed_active', $this->active ? '1' : '0');
-            
-            $this->post_id = $post_id;
-            return true;
-        }
+    public function generate_title(): string {
+        $host = parse_url($this->url, PHP_URL_HOST);
+        return $host ?: $this->url;
     }
 }
