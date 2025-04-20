@@ -11,7 +11,7 @@ namespace AthenaAI\Services;
 
 use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
-use AthenaAI\Services\FeedParser\ParserRegistry;
+use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -36,11 +36,11 @@ class FeedService {
     private FeedHttpClient $http_client;
     
     /**
-     * Parser registry.
+     * Feed processor factory.
      *
-     * @var ParserRegistry
+     * @var FeedProcessorFactory
      */
-    private ParserRegistry $parser_registry;
+    private FeedProcessorFactory $processor_factory;
     
     /**
      * Whether to output verbose console logs.
@@ -50,20 +50,30 @@ class FeedService {
     private bool $verbose_console = false;
     
     /**
+     * Error handler instance.
+     *
+     * @var ErrorHandler
+     */
+    private ErrorHandler $error_handler;
+    
+    /**
      * Constructor.
      *
-     * @param FeedRepository $repository      Feed repository.
-     * @param FeedHttpClient $http_client     HTTP client.
-     * @param ParserRegistry $parser_registry Parser registry.
+     * @param FeedRepository      $repository        Feed repository.
+     * @param FeedHttpClient      $http_client       HTTP client.
+     * @param FeedProcessorFactory $processor_factory Feed processor factory.
+     * @param ErrorHandler        $error_handler     Error handler.
      */
     public function __construct(
         FeedRepository $repository,
         FeedHttpClient $http_client,
-        ParserRegistry $parser_registry
+        FeedProcessorFactory $processor_factory,
+        ErrorHandler $error_handler
     ) {
         $this->repository = $repository;
         $this->http_client = $http_client;
-        $this->parser_registry = $parser_registry;
+        $this->processor_factory = $processor_factory;
+        $this->error_handler = $error_handler;
     }
     
     /**
@@ -72,10 +82,12 @@ class FeedService {
      * @return self
      */
     public static function create(): self {
+        $repository = new FeedRepository();
         return new self(
-            new FeedRepository(),
+            $repository,
             new FeedHttpClient(),
-            new ParserRegistry()
+            new FeedProcessorFactory(),
+            new ErrorHandler($repository)
         );
     }
     
@@ -88,7 +100,13 @@ class FeedService {
     public function setVerboseMode(bool $verbose): self {
         $this->verbose_console = $verbose;
         $this->http_client->setVerboseMode($verbose);
-        $this->parser_registry->setVerboseMode($verbose);
+        $this->error_handler->setVerboseMode($verbose);
+        
+        // Set processor factory verbose mode
+        if (method_exists($this->processor_factory, 'setVerboseMode')) {
+            $this->processor_factory->setVerboseMode($verbose);
+        }
+        
         return $this;
     }
     
@@ -99,21 +117,21 @@ class FeedService {
      * @return bool Whether the processing was successful.
      */
     public function processFeed(Feed $feed): bool {
-        $this->consoleLog("Processing feed: " . $feed->get_url(), 'group');
+        $this->error_handler->consoleLog("Processing feed: " . $feed->get_url(), 'group');
         
         // Fetch the feed content
         $content = $this->fetchFeed($feed);
         if (!$content) {
-            $this->consoleLog("Failed to fetch feed content", 'error');
-            $this->consoleLog('', 'groupEnd');
+            $this->error_handler->consoleLog("Failed to fetch feed content", 'error');
+            $this->error_handler->consoleLog('', 'groupEnd');
             return false;
         }
         
-        // Parse the feed
-        $items = $this->parseFeed($content);
+        // Process the feed content
+        $items = $this->processFeedContent($content);
         if (empty($items)) {
-            $this->consoleLog("No items found in feed", 'warn');
-            $this->consoleLog('', 'groupEnd');
+            $this->error_handler->consoleLog("No items found in feed", 'warn');
+            $this->error_handler->consoleLog('', 'groupEnd');
             
             // Update feed metadata to record the attempt
             $this->repository->update_feed_metadata($feed, 0);
@@ -122,8 +140,8 @@ class FeedService {
         
         // Save the items
         $result = $this->saveItems($feed, $items);
-        $this->consoleLog("Saved " . count($items) . " items", 'info');
-        $this->consoleLog('', 'groupEnd');
+        $this->error_handler->consoleLog("Saved " . count($items) . " items", 'info');
+        $this->error_handler->consoleLog('', 'groupEnd');
         
         return $result;
     }
@@ -162,16 +180,18 @@ class FeedService {
      * @param Feed $feed The feed to fetch.
      * @return string|false The feed content or false on failure.
      */
-    private function fetchFeed(Feed $feed) {
+    private function fetchFeed(Feed $feed): string|false {
         $url = $feed->get_url();
-        if (!$url) {
-            $this->logError($feed, 'no_url', 'No feed URL provided');
+        if (empty($url)) {
+            $this->error_handler->logError($feed, 'no_url', 'Feed URL is empty');
             return false;
         }
         
+        $this->error_handler->consoleLog("Fetching feed from URL: {$url}", 'info');
+        
         $content = $this->http_client->fetch($url);
         if (!$content) {
-            $this->logError($feed, 'fetch_failed', 'Failed to fetch feed content');
+            $this->error_handler->logError($feed, 'fetch_failed', 'Failed to fetch feed content');
             return false;
         }
         
@@ -179,13 +199,14 @@ class FeedService {
     }
     
     /**
-     * Parse feed content.
+     * Process feed content using the appropriate processor.
      *
-     * @param string $content The feed content to parse.
-     * @return array The parsed feed items.
+     * @param string $content The feed content to process.
+     * @return array The processed feed items.
      */
-    private function parseFeed(string $content): array {
-        return $this->parser_registry->parse($content);
+    private function processFeedContent(string $content): array {
+        $items = $this->processor_factory->process($content);
+        return $items ?? [];
     }
     
     /**
@@ -199,7 +220,7 @@ class FeedService {
         global $wpdb;
         
         if (!$feed->get_id()) {
-            $this->logError($feed, 'no_feed_id', 'Feed has no ID');
+            $this->error_handler->logError($feed, 'no_feed_id', 'Feed has no ID');
             return false;
         }
         
@@ -209,12 +230,12 @@ class FeedService {
         
         foreach ($items as $item) {
             // Skip items without required fields
-            if (empty($item['link']) || empty($item['title'])) {
+            if (empty($item['guid']) || (empty($item['link']) && empty($item['title']))) {
                 continue;
             }
             
-            // Generate a unique key for the item
-            $item_key = md5($item['link'] . $feed_id);
+            // Generate a unique key for the item - preferring guid, falling back to link+title hash
+            $item_key = isset($item['guid']) ? md5($item['guid']) : md5(($item['link'] ?? '') . ($item['title'] ?? ''));
             
             // Check if the item already exists
             $exists = $wpdb->get_var(
@@ -228,13 +249,16 @@ class FeedService {
                 continue;
             }
             
+            // Format date properly
+            $pub_date = isset($item['pub_date']) ? $item['pub_date'] : current_time('mysql');
+            
             // Prepare the data
             $data = [
                 'feed_id' => $feed_id,
                 'item_key' => $item_key,
                 'title' => $item['title'] ?? '',
                 'link' => $item['link'] ?? '',
-                'pub_date' => $item['date'] ?? current_time('mysql'),
+                'pub_date' => $pub_date,
                 'raw_content' => wp_json_encode($item),
                 'fetched_date' => current_time('mysql')
             ];
@@ -256,6 +280,8 @@ class FeedService {
             
             if ($result) {
                 $new_items_count++;
+            } else {
+                $this->error_handler->consoleLog("Failed to insert item: " . $wpdb->last_error, 'error');
             }
         }
         
@@ -265,43 +291,5 @@ class FeedService {
         return true;
     }
     
-    /**
-     * Log an error for a feed.
-     *
-     * @param Feed   $feed    The feed to log the error for.
-     * @param string $code    The error code.
-     * @param string $message The error message.
-     * @return void
-     */
-    private function logError(Feed $feed, string $code, string $message): void {
-        $feed->set_last_error($message);
-        
-        if ($feed->get_id()) {
-            $this->repository->update_feed_error($feed, $code, $message);
-        }
-        
-        $this->consoleLog("Error ({$code}): {$message}", 'error');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Athena AI Feed Error ({$code}): {$message}");
-        }
-    }
-    
-    /**
-     * Output a console log message if verbose mode is enabled.
-     *
-     * @param string $message The message to log.
-     * @param string $type    The type of log message (log, info, warn, error, group, groupEnd).
-     * @return void
-     */
-    private function consoleLog(string $message, string $type = 'log'): void {
-        if (!$this->verbose_console) {
-            return;
-        }
 
-        $valid_types = ['log', 'info', 'warn', 'error', 'group', 'groupEnd'];
-        $type = in_array($type, $valid_types) ? $type : 'log';
-        
-        echo '<script>console.' . $type . '("Athena AI Feed: ' . esc_js($message) . '");</script>';
-    }
 }
