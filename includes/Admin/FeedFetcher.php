@@ -333,10 +333,13 @@ class FeedFetcher {
                 $logger->error(sprintf('Failed to fetch feed: %s', $feed_post->post_title));                  
                 
                 if ($verbose_console) {
-                    // Get the last error from the feed
+                // Get the last error from the feed
+                $last_error = '';
+                if (method_exists($feed, 'get_last_error')) {
                     $last_error = $feed->get_last_error();
-                    if (!empty($last_error)) {
-                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \esc_js($feed_post->post_title) . ' - Error: ' . \esc_js($last_error) . '");</script>';
+                }
+                if (!empty($last_error)) {
+                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \esc_js($feed_post->post_title) . ' - Error: ' . \esc_js($last_error) . '");</script>';
                     } else {
                         echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \esc_js($feed_post->post_title) . ' - Unknown error");</script>';
                     }

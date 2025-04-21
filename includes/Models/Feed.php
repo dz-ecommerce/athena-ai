@@ -401,6 +401,62 @@ class Feed {
     }
     
     /**
+     * Holt einen Feed anhand seiner ID
+     * 
+     * @param int $feed_id Die ID des Feeds
+     * @return Feed|null Das Feed-Objekt oder null, wenn nicht gefunden
+     */
+    public static function get_by_id(int $feed_id): ?Feed {
+        // Prüfe, ob der Feed existiert
+        $feed_post = \get_post($feed_id);
+        if (!$feed_post || $feed_post->post_type !== 'athena-feed') {
+            return null;
+        }
+        
+        // Hole die Feed-URL und andere Metadaten
+        $feed_url = \get_post_meta($feed_id, '_athena_feed_url', true);
+        if (empty($feed_url)) {
+            return null;
+        }
+        
+        $update_interval = (int) \get_post_meta($feed_id, '_athena_feed_update_interval', true) ?: 3600;
+        $active = \get_post_meta($feed_id, '_athena_feed_active', true) !== '0';
+        
+        // Erstelle ein neues Feed-Objekt
+        $feed = new self($feed_url, $update_interval, $active);
+        $feed->set_post_id($feed_id);
+        
+        // Hole den letzten Fehler aus der Datenbank
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'feed_metadata';
+        
+        // Prüfe, ob die Tabelle existiert
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
+        
+        if ($table_exists) {
+            $metadata = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT last_error, last_fetched FROM {$table_name} WHERE feed_id = %d",
+                    $feed_id
+                )
+            );
+            
+            if ($metadata) {
+                if (!empty($metadata->last_error)) {
+                    $feed->set_last_error($metadata->last_error);
+                }
+                
+                if (!empty($metadata->last_fetched)) {
+                    $last_checked = new \DateTime($metadata->last_fetched);
+                    $feed->set_last_checked($last_checked);
+                }
+            }
+        }
+        
+        return $feed;
+    }
+    
+    /**
      * Holt alle Feeds, die aktualisiert werden müssen
      * 
      * @return array Ein Array von Feed-Objekten, die aktualisiert werden müssen
