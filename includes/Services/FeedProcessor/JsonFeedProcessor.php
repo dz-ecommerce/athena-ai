@@ -155,7 +155,7 @@ class JsonFeedProcessor extends AbstractFeedProcessor {
         
         // As a last resort, create a hash of the content
         if (empty($guid) && isset($item['content'])) {
-            $guid = md5(maybe_serialize($item));
+            $guid = md5(json_encode($item) ?: '');
         }
         
         // Skip items without any identifiable GUID
@@ -192,7 +192,7 @@ class JsonFeedProcessor extends AbstractFeedProcessor {
         
         // If no valid date found, use current time
         if (empty($pub_date)) {
-            $pub_date = current_time('mysql');
+            $pub_date = date('Y-m-d H:i:s');
             $this->consoleLog("Using current time as fallback for item: " . $guid, 'warn');
         }
         

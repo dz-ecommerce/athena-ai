@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace AthenaAI\Services\FeedProcessor;
 
 use AthenaAI\Interfaces\FeedProcessorInterface;
+use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -21,6 +22,12 @@ if (!defined('ABSPATH')) {
  * Factory for creating and selecting feed processors.
  */
 class FeedProcessorFactory {
+    /**
+     * Logger service instance.
+     *
+     * @var LoggerService
+     */
+    private LoggerService $logger;
     /**
      * Available feed processors.
      *
@@ -42,6 +49,7 @@ class FeedProcessorFactory {
      */
     public function __construct(bool $verbose_console = false) {
         $this->verbose_console = $verbose_console;
+        $this->logger = LoggerService::getInstance()->setComponent('Feed Processor Factory');
         $this->registerDefaultProcessors();
     }
     
@@ -84,35 +92,35 @@ class FeedProcessorFactory {
      */
     public function getProcessorForContent(?string $content): ?FeedProcessorInterface {
         if ($this->verbose_console) {
-            echo '<script>console.group("Finding appropriate feed processor");</script>';
+            $this->logger->console("Finding appropriate feed processor", 'group');
         }
         
         // Behandle NULL-Werte
         if ($content === null || empty($content)) {
             if ($this->verbose_console) {
-                echo '<script>console.error("Feed content is null or empty");</script>';
-                echo '<script>console.groupEnd();</script>';
+                $this->logger->console("Feed content is null or empty", 'error');
+                $this->logger->console("", 'groupEnd');
             }
             return null;
         }
         
         foreach ($this->processors as $processor) {
             if ($this->verbose_console) {
-                echo '<script>console.log("Trying processor: ' . esc_js($processor->getName()) . '");</script>';
+                $this->logger->console("Trying processor: " . $processor->getName(), 'info');
             }
             
             if ($processor->canProcess($content)) {
                 if ($this->verbose_console) {
-                    echo '<script>console.log("Selected processor: ' . esc_js($processor->getName()) . '");</script>';
-                    echo '<script>console.groupEnd();</script>';
+                    $this->logger->console("Selected processor: " . $processor->getName(), 'info');
+                    $this->logger->console("", 'groupEnd');
                 }
                 return $processor;
             }
         }
         
         if ($this->verbose_console) {
-            echo '<script>console.error("No suitable processor found for feed content");</script>';
-            echo '<script>console.groupEnd();</script>';
+            $this->logger->console("No suitable processor found for feed content", 'error');
+            $this->logger->console("", 'groupEnd');
         }
         
         return null;
@@ -128,7 +136,7 @@ class FeedProcessorFactory {
         // Behandle NULL-Werte
         if ($content === null || empty($content)) {
             if ($this->verbose_console) {
-                echo '<script>console.error("Cannot process null or empty content");</script>';
+                $this->logger->console("Cannot process null or empty content", 'error');
             }
             return null;
         }
@@ -137,13 +145,13 @@ class FeedProcessorFactory {
         
         if (!$processor) {
             if ($this->verbose_console) {
-                echo '<script>console.error("No suitable processor found for content");</script>';
+                $this->logger->console("No suitable processor found for content", 'error');
             }
             return null;
         }
         
         if ($this->verbose_console) {
-            echo '<script>console.log("Processing with: ' . esc_js($processor->getName()) . '");</script>';
+            $this->logger->console("Processing with: " . $processor->getName(), 'info');
         }
         
         return $processor->process($content);
