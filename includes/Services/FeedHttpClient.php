@@ -103,6 +103,102 @@ class FeedHttpClient {
     }
 
     /**
+     * Prüft, ob eine URL zu socialmediaexaminer.com gehört
+     * 
+     * @param string $url Die zu prüfende URL
+     * @return bool True, wenn die URL zu socialmediaexaminer.com gehört, sonst false
+     */
+    private function isSocialMediaExaminerUrl(string $url): bool {
+        return strpos($url, 'socialmediaexaminer.com') !== false;
+    }
+    
+    /**
+     * Spezialisierte Methode zum Abrufen von socialmediaexaminer.com Feeds
+     * 
+     * @param string $url Die Feed-URL
+     * @return string|false Der Feed-Inhalt oder false bei Fehler
+     */
+    private function fetchSocialMediaExaminerFeed(string $url): string|false {
+        $this->consoleLog("Using specialized method for Social Media Examiner feed", 'info');
+        
+        // Spezielle Header für Social Media Examiner
+        $options = [
+            'timeout' => 60, // Längeres Timeout
+            'redirection' => 10,
+            'sslverify' => false,
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.9,de;q=0.8',
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
+                'Sec-Fetch-Dest' => 'document',
+                'Sec-Fetch-Mode' => 'navigate',
+                'Sec-Fetch-Site' => 'none',
+                'Sec-Fetch-User' => '?1',
+                'Upgrade-Insecure-Requests' => '1'
+            ]
+        ];
+        
+        // Verwende cURL für maximale Kontrolle
+        $ch = curl_init($url);
+        
+        // Grundlegende cURL-Optionen
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, $options['redirection']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $options['timeout']);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $options['sslverify']);
+        curl_setopt($ch, CURLOPT_ENCODING, '');
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_COOKIESESSION, true);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, '');
+        
+        // Header setzen
+        $headers = [];
+        foreach ($options['headers'] as $key => $value) {
+            $headers[] = "{$key}: {$value}";
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        
+        // cURL-Anfrage ausführen
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        
+        curl_close($ch);
+        
+        // Log-Ausgabe für Debugging
+        $this->consoleLog("cURL response code: {$status_code}, content-type: {$content_type}", 'info');
+        
+        if ($response === false) {
+            $error_msg = "cURL error: {$error}";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
+            return false;
+        }
+        
+        if ($status_code !== 200) {
+            $error_msg = "Invalid response code from cURL: {$status_code}";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
+            return false;
+        }
+        
+        // Überprüfe, ob der Inhalt leer ist
+        if (empty($response)) {
+            $error_msg = "Empty response body from cURL";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
+            return false;
+        }
+        
+        return $response;
+    }
+
+    /**
      * Fetch content from a URL.
      *
      * @param string $url     The URL to fetch.
@@ -122,6 +218,11 @@ class FeedHttpClient {
             $this->set_last_error($error);
             $this->consoleLog($error, 'error');
             return false;
+        }
+        
+        // Spezialbehandlung für Social Media Examiner
+        if ($this->isSocialMediaExaminerUrl($url)) {
+            return $this->fetchSocialMediaExaminerFeed($url);
         }
         
         // Merge default options with provided options
@@ -255,15 +356,32 @@ class FeedHttpClient {
             $this->consoleLog($error_msg, 'error');
             
             // Wenn wir einen 403 Forbidden-Fehler erhalten, versuchen wir es mit einem alternativen User-Agent
-            if ($status_code === 403 && isset($options['retry']) && $options['retry'] === false) {
-                $this->consoleLog("Received 403 Forbidden, trying with alternative User-Agent", 'warn');
+            if ($status_code === 403 && (!isset($options['retry']) || $options['retry'] < 2)) {
+                $retry_count = isset($options['retry']) ? $options['retry'] + 1 : 1;
+                $this->consoleLog("Received 403 Forbidden, trying with alternative approach (attempt {$retry_count})", 'warn');
                 
-                // Alternativen User-Agent verwenden
-                $options['headers']['User-Agent'] = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
-                $options['retry'] = true; // Markiere als Wiederholungsversuch
+                // Verschiedene Strategien je nach Wiederholungsversuch
+                if ($retry_count === 1) {
+                    // Erster Wiederholungsversuch: Anderen Browser-User-Agent verwenden
+                    $options['headers']['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15';
+                    $options['headers']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+                    $options['headers']['Accept-Language'] = 'en-US,en;q=0.9';
+                    // Entferne den Google-Referer, da dieser blockiert werden könnte
+                    if (isset($options['headers']['Referer']) && strpos($options['headers']['Referer'], 'google.com') !== false) {
+                        unset($options['headers']['Referer']);
+                    }
+                } else {
+                    // Zweiter Wiederholungsversuch: Direkter Zugriff ohne spezielle Header
+                    $options['headers'] = [
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                        'Accept' => '*/*'
+                    ];
+                }
+                
+                $options['retry'] = $retry_count; // Aktualisiere den Wiederholungszähler
                 
                 // Kurze Pause vor dem Wiederholungsversuch
-                usleep(mt_rand(2000000, 5000000)); // 2-5 Sekunden Pause
+                usleep(mt_rand(3000000, 6000000)); // 3-6 Sekunden Pause
                 
                 return $this->curlFetch($url, $options);
             }
