@@ -530,7 +530,10 @@ class FeedService {
             $content = $this->http_client->fetch($feed->get_url());
             
             if (empty($content)) {
-                $error = $this->http_client->get_last_error() ?: 'Leerer Feed-Inhalt erhalten';
+                $error = 'Leerer Feed-Inhalt erhalten';
+                if (method_exists($this->http_client, 'get_last_error')) {
+                    $error = $this->http_client->get_last_error() ?: $error;
+                }
                 if (method_exists($feed, 'update_feed_error')) {
                     $feed->update_feed_error($error);
                 }
