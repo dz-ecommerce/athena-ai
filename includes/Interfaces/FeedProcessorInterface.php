@@ -22,18 +22,18 @@ interface FeedProcessorInterface {
     /**
      * Check if the processor can handle this content.
      *
-     * @param string $content The feed content to check.
+     * @param string|null $content The feed content to check.
      * @return bool True if this processor can handle the content.
      */
-    public function canProcess(string $content): bool;
+    public function canProcess(?string $content): bool;
     
     /**
      * Process the feed content and extract feed items.
      *
-     * @param string $content The feed content to process.
+     * @param string|null $content The feed content to process.
      * @return array The extracted feed items.
      */
-    public function process(string $content): array;
+    public function process(?string $content): array;
     
     /**
      * Get processor name for identification.

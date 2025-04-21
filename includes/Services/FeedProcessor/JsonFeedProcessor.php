@@ -22,10 +22,15 @@ class JsonFeedProcessor extends AbstractFeedProcessor {
     /**
      * Check if this processor can handle the content.
      *
-     * @param string $content The feed content to check.
+     * @param string|null $content The feed content to check.
      * @return bool True if this processor can handle the content.
      */
-    public function canProcess(string $content): bool {
+    public function canProcess(?string $content): bool {
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            return false;
+        }
+        
         // Trim whitespace
         $trimmed = trim($content);
         
@@ -57,11 +62,18 @@ class JsonFeedProcessor extends AbstractFeedProcessor {
     /**
      * Process JSON feed content.
      *
-     * @param string $content The feed content to process.
+     * @param string|null $content The feed content to process.
      * @return array The extracted feed items.
      */
-    public function process(string $content): array {
+    public function process(?string $content): array {
         $this->consoleLog("Processing feed with JSON processor", 'info');
+        
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            $this->consoleLog("Feed content is null or empty", 'error');
+            $this->logError("Feed content is null or empty");
+            return [];
+        }
         
         // Decode JSON content
         $data = json_decode($content, true);
@@ -313,7 +325,7 @@ class JsonFeedProcessor extends AbstractFeedProcessor {
                     'type' => 'image/jpeg', // Assume image type
                     'length' => 0
                 ];
-            } elseif (is_array($image) && isset($image['url'])) {
+            } elseif (is_array($image) && isset($image['url']) && $image['url'] !== null) {
                 $enclosures[] = [
                     'link' => $image['url'],
                     'type' => $image['type'] ?? 'image/jpeg',

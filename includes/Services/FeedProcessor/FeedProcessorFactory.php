@@ -79,12 +79,21 @@ class FeedProcessorFactory {
     /**
      * Find the appropriate processor for feed content.
      *
-     * @param string $content The feed content to process.
+     * @param string|null $content The feed content to process.
      * @return FeedProcessorInterface|null The selected processor or null if none found.
      */
-    public function getProcessorForContent(string $content): ?FeedProcessorInterface {
+    public function getProcessorForContent(?string $content): ?FeedProcessorInterface {
         if ($this->verbose_console) {
             echo '<script>console.group("Finding appropriate feed processor");</script>';
+        }
+        
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            if ($this->verbose_console) {
+                echo '<script>console.error("Feed content is null or empty");</script>';
+                echo '<script>console.groupEnd();</script>';
+            }
+            return null;
         }
         
         foreach ($this->processors as $processor) {
@@ -112,10 +121,18 @@ class FeedProcessorFactory {
     /**
      * Process feed content using the appropriate processor.
      *
-     * @param string $content The feed content to process.
+     * @param string|null $content The feed content to process.
      * @return array|null The processed feed items or null if processing failed.
      */
-    public function process(string $content): ?array {
+    public function process(?string $content): ?array {
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            if ($this->verbose_console) {
+                echo '<script>console.error("Cannot process null or empty content");</script>';
+            }
+            return null;
+        }
+        
         $processor = $this->getProcessorForContent($content);
         
         if (!$processor) {

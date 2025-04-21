@@ -22,10 +22,15 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
     /**
      * Check if this processor can handle the content.
      *
-     * @param string $content The feed content to check.
+     * @param string|null $content The feed content to check.
      * @return bool True if this processor can handle the content.
      */
-    public function canProcess(string $content): bool {
+    public function canProcess(?string $content): bool {
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            return false;
+        }
+        
         // Check for XML/RSS markers
         $is_xml = strpos($content, '<?xml') !== false;
         $has_rss = strpos($content, '<rss') !== false || 
@@ -47,11 +52,18 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
     /**
      * Process XML feed content.
      *
-     * @param string $content The feed content to process.
+     * @param string|null $content The feed content to process.
      * @return array The extracted feed items.
      */
-    public function process(string $content): array {
+    public function process(?string $content): array {
         $this->consoleLog("Processing feed with XML/RSS processor", 'info');
+        
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            $this->consoleLog("Feed content is null or empty", 'error');
+            $this->logError("Feed content is null or empty");
+            return [];
+        }
         
         // Initialize SimplePie
         $feed = new \SimplePie();

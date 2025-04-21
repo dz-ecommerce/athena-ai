@@ -43,22 +43,29 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
     /**
      * Log a message to the console.
      *
-     * @param string $message The message to output.
+     * @param string|null $message The message to output.
      * @param string $level   Log level: log, info, warn, or error.
      * @return void
      */
-    protected function consoleLog(string $message, string $level = 'log'): void {
+    protected function consoleLog(?string $message, string $level = 'log'): void {
+        if ($message === null) {
+            $message = 'NULL message provided to console log';
+            $level = 'warn';
+        }
         $this->logger->console($message, $level);
     }
     
     /**
      * Log an error message.
      *
-     * @param string $message The error message.
+     * @param string|null $message The error message.
      * @param string $code    Optional error code.
      * @return void
      */
-    protected function logError(string $message, string $code = ''): void {
+    protected function logError(?string $message, string $code = ''): void {
+        if ($message === null) {
+            $message = 'NULL error message provided';
+        }
         $this->logger->error($message, $code);
     }
     
