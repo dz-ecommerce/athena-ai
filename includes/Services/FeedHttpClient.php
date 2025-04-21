@@ -31,9 +31,19 @@ class FeedHttpClient {
         'sslverify' => false,
         'headers' => [
             'Accept' => 'application/rss+xml, application/rdf+xml, application/atom+xml, application/xml, text/xml, */*',
-            'User-Agent' => 'Mozilla/5.0 (compatible; Athena AI Feed Fetcher/1.0)'
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Referer' => 'https://www.google.com/',
+            'Cache-Control' => 'max-age=0',
+            'Connection' => 'keep-alive'
         ]
     ];
+    
+    /**
+     * Last error message
+     *
+     * @var string
+     */
+    private string $last_error = '';
 
     /**
      * Whether to output verbose console logs.
@@ -73,6 +83,26 @@ class FeedHttpClient {
     }
 
     /**
+     * Get the last error message
+     * 
+     * @return string The last error message
+     */
+    public function get_last_error(): string {
+        return $this->last_error;
+    }
+    
+    /**
+     * Set the last error message
+     * 
+     * @param string $error The error message
+     * @return self
+     */
+    private function set_last_error(string $error): self {
+        $this->last_error = $error;
+        return $this;
+    }
+
+    /**
      * Fetch content from a URL.
      *
      * @param string $url     The URL to fetch.
@@ -80,17 +110,25 @@ class FeedHttpClient {
      * @return string|false The fetched content or false on failure.
      */
     public function fetch(string $url, array $options = []) {
+        // Reset last error
+        $this->set_last_error('');
+        
         // Log fetching attempt
         $this->consoleLog("Fetching feed from URL: {$url}", 'info');
 
         // Basic URL validation
         if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-            $this->consoleLog("Invalid URL format: {$url}", 'error');
+            $error = "Invalid URL format: {$url}";
+            $this->set_last_error($error);
+            $this->consoleLog($error, 'error');
             return false;
         }
         
         // Merge default options with provided options
         $request_options = array_merge($this->default_options, $options);
+        
+        // Add random delay to avoid rate limiting (between 1-3 seconds)
+        usleep(mt_rand(1000000, 3000000));
         
         // Debug options
         if (function_exists('wp_json_encode')) {
@@ -109,6 +147,7 @@ class FeedHttpClient {
             if (function_exists('is_wp_error')) {
                 if (\is_wp_error($response)) {
                     $error_message = $response->get_error_message();
+                    $this->set_last_error("WordPress error fetching feed: {$error_message}");
                     $this->consoleLog("WordPress error fetching feed: {$error_message}", 'error');
                     return false;
                 }
@@ -118,7 +157,9 @@ class FeedHttpClient {
             if (function_exists('wp_remote_retrieve_response_code')) {
                 $status_code = \wp_remote_retrieve_response_code($response);
                 if ($status_code !== 200) {
-                    $this->consoleLog("Invalid response code: {$status_code}", 'error');
+                    $error = "Invalid response code: {$status_code}";
+                    $this->set_last_error($error);
+                    $this->consoleLog($error, 'error');
                     return false;
                 }
             }
@@ -136,7 +177,9 @@ class FeedHttpClient {
         }
         
         if (empty($body)) {
-            $this->consoleLog("Empty response body", 'error');
+            $error = "Empty response body";
+            $this->set_last_error($error);
+            $this->consoleLog($error, 'error');
             return false;
         }
         
@@ -160,7 +203,9 @@ class FeedHttpClient {
      */
     private function curlFetch(string $url, array $options = []): string|false {
         if (!function_exists('curl_init')) {
-            $this->consoleLog("cURL is not available", 'error');
+            $error = "cURL is not available";
+            $this->set_last_error($error);
+            $this->consoleLog($error, 'error');
             return false;
         }
         
@@ -172,6 +217,10 @@ class FeedHttpClient {
         curl_setopt($ch, CURLOPT_MAXREDIRS, $options['redirection'] ?? 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, $options['timeout'] ?? 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $options['sslverify'] ?? false);
+        curl_setopt($ch, CURLOPT_ENCODING, ''); // Accept all available encodings
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true); // Set referer on redirect
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // Connection timeout
+        curl_setopt($ch, CURLOPT_COOKIESESSION, true); // Use cookies
         
         // Set headers if provided
         if (isset($options['headers']) && is_array($options['headers'])) {
@@ -186,16 +235,47 @@ class FeedHttpClient {
         $response = curl_exec($ch);
         $error = curl_error($ch);
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        
+        // Log response info for debugging
+        $this->consoleLog("cURL response code: {$status_code}, content-type: {$content_type}", 'info');
         
         curl_close($ch);
         
         if ($response === false) {
-            $this->consoleLog("cURL error: {$error}", 'error');
+            $error_msg = "cURL error: {$error}";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
             return false;
         }
         
         if ($status_code !== 200) {
-            $this->consoleLog("Invalid response code from cURL: {$status_code}", 'error');
+            $error_msg = "Invalid response code from cURL: {$status_code}";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
+            
+            // Wenn wir einen 403 Forbidden-Fehler erhalten, versuchen wir es mit einem alternativen User-Agent
+            if ($status_code === 403 && isset($options['retry']) && $options['retry'] === false) {
+                $this->consoleLog("Received 403 Forbidden, trying with alternative User-Agent", 'warn');
+                
+                // Alternativen User-Agent verwenden
+                $options['headers']['User-Agent'] = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+                $options['retry'] = true; // Markiere als Wiederholungsversuch
+                
+                // Kurze Pause vor dem Wiederholungsversuch
+                usleep(mt_rand(2000000, 5000000)); // 2-5 Sekunden Pause
+                
+                return $this->curlFetch($url, $options);
+            }
+            
+            return false;
+        }
+        
+        // Überprüfe, ob der Inhalt leer ist
+        if (empty($response)) {
+            $error_msg = "Empty response body from cURL";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
             return false;
         }
         
