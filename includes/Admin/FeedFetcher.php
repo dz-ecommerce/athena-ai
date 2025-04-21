@@ -46,7 +46,9 @@ class FeedFetcher {
             $wpdb->show_errors = false;
             
             // Feeds mit Force-Flag abrufen und erweiterte Fehlerausgabe aktivieren
+            ob_start();
             $result = self::fetch_all_feeds(true, true);
+            $console_scripts = ob_get_clean();
             
             // Fehlerausgabe wiederherstellen
             $wpdb->show_errors = $show_errors;
@@ -73,6 +75,7 @@ class FeedFetcher {
             ], \admin_url('admin.php'));
             
             echo '<html><head>';
+            echo $console_scripts;
             echo '<meta http-equiv="refresh" content="0;URL=\'' . \esc_url($redirect_url) . '\" />';
             echo '</head><body>';
             echo '<p>' . \__('Feed fetch completed. Redirecting...', 'athena-ai') . '</p>';
