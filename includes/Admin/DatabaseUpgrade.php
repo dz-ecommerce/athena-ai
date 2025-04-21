@@ -92,26 +92,39 @@ class DatabaseUpgrade {
      * Handle the database upgrade action
      */
     public static function handle_upgrade_database(): void {
-        // Überprüfe die Nonce
-        if (!isset($_POST['athena_upgrade_database_nonce']) || !wp_verify_nonce($_POST['athena_upgrade_database_nonce'], 'athena_upgrade_database')) {
-            wp_die(__('Sicherheitsüberprüfung fehlgeschlagen.', 'athena-ai'));
-        }
+        // Starte Output-Buffering, um Ausgaben vor Header-Versand zu verhindern
+        ob_start();
+        
+        try {
+            // Überprüfe die Nonce
+            if (!isset($_POST['athena_upgrade_database_nonce']) || !wp_verify_nonce($_POST['athena_upgrade_database_nonce'], 'athena_upgrade_database')) {
+                ob_end_clean(); // Buffer leeren
+                wp_die(__('Sicherheitsüberprüfung fehlgeschlagen.', 'athena-ai'));
+            }
 
-        // Überprüfe die Berechtigungen
-        if (!current_user_can('manage_options')) {
-            wp_die(__('Sie haben nicht die erforderlichen Berechtigungen, um diese Aktion auszuführen.', 'athena-ai'));
-        }
+            // Überprüfe die Berechtigungen
+            if (!current_user_can('manage_options')) {
+                ob_end_clean(); // Buffer leeren
+                wp_die(__('Sie haben nicht die erforderlichen Berechtigungen, um diese Aktion durchzuführen.', 'athena-ai'));
+            }
 
-        // Führe das Datenbankupgrade durch
-        $result = self::upgrade_database();
+            // Führe das Datenbank-Upgrade durch
+            $result = self::upgrade_database();
+            
+            // Verwerfe gepufferte Ausgabe vor der Weiterleitung
+            ob_end_clean();
 
-        // Leite zurück zur Upgrade-Seite
-        if ($result === true) {
-            wp_redirect(admin_url('admin.php?page=athena-database-upgrade&success=1'));
-        } else {
-            wp_redirect(admin_url('admin.php?page=athena-database-upgrade&error=' . urlencode($result)));
+            if ($result === true) {
+                wp_redirect(admin_url('admin.php?page=athena-database-upgrade&success=1'));
+            } else {
+                wp_redirect(admin_url('admin.php?page=athena-database-upgrade&error=' . urlencode($result)));
+            }
+            exit;
+        } catch (\Exception $e) {
+            // Bei Fehlern Buffer leeren und Fehlermeldung anzeigen
+            ob_end_clean();
+            wp_die($e->getMessage());
         }
-        exit;
     }
 
     /**
