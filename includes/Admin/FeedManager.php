@@ -207,17 +207,20 @@ class FeedManager extends BaseAdmin {
         }
 
         // Save the feed URL
-        if (isset($_POST['athena_feed_url'])) {
+        if (isset($_POST['athena_feed_url']) && !empty($_POST['athena_feed_url'])) {
             $feed_url = sanitize_url($_POST['athena_feed_url']);
             
-            update_post_meta(
-                $post_id,
-                '_athena_feed_url',
-                $feed_url
-            );
-            
-            // Update feed meta data
-            $this->update_feed_meta($post_id, $feed_url);
+            // Stelle sicher, dass $feed_url nicht NULL ist
+            if ($feed_url !== null && $feed_url !== '') {
+                update_post_meta(
+                    $post_id,
+                    '_athena_feed_url',
+                    $feed_url
+                );
+                
+                // Update feed meta data
+                $this->update_feed_meta($post_id, $feed_url);
+            }
         }
     }
     
@@ -225,9 +228,9 @@ class FeedManager extends BaseAdmin {
      * Update feed meta data when feed URL changes
      * 
      * @param int $post_id The post ID
-     * @param string $feed_url The feed URL
+     * @param string|null $feed_url The feed URL
      */
-    private function update_feed_meta($post_id, $feed_url) {
+    private function update_feed_meta($post_id, ?string $feed_url) {
         // Set default values if they don't exist
         if (!get_post_meta($post_id, '_athena_feed_update_interval', true)) {
             update_post_meta($post_id, '_athena_feed_update_interval', 3600); // Default: 1 hour
