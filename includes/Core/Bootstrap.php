@@ -9,6 +9,7 @@ namespace AthenaAI\Core;
 
 use AthenaAI\Admin\AdminBootstrap;
 use AthenaAI\Services\CronScheduler;
+use AthenaAI\Core\I18n;
 
 /**
  * Zentrale Bootstrap-Klasse, die das Plugin initialisiert.
@@ -29,6 +30,9 @@ class Bootstrap {
         // Plugin-Aktivierungs- und Deaktivierungshooks registrieren
         \register_activation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'activate']);
         \register_deactivation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'deactivate']);
+        
+        // Internationalisierung initialisieren
+        I18n::init();
         
         // Plugin-Komponenten initialisieren
         \add_action('plugins_loaded', [self::class, 'load_components']);

@@ -28,15 +28,8 @@ define('ATHENA_AI_PLUGIN_BASENAME', \plugin_basename(__FILE__));
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/Autoloader.php';
 new AthenaAI\Autoloader();
 
-// Textdomain erst auf nach_setup_theme laden, um "Translation loading triggered too early" zu vermeiden
-// Höhere Priorität (999) stellt sicher, dass es nach anderen Initialisierungen geladen wird
-\add_action('after_setup_theme', function() {
-    \load_plugin_textdomain(
-        'athena-ai',
-        false,
-        \dirname(\plugin_basename(__FILE__)) . '/languages'
-    );
-}, 999);
+// Wir laden die Textdomain nicht mehr direkt hier, sondern erst später im Plugin-Lebenszyklus
+// Dies verhindert die "Translation loading triggered too early"-Warnung
 
 // Bootstrap-Prozess starten
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/Core/Bootstrap.php';
