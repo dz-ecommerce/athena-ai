@@ -83,7 +83,7 @@ class UpdateChecker {
                 if (!empty($transient) && isset($transient->response[$pluginFile])) {
                     $update = $transient->response[$pluginFile];
                     // Ensure the update ZIP is from a release
-                    if (isset($update->package) && strpos($update->package, '/releases/download/') === false) {
+                    if (isset($update->package) && is_string($update->package) && $update->package !== '' && strpos($update->package, '/releases/download/') === false) {
                         unset($transient->response[$pluginFile]);
                     }
                 }

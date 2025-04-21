@@ -486,8 +486,12 @@ class DebugPage {
                 echo '<script>console.info("Feed-Inhalt erfolgreich abgerufen. Länge: ' . $content_length . ' Bytes");</script>';
                 
                 // Zeige eine Vorschau des Inhalts
-                $preview = substr($content, 0, 200);
-                $preview = str_replace("\n", "", $preview);
+                if ($content !== null && is_string($content)) {
+                    $preview = substr($content, 0, 200);
+                    $preview = is_string($preview) ? str_replace("\n", "", $preview) : '';
+                } else {
+                    $preview = '';
+                }
                 echo '<script>console.info("Inhalt-Vorschau: ' . esc_js($preview) . '...");</script>';
                 
                 // Versuche, den Inhalt zu parsen
@@ -523,8 +527,12 @@ class DebugPage {
                         echo '<script>console.error("Feed-Inhalt konnte weder als XML noch als JSON geparst werden.");</script>';
                         
                         // Zeige die ersten 500 Zeichen des Inhalts
-                        $preview = substr($content, 0, 500);
-                        $preview = str_replace("\n", "", $preview);
+                        if ($content !== null && is_string($content)) {
+                            $preview = substr($content, 0, 500);
+                            $preview = is_string($preview) ? str_replace("\n", "", $preview) : '';
+                        } else {
+                            $preview = '';
+                        }
                         echo '<script>console.info("Erweiterter Inhalt: ' . esc_js($preview) . '...");</script>';
                     }
                 }
