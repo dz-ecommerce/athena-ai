@@ -13,6 +13,7 @@ use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
 use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
 use AthenaAI\Services\LoggerService;
+use SimpleXMLElement;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -349,7 +350,7 @@ class FeedService {
      *
      * @return array Array mit Feed-Items.
      */
-    private function processXmlFeed(\SimpleXMLElement $xml, Feed $feed) {
+    private function processXmlFeed(SimpleXMLElement $xml, Feed $feed) {
         return $this->extractItemsFromXml($xml, $feed);
     }
     
@@ -361,7 +362,7 @@ class FeedService {
      *
      * @return array Array mit Feed-Items.
      */
-    private function extractItemsFromXml(\SimpleXMLElement $xml, Feed $feed) {
+    private function extractItemsFromXml(SimpleXMLElement $xml, Feed $feed) {
         $items = [];
 
         // RSS-Feed verarbeiten
@@ -541,7 +542,10 @@ class FeedService {
             $items = $this->processFeedContent($content, $feed);
             
             if ($items === false || empty($items)) {
-                $error = method_exists($feed, 'get_last_error') ? $feed->get_last_error() : 'Keine Items im Feed gefunden oder Parsing-Fehler';
+                $error = 'Keine Items im Feed gefunden oder Parsing-Fehler';
+                if (method_exists($feed, 'get_last_error')) {
+                    $error = $feed->get_last_error();
+                }
                 if (method_exists($feed, 'update_feed_error')) {
                     $feed->update_feed_error($error);
                 }
@@ -593,5 +597,69 @@ class FeedService {
             }
             return false;
         }
+    }
+    
+    /**
+     * Gibt das aktuelle Datum und die Uhrzeit im MySQL-Format zurück.
+     * Fallback für die WordPress-Funktion current_time().
+     *
+     * @param string $type Format-Typ (default: 'mysql').
+     * @return string Formatiertes Datum und Uhrzeit.
+     */
+    private function getCurrentTime(string $type = 'mysql'): string {
+        if (function_exists('current_time')) {
+            return \current_time($type);
+        }
+        
+        // Fallback: Aktuelles Datum im MySQL-Format
+        return date('Y-m-d H:i:s');
+    }
+    
+    /**
+     * Kodiert ein Array oder Objekt als JSON.
+     * Fallback für die WordPress-Funktion wp_json_encode().
+     *
+     * @param mixed $data Zu kodierende Daten.
+     * @param int $options JSON-Kodierungsoptionen.
+     * @return string|false JSON-String oder false bei Fehler.
+     */
+    private function jsonEncode($data, int $options = 0) {
+        if (function_exists('wp_json_encode')) {
+            return \wp_json_encode($data, $options);
+        }
+        
+        // Fallback: Standard-PHP-Funktion mit Fehlerbehandlung
+        $json = \json_encode($data, $options | JSON_UNESCAPED_UNICODE);
+        if ($json === false && json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->error("JSON-Kodierungsfehler: " . json_last_error_msg());
+            return false;
+        }
+        
+        return $json;
+    }
+    
+    /**
+     * Escaped einen String für die Verwendung in JavaScript.
+     * Fallback für die WordPress-Funktion esc_js().
+     *
+     * @param string $text Zu escapender Text.
+     * @return string Escapeter Text.
+     */
+    private function escapeJs(string $text): string {
+        if (function_exists('esc_js')) {
+            return \esc_js($text);
+        }
+        
+        // Fallback: Eigene Implementierung
+        $text = str_replace("\\", "\\\\", $text);
+        $text = str_replace("'", "\\'", $text);
+        $text = str_replace('"', '\\"', $text);
+        $text = str_replace("\r", "\\r", $text);
+        $text = str_replace("\n", "\\n", $text);
+        $text = str_replace("<", "\\x3C", $text); // Verhindert </script>-Angriffe
+        $text = str_replace(">", "\\x3E", $text);
+        $text = str_replace("&", "\\x26", $text);
+        
+        return $text;
     }
 }
