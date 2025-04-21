@@ -208,7 +208,27 @@ class FeedManager extends BaseAdmin {
 
         // Save the feed URL
         if (isset($_POST['athena_feed_url']) && !empty($_POST['athena_feed_url'])) {
-            $feed_url = sanitize_url($_POST['athena_feed_url']);
+            // Eigene Implementierung von sanitize_url, um NULL-Werte zu vermeiden
+            $feed_url = isset($_POST['athena_feed_url']) ? $_POST['athena_feed_url'] : '';
+            
+            // Stelle sicher, dass $feed_url ein String ist
+            if (!is_string($feed_url)) {
+                $feed_url = '';
+            }
+            
+            // Bereinige die URL
+            $feed_url = trim($feed_url);
+            
+            // Prüfe, ob die URL gültig ist
+            if (!empty($feed_url)) {
+                if (function_exists('\esc_url_raw')) {
+                    // Stelle sicher, dass wir einen String an esc_url_raw übergeben
+                    $feed_url = \esc_url_raw((string)$feed_url);
+                } else {
+                    // Einfache URL-Validierung als Fallback
+                    $feed_url = filter_var($feed_url, FILTER_VALIDATE_URL) ? $feed_url : '';
+                }
+            }
             
             // Stelle sicher, dass $feed_url nicht NULL ist
             if ($feed_url !== null && $feed_url !== '') {

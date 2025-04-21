@@ -360,7 +360,13 @@ class FeedHttpClient {
             $link = '';
             $link_elem = $xpath->query('.//a[@href]', $article)->item(0);
             if ($link_elem) {
-                $link = $link_elem->getAttribute('href');
+                // Sichere Methode zum Abrufen des href-Attributs
+                $link = '';
+                if (method_exists($link_elem, 'getAttribute')) {
+                    $link = $link_elem->getAttribute('href');
+                } elseif (property_exists($link_elem, 'attributes') && isset($link_elem->attributes['href'])) {
+                    $link = $link_elem->attributes['href']->value;
+                }
                 // Konvertiere relative URLs zu absoluten URLs
                 if ($link !== null && $link !== '' && strpos($link, 'http') !== 0) {
                     $link = rtrim($base_url, '/') . '/' . ltrim($link, '/');
@@ -456,17 +462,8 @@ class FeedHttpClient {
             return false;
         }
             
-            // Get the body
-            if (function_exists('wp_remote_retrieve_body')) {
-                $body = \wp_remote_retrieve_body($response);
-            } else {
-                $body = is_array($response) && isset($response['body']) ? $response['body'] : false;
-            }
-        } else {
-            // Fallback to curl if WordPress functions are not available
-            $this->consoleLog("WordPress HTTP functions not available, using cURL fallback", 'warn');
-            $body = $this->curlFetch($url, $request_options);
-        }
+        // Get the body from the response
+        $body = is_array($response) && isset($response['body']) ? $response['body'] : false;
         
         if (empty($body)) {
             $error = "Empty response body";
