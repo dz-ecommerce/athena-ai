@@ -74,11 +74,10 @@ class FeedFetcher {
                 'new_items' => $result['new_items']
             ], \admin_url('admin.php'));
             
-            echo '<html><head>';
+            echo '<html><head></head><body>';
             echo $console_scripts;
-            echo '<meta http-equiv="refresh" content="0;URL=\'' . \esc_url($redirect_url) . '\" />';
-            echo '</head><body>';
-            echo '<p>' . \__('Feed fetch completed. Redirecting...', 'athena-ai') . '</p>';
+            echo '<p>' . \__('Feed fetch completed. Redirecting in 3 seconds...', 'athena-ai') . '</p>';
+            echo '<script>setTimeout(function(){ window.location.href = "' . \esc_url($redirect_url) . '"; }, 3000);</script>';
             echo '</body></html>';
             exit;
         });
