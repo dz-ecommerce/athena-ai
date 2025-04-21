@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace AthenaAI\Models;
 
+use AthenaAI\Services\FeedService;
+use AthenaAI\Repositories\FeedRepository;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -205,5 +208,45 @@ class Feed {
     public function generate_title(): string {
         $host = \parse_url($this->url, PHP_URL_HOST);
         return $host ?: $this->url;
+    }
+    
+    /**
+     * Ruft den Feed ab und verarbeitet ihn
+     * 
+     * Diese Methode verwendet den FeedService, um den Feed abzurufen und zu verarbeiten.
+     * Sie aktualisiert auch die Feed-Metadaten in der Datenbank.
+     * 
+     * @param bool $verbose_console Ob detaillierte Konsolenausgaben erzeugt werden sollen
+     * @return bool Ob der Abruf und die Verarbeitung erfolgreich waren
+     */
+    public function fetch(bool $verbose_console = false): bool {
+        // Erstelle eine Instanz des FeedService
+        $feed_service = FeedService::create();
+        
+        // Setze den letzten Fehler zurück
+        $this->last_error = '';
+        
+        // Rufe den Feed ab und verarbeite ihn
+        $result = $feed_service->fetch_and_process_feed($this, $verbose_console);
+        
+        // Wenn der Abruf fehlgeschlagen ist, setze einen generischen Fehlermeldung
+        if (!$result) {
+            $this->last_error = 'Fehler beim Abrufen oder Verarbeiten des Feeds';
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Holt alle Feeds, die aktualisiert werden müssen
+     * 
+     * @return array Ein Array von Feed-Objekten, die aktualisiert werden müssen
+     */
+    public static function get_feeds_to_update(): array {
+        // Erstelle eine Instanz des FeedRepository
+        $repository = new FeedRepository();
+        
+        // Hole alle Feeds, die aktualisiert werden müssen
+        return $repository->get_feeds_to_update();
     }
 }
