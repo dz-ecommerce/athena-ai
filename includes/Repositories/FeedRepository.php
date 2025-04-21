@@ -547,7 +547,7 @@ class FeedRepository {
                 }
                 
                 // Extract publication date with a safe default
-                $pub_date = \current_time('mysql');
+                $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
                 
                 // Try to find the publication date in the item
                 if (isset($item['pubDate']) && !empty($item['pubDate'])) {
@@ -564,7 +564,7 @@ class FeedRepository {
                     $pub_date = $date->format('Y-m-d H:i:s');
                 } catch (\Exception $e) {
                     // If we can't parse the date, use the current time
-                    $pub_date = \current_time('mysql');
+                    $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
                 }
                 
                 // Check if an item with this GUID already exists for this feed
@@ -580,7 +580,9 @@ class FeedRepository {
                 }
                 
                 // Prepare JSON content with error handling
-                $json_content = \wp_json_encode($item, JSON_UNESCAPED_UNICODE);
+                $json_content = function_exists('wp_json_encode') ? 
+                    \wp_json_encode($item, JSON_UNESCAPED_UNICODE) : 
+                    \json_encode($item, JSON_UNESCAPED_UNICODE);
                 if ($json_content === false) {
                     $stats['errors']++;
                     continue;
@@ -624,7 +626,11 @@ class FeedRepository {
             $wpdb->query('ROLLBACK');
             
             // Log the error
-            $this->log_error($feed, 'process_items_error', $e->getMessage());
+            if (method_exists($this, 'log_error')) {
+                $this->log_error($feed, 'db_transaction_failed', $e->getMessage());
+            } else {
+                $this->log_error($feed, 'process_items_error', $e->getMessage());
+            }
             $this->update_feed_error($feed, 'process_items_error', $e->getMessage());
             
             return $stats;

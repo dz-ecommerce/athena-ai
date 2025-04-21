@@ -295,8 +295,8 @@ class FeedFetcher {
             );
             $feed->set_post_id($feed_post->ID);
             
-            // Use FeedService for processing
-            $feedService = new FeedService();
+            // Use FeedService for processing - use the static factory method to properly initialize all dependencies
+            $feedService = \AthenaAI\Services\FeedService::create();
             $success = $feedService->fetch_and_process_feed($feed, $verbose_console);
             
             if ($success) {
