@@ -11,7 +11,6 @@ namespace AthenaAI\Services;
 
 use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
-use AthenaAI\Repositories\FeedRepository;
 use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
 use AthenaAI\Services\LoggerService;
 
@@ -259,12 +258,15 @@ class FeedService {
                 continue;
             }
             
+            // Generiere einen Hash für das Item als Primärschlüssel
+            $item_hash = md5($item['guid']);
+            
             // Prüfe, ob das Item bereits existiert
             $exists = $wpdb->get_var(
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$table_name} WHERE feed_id = %d AND guid = %s",
-                    $feed_id,
-                    $item['guid']
+                    "SELECT COUNT(*) FROM {$table_name} WHERE item_hash = %s AND feed_id = %d",
+                    $item_hash,
+                    $feed_id
                 )
             );
 
@@ -272,22 +274,44 @@ class FeedService {
                 $this->logger->debug("Item mit GUID {$item['guid']} existiert bereits.");
                 continue;
             }
+            
+            // Bereite das Veröffentlichungsdatum vor
+            $pub_date = $item['published'] ?? $this->getCurrentTime();
+            
+            // Versuche, das Datum zu formatieren
+            try {
+                $date = new \DateTime($pub_date);
+                $pub_date = $date->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                $pub_date = $this->getCurrentTime();
+            }
+            
+            // Bereite den JSON-Inhalt vor
+            $json_content = $this->jsonEncode($item);
+                
+            if ($json_content === false) {
+                $this->logger->error("Fehler beim Kodieren des Items als JSON");
+                continue;
+            }
 
             // Füge das Item hinzu
             $result = $wpdb->insert(
                 $table_name,
                 [
-                    'feed_id'     => $feed_id,
-                    'guid'        => $item['guid'],
-                    'title'       => $item['title'] ?? '',
-                    'link'        => $item['link'] ?? '',
-                    'description' => $item['description'] ?? '',
-                    'content'     => $item['content'] ?? '',
-                    'author'      => $item['author'] ?? '',
-                    'published'   => $item['published'] ?? \current_time('mysql'),
-                    'updated'     => $item['updated'] ?? \current_time('mysql'),
-                    'raw_data'    => json_encode($item['raw_data'] ?? []),
-                    'created'     => \current_time('mysql'),
+                    'item_hash'  => $item_hash,
+                    'feed_id'    => $feed_id,
+                    'guid'       => $item['guid'],
+                    'pub_date'   => $pub_date,
+                    'raw_content'=> $json_content,
+                    'created_at' => $this->getCurrentTime()
+                ],
+                [
+                    '%s', // item_hash
+                    '%d', // feed_id
+                    '%s', // guid
+                    '%s', // pub_date
+                    '%s', // raw_content
+                    '%s'  // created_at
                 ]
             );
 
@@ -305,6 +329,11 @@ class FeedService {
         // Aktualisiere den Feed-Status
         if (method_exists($feed, 'update_last_checked')) {
             $feed->update_last_checked();
+        }
+        
+        // Aktualisiere die Feed-Metadaten in der Datenbank
+        if (isset($this->repository) && method_exists($this->repository, 'update_feed_metadata')) {
+            $this->repository->update_feed_metadata($feed, $new_items);
         }
         
         $this->logger->info("Feed-Items-Speicherung abgeschlossen. Neue Items: {$new_items}, Fehler: {$errors}");
@@ -510,25 +539,27 @@ class FeedService {
             
             // Feed-Inhalt verarbeiten
             $items = $this->processFeedContent($content, $feed);
-            $items = [];
-            // Try to process the content as XML feed
-            $simple_xml = @simplexml_load_string($content);
-            if ($simple_xml) {
-                // Convert SimpleXML to array
-                $items = $this->convertXmlToArray($simple_xml);
-            } else {
-                // Fallback: try to parse as JSON
-                $json_data = \json_decode($content, true);
-                if (is_array($json_data) && !empty($json_data)) {
-                    $items = $json_data;
-                } else if ($verbose_console) {
-                    echo '<script>console.error("Unable to process feed content format for ' . htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8') . '");</script>';
+            
+            if ($items === false || empty($items)) {
+                $error = method_exists($feed, 'get_last_error') ? $feed->get_last_error() : 'Keine Items im Feed gefunden oder Parsing-Fehler';
+                if (method_exists($feed, 'update_feed_error')) {
+                    $feed->update_feed_error($error);
                 }
+                $this->logger->error("Feed-Verarbeitung fehlgeschlagen: {$error}");
+                
+                if ($verbose_console) {
+                    $url = $this->escapeJs($feed->get_url());
+                    echo '<script>console.warn("No items found in feed: ' . $url . '");</script>';
+                }
+                
+                return false;
             }
+            
+            $this->logger->info("Feed-Inhalt erfolgreich verarbeitet. " . count($items) . " Items gefunden.");
             
             if (empty($items)) {
                 if ($verbose_console) {
-                    $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
+                    $url = $this->escapeJs($feed->get_url());
                     echo '<script>console.warn("No items found in feed: ' . $url . '");</script>';
                 }
                 
@@ -541,7 +572,9 @@ class FeedService {
             $result = $this->saveItems($feed, $items);
             
             if ($verbose_console) {
-                $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
+                $url = function_exists('esc_js') 
+                    ? \esc_js($feed->get_url()) 
+                    : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
                 echo '<script>console.info("Processed feed: ' . $url . '");</script>';
             }
             
@@ -550,7 +583,7 @@ class FeedService {
         } catch (\Exception $e) {
             // Handle any exceptions that might occur
             if ($verbose_console) {
-                $error_message = function_exists('esc_js') ? \esc_js($e->getMessage()) : htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+                $error_message = $this->escapeJs($e->getMessage());
                 echo '<script>console.error("Error processing feed: ' . $error_message . '");</script>';
             }
             
