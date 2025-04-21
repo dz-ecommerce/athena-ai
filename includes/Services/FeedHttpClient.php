@@ -153,82 +153,130 @@ class FeedHttpClient {
                 'title' => 'How to Create Instagram Reels That Get More Views',
                 'link' => 'https://www.socialmediaexaminer.com/how-to-create-instagram-reels-that-get-more-views/',
                 'description' => 'Discover how to create Instagram reels that get more views and engagement.',
-                'pubDate' => date('r', strtotime('-1 day'))
+                'pubDate' => date('r', strtotime('-1 day')),
+                'guid' => 'sme-' . md5('how-to-create-instagram-reels-that-get-more-views')
             ],
             [
                 'title' => 'How to Use AI to Create Social Media Content',
                 'link' => 'https://www.socialmediaexaminer.com/how-to-use-ai-to-create-social-media-content/',
                 'description' => 'Learn how to leverage AI tools to create engaging social media content faster.',
-                'pubDate' => date('r', strtotime('-2 days'))
+                'pubDate' => date('r', strtotime('-2 days')),
+                'guid' => 'sme-' . md5('how-to-use-ai-to-create-social-media-content')
             ],
             [
                 'title' => 'TikTok Marketing: How to Grow Your Business With TikTok',
                 'link' => 'https://www.socialmediaexaminer.com/tiktok-marketing-how-to-grow-your-business-with-tiktok/',
                 'description' => 'Discover strategies to effectively market your business on TikTok.',
-                'pubDate' => date('r', strtotime('-3 days'))
+                'pubDate' => date('r', strtotime('-3 days')),
+                'guid' => 'sme-' . md5('tiktok-marketing-how-to-grow-your-business-with-tiktok')
             ],
             [
                 'title' => 'LinkedIn Marketing: How to Build a Powerful LinkedIn Presence',
                 'link' => 'https://www.socialmediaexaminer.com/linkedin-marketing-how-to-build-a-powerful-linkedin-presence/',
                 'description' => 'Learn how to optimize your LinkedIn profile and company page for better results.',
-                'pubDate' => date('r', strtotime('-4 days'))
+                'pubDate' => date('r', strtotime('-4 days')),
+                'guid' => 'sme-' . md5('linkedin-marketing-how-to-build-a-powerful-linkedin-presence')
             ],
             [
                 'title' => 'Facebook Ads: How to Create Effective Facebook Ad Campaigns',
                 'link' => 'https://www.socialmediaexaminer.com/facebook-ads-how-to-create-effective-facebook-ad-campaigns/',
                 'description' => 'Discover strategies for creating high-performing Facebook ad campaigns.',
-                'pubDate' => date('r', strtotime('-5 days'))
+                'pubDate' => date('r', strtotime('-5 days')),
+                'guid' => 'sme-' . md5('facebook-ads-how-to-create-effective-facebook-ad-campaigns')
             ],
             [
                 'title' => 'Social Media Strategy: How to Create a Successful Social Media Marketing Plan',
                 'link' => 'https://www.socialmediaexaminer.com/social-media-strategy-how-to-create-a-successful-social-media-marketing-plan/',
                 'description' => 'Learn how to develop a comprehensive social media marketing strategy.',
-                'pubDate' => date('r', strtotime('-6 days'))
+                'pubDate' => date('r', strtotime('-6 days')),
+                'guid' => 'sme-' . md5('social-media-strategy-how-to-create-a-successful-social-media-marketing-plan')
             ],
             [
                 'title' => 'Instagram Marketing: How to Grow Your Instagram Following',
                 'link' => 'https://www.socialmediaexaminer.com/instagram-marketing-how-to-grow-your-instagram-following/',
                 'description' => 'Discover proven tactics to increase your Instagram followers and engagement.',
-                'pubDate' => date('r', strtotime('-7 days'))
+                'pubDate' => date('r', strtotime('-7 days')),
+                'guid' => 'sme-' . md5('instagram-marketing-how-to-grow-your-instagram-following')
             ],
             [
                 'title' => 'YouTube Marketing: How to Optimize Your YouTube Channel',
                 'link' => 'https://www.socialmediaexaminer.com/youtube-marketing-how-to-optimize-your-youtube-channel/',
                 'description' => 'Learn how to optimize your YouTube channel for better visibility and growth.',
-                'pubDate' => date('r', strtotime('-8 days'))
+                'pubDate' => date('r', strtotime('-8 days')),
+                'guid' => 'sme-' . md5('youtube-marketing-how-to-optimize-your-youtube-channel')
             ],
             [
                 'title' => 'Twitter Marketing: How to Use Twitter for Business',
                 'link' => 'https://www.socialmediaexaminer.com/twitter-marketing-how-to-use-twitter-for-business/',
                 'description' => 'Discover effective strategies for marketing your business on Twitter.',
-                'pubDate' => date('r', strtotime('-9 days'))
+                'pubDate' => date('r', strtotime('-9 days')),
+                'guid' => 'sme-' . md5('twitter-marketing-how-to-use-twitter-for-business')
             ],
             [
                 'title' => 'Social Media Tools: Essential Tools for Social Media Marketers',
                 'link' => 'https://www.socialmediaexaminer.com/social-media-tools-essential-tools-for-social-media-marketers/',
                 'description' => 'Learn about the most useful tools for managing and optimizing your social media presence.',
-                'pubDate' => date('r', strtotime('-10 days'))
+                'pubDate' => date('r', strtotime('-10 days')),
+                'guid' => 'sme-' . md5('social-media-tools-essential-tools-for-social-media-marketers')
             ]
         ];
         
-        // Erstelle einen XML-Feed im RSS-Format
-        $feed = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>';
-        $feed .= '<title>Social Media Examiner</title>';
-        $feed .= '<link>' . htmlspecialchars($base_url) . '</link>';
-        $feed .= '<description>Social Media Marketing Articles</description>';
+        // Erstelle einen XML-Feed im RSS-Format mit korrekter XML-Struktur
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+        
+        // Erstelle das RSS-Element
+        $rss = $dom->createElement('rss');
+        $rss->setAttribute('version', '2.0');
+        $dom->appendChild($rss);
+        
+        // Erstelle das Channel-Element
+        $channel = $dom->createElement('channel');
+        $rss->appendChild($channel);
+        
+        // Füge Channel-Metadaten hinzu
+        $title = $dom->createElement('title', 'Social Media Examiner');
+        $channel->appendChild($title);
+        
+        $link = $dom->createElement('link', $base_url);
+        $channel->appendChild($link);
+        
+        $description = $dom->createElement('description', 'Social Media Marketing Articles');
+        $channel->appendChild($description);
         
         // Füge jeden Artikel zum Feed hinzu
         foreach ($articles as $article) {
-            $feed .= '<item>';
-            $feed .= '<title>' . htmlspecialchars($article['title']) . '</title>';
-            $feed .= '<link>' . htmlspecialchars($article['link']) . '</link>';
-            $feed .= '<guid>' . htmlspecialchars($article['link']) . '</guid>';
-            $feed .= '<pubDate>' . htmlspecialchars($article['pubDate']) . '</pubDate>';
-            $feed .= '<description>' . htmlspecialchars($article['description']) . '</description>';
-            $feed .= '</item>';
+            $item = $dom->createElement('item');
+            
+            // Titel
+            $itemTitle = $dom->createElement('title', $article['title']);
+            $item->appendChild($itemTitle);
+            
+            // Link
+            $itemLink = $dom->createElement('link', $article['link']);
+            $item->appendChild($itemLink);
+            
+            // GUID (wichtig für die Erkennung neuer Artikel)
+            $itemGuid = $dom->createElement('guid', $article['guid']);
+            $itemGuid->setAttribute('isPermaLink', 'false');
+            $item->appendChild($itemGuid);
+            
+            // Veröffentlichungsdatum
+            $itemPubDate = $dom->createElement('pubDate', $article['pubDate']);
+            $item->appendChild($itemPubDate);
+            
+            // Beschreibung
+            $itemDescription = $dom->createElement('description');
+            $cdata = $dom->createCDATASection($article['description']);
+            $itemDescription->appendChild($cdata);
+            $item->appendChild($itemDescription);
+            
+            // Füge das Item zum Channel hinzu
+            $channel->appendChild($item);
         }
         
-        $feed .= '</channel></rss>';
+        // Generiere den XML-String
+        $feed = $dom->saveXML();
         
         $this->consoleLog("Generated simulated feed with " . count($articles) . " items", 'info');
         
