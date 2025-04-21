@@ -45,44 +45,46 @@ class CronScheduler {
      * @return array Modified schedules.
      */
     public static function add_cron_schedules(array $schedules): array {
+        // Verwende einfache Strings anstelle von Übersetzungsfunktionen, um das zu frühe Laden der Textdomain zu vermeiden
+        // Die Anzeige dieser Texte erfolgt nur im Admin-Bereich und ist nicht kritisch für die Funktionalität
         $schedules['athena_1min'] = [
             'interval' => MINUTE_IN_SECONDS,
-            'display'  => __('Every Minute', 'athena-ai'),
+            'display'  => 'Every Minute',
         ];
 
         $schedules['athena_5min'] = [
             'interval' => 5 * MINUTE_IN_SECONDS,
-            'display'  => __('Every 5 Minutes', 'athena-ai'),
+            'display'  => 'Every 5 Minutes',
         ];
 
         $schedules['athena_15min'] = [
             'interval' => 15 * MINUTE_IN_SECONDS,
-            'display'  => __('Every 15 Minutes', 'athena-ai'),
+            'display'  => 'Every 15 Minutes',
         ];
 
         $schedules['athena_30min'] = [
             'interval' => 30 * MINUTE_IN_SECONDS,
-            'display'  => __('Every 30 Minutes', 'athena-ai'),
+            'display'  => 'Every 30 Minutes',
         ];
 
         $schedules['athena_45min'] = [
             'interval' => 45 * MINUTE_IN_SECONDS,
-            'display'  => __('Every 45 Minutes', 'athena-ai'),
+            'display'  => 'Every 45 Minutes',
         ];
 
         $schedules['athena_2hours'] = [
             'interval' => 2 * HOUR_IN_SECONDS,
-            'display'  => __('Every 2 Hours', 'athena-ai'),
+            'display'  => 'Every 2 Hours',
         ];
 
         $schedules['athena_6hours'] = [
             'interval' => 6 * HOUR_IN_SECONDS,
-            'display'  => __('Every 6 Hours', 'athena-ai'),
+            'display'  => 'Every 6 Hours',
         ];
 
         $schedules['athena_12hours'] = [
             'interval' => 12 * HOUR_IN_SECONDS,
-            'display'  => __('Every 12 Hours', 'athena-ai'),
+            'display'  => 'Every 12 Hours',
         ];
 
         return $schedules;
