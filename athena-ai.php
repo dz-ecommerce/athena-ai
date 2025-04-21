@@ -3,7 +3,7 @@
  * Plugin Name: Athena AI
  * Plugin URI: https://your-domain.com/athena-ai
  * Description: A powerful AI integration plugin for WordPress
- * Version: 1.0.167
+ * Version: 1.0.166
  * Author: Your Name
  * Author URI: https://your-domain.com
  * Text Domain: athena-ai
@@ -18,15 +18,25 @@ if (!defined('WPINC')) {
 }
 
 // Define plugin constants
-define('ATHENA_AI_VERSION', '1.0.167');
+define('ATHENA_AI_VERSION', '1.0.166');
 define('ATHENA_AI_PLUGIN_FILE', __FILE__);
-define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('ATHENA_AI_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('ATHENA_AI_PLUGIN_DIR', \plugin_dir_path(__FILE__));
+define('ATHENA_AI_PLUGIN_URL', \plugin_dir_url(__FILE__));
+define('ATHENA_AI_PLUGIN_BASENAME', \plugin_basename(__FILE__));
 
 // Autoloader für Plugin-Klassen
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/Autoloader.php';
 new AthenaAI\Autoloader();
+
+// Textdomain erst auf nach_setup_theme laden, um "Translation loading triggered too early" zu vermeiden
+// Höhere Priorität (999) stellt sicher, dass es nach anderen Initialisierungen geladen wird
+\add_action('after_setup_theme', function() {
+    \load_plugin_textdomain(
+        'athena-ai',
+        false,
+        \dirname(\plugin_basename(__FILE__)) . '/languages'
+    );
+}, 999);
 
 // Bootstrap-Prozess starten
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/Core/Bootstrap.php';

@@ -30,10 +30,6 @@ class Bootstrap {
         \register_activation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'activate']);
         \register_deactivation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'deactivate']);
         
-        // Textdomain laden - auf init Hook mit Priorität 10
-        // Dies verhindert "Translation loading triggered too early"-Warnungen
-        \add_action('init', [self::class, 'load_textdomain'], 10);
-        
         // Plugin-Komponenten initialisieren
         \add_action('plugins_loaded', [self::class, 'load_components']);
     }
@@ -65,26 +61,8 @@ class Bootstrap {
         \flush_rewrite_rules();
     }
     
-    /**
-     * Text-Domain laden
-     * 
-     * @return void
-     * @suppress PhanUndeclaredFunction, PhanUndeclaredFunctionInCallable
-     * @SuppressWarnings(PHPMD.UndefinedFunction)
-     * @noinspection PhpUndefinedFunctionInspection
-     */
-    public static function load_textdomain(): void {
-        // Verwenden der WordPress-Funktion mit globalem Namespace-Präfix
-        // Wir müssen den globalen Namespace explizit angeben, da wir uns in einem Namespace befinden
-        // IDE-Linting-Fehler werden durch die Annotations oben unterdrückt
-        // @phpstan-ignore-next-line
-        // @intelephense-ignore
-        \load_plugin_textdomain(
-            'athena-ai',
-            false,
-            \dirname(\plugin_basename(ATHENA_AI_PLUGIN_FILE)) . '/languages'
-        );
-    }
+    // Die load_textdomain Methode wurde in die Hauptdatei verschoben, um Probleme mit
+    // "Translation loading triggered too early" zu vermeiden
     
     /**
      * Plugin-Komponenten laden.
