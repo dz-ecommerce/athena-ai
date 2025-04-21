@@ -11,6 +11,7 @@ namespace AthenaAI\Services;
 
 use AthenaAI\Models\Feed;
 use AthenaAI\Repositories\FeedRepository;
+use AthenaAI\Repositories\FeedRepository;
 use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
 use AthenaAI\Services\LoggerService;
 
@@ -58,453 +59,457 @@ class FeedService {
     private ErrorHandler $error_handler;
     
     /**
+     * Verbose-Modus aktiviert/deaktiviert
+     *
+     * @var bool
+     */
+    private bool $verbose_mode = false;
+
+    /**
      * Constructor.
      *
-     * @param FeedRepository      $repository        Feed repository.
      * @param FeedHttpClient      $http_client       HTTP client.
-     * @param FeedProcessorFactory $processor_factory Feed processor factory.
-     * @param ErrorHandler        $error_handler     Error handler.
      * @param LoggerService       $logger            Logger service.
      */
-    public function __construct(
-        FeedRepository $repository,
-        FeedHttpClient $http_client,
-        FeedProcessorFactory $processor_factory,
-        ErrorHandler $error_handler,
-        ?LoggerService $logger = null
-    ) {
-        $this->repository = $repository;
+    public function __construct(FeedHttpClient $http_client, LoggerService $logger) {
         $this->http_client = $http_client;
-        $this->processor_factory = $processor_factory;
-        $this->error_handler = $error_handler;
-        $this->logger = $logger ?? LoggerService::getInstance()->setComponent('Feed Service');
+        $this->logger      = $logger->setComponent('FeedService');
+        $this->verbose_mode = false;
     }
     
     /**
-     * Create a default instance with all dependencies.
+     * Factory-Methode zum Erstellen einer FeedService-Instanz.
      *
-     * @return self
+     * @return FeedService
      */
-    public static function create(): self {
-        $repository = new FeedRepository();
-        $logger = LoggerService::getInstance()->setComponent('Feed Service');
+    public static function create(): FeedService {
         return new self(
-            $repository,
             new FeedHttpClient(),
-            new FeedProcessorFactory(),
-            new ErrorHandler($repository),
-            $logger
+            LoggerService::getInstance()
         );
     }
     
     /**
-     * Set verbose console output mode.
+     * Setzt den Verbose-Modus.
      *
-     * @param bool $verbose Whether to output verbose console logs.
-     * @return self
+     * @param bool $verbose_mode Verbose-Modus aktivieren/deaktivieren.
+     * @return FeedService
      */
-    public function setVerboseMode(bool $verbose): self {
-        $this->logger->setVerboseMode($verbose);
-        $this->http_client->setVerboseMode($verbose);
-        $this->error_handler->setVerboseMode($verbose);
-        
-        // Set processor factory verbose mode
-        if (method_exists($this->processor_factory, 'setVerboseMode')) {
-            $this->processor_factory->setVerboseMode($verbose);
-        }
-        
+    public function setVerboseMode(bool $verbose_mode): FeedService {
+        $this->verbose_mode = $verbose_mode;
+        $this->logger->setVerboseMode($verbose_mode);
+        $this->http_client->setVerboseMode($verbose_mode);
         return $this;
     }
     
     /**
-     * Process a single feed.
+     * Verarbeitet den Feed-Inhalt und extrahiert die Items.
      *
-     * @param Feed $feed The feed to process.
-     * @return bool Whether the processing was successful.
-     */
-    public function processFeed(Feed $feed): bool {
-        $this->logger->group("Processing feed: " . $feed->get_url());
-        
-        // Fetch the feed content
-        $content = $this->fetchFeed($feed);
-        if (!$content) {
-            $this->logger->error("Failed to fetch feed content");
-            $this->logger->groupEnd();
-            return false;
-        }
-        
-        // Process the feed content
-        $items = $this->processFeedContent($content);
-        if (empty($items)) {
-            $this->logger->warn("No items found in feed");
-            $this->logger->groupEnd();
-            
-            // Update feed metadata to record the attempt
-            $this->repository->update_feed_metadata($feed, 0);
-            return true;
-        }
-        
-        // Save the items
-        $result = $this->saveItems($feed, $items);
-        $this->logger->info("Saved " . count($items) . " items");
-        $this->logger->groupEnd();
-        
-        return $result;
-    }
-    
-    /**
-     * Process all feeds that need updating.
+     * @param string $content Feed-Inhalt.
+     * @param Feed   $feed    Feed-Objekt für Fehlerbehandlung.
      *
-     * @return array Statistics about the processed feeds.
+     * @return array|false Array mit Feed-Items oder false bei Fehler.
      */
-    public function processAllFeeds(): array {
-        $stats = [
-            'total' => 0,
-            'success' => 0,
-            'error' => 0,
-            'new_items' => 0
-        ];
+    private function processFeedContent(string $content, Feed $feed) {
+        $this->logger->info("Verarbeite Feed-Inhalt...");
         
-        $feeds = $this->repository->get_feeds_to_update();
-        $stats['total'] = count($feeds);
+        // Versuche, den Feed als XML zu parsen
+        libxml_use_internal_errors(true);
+        $xml = @simplexml_load_string($content);
         
-        foreach ($feeds as $feed) {
-            $result = $this->processFeed($feed);
-            if ($result) {
-                $stats['success']++;
-            } else {
-                $stats['error']++;
+        if ($xml !== false) {
+            $this->logger->info("Feed-Inhalt als XML erkannt.");
+            $items = $this->processXmlFeed($xml, $feed);
+            if (!empty($items)) {
+                return $items;
             }
-        }
-        
-        return $stats;
-    }
-    
-    /**
-     * Fetch a feed's content.
-     *
-     * @param Feed $feed The feed to fetch.
-     * @return string|false The feed content or false on failure.
-     */
-    private function fetchFeed(Feed $feed): string|false {
-        $url = $feed->get_url();
-        if (empty($url)) {
-            $this->error_handler->logError($feed, 'no_url', 'Feed URL is empty');
-            return false;
-        }
-        
-        $this->logger->info("Fetching feed from URL: {$url}");
-        
-        $content = $this->http_client->fetch($url);
-        if (!$content) {
-            $this->error_handler->logError($feed, 'fetch_failed', 'Failed to fetch feed content');
-            return false;
-        }
-        
-        return $content;
-    }
-    
-    /**
-     * Process feed content using the appropriate processor.
-     *
-     * @param string $content The feed content to process.
-     * @return array The processed feed items.
-     */
-    private function processFeedContent(string $content): array {
-        $items = $this->processor_factory->process($content);
-        return $items ?? [];
-    }
-    
-    /**
-     * Save feed items to the database.
-     *
-     * @param Feed  $feed  The feed the items belong to.
-     * @param array $items The feed items to save.
-     * @return bool Whether the save was successful.
-     */
-    private function saveItems(Feed $feed, array $items): bool {
-        global $wpdb;
-        
-        if (!$feed->get_post_id()) {
-            $this->error_handler->logError($feed, 'no_feed_id', 'Feed has no ID');
-            return false;
-        }
-        
-        $feed_id = $feed->get_post_id();
-        $new_items_count = 0;
-        $items_table = $wpdb->prefix . 'feed_raw_items';
-        
-        foreach ($items as $item) {
-            // Skip items without required fields
-            if (empty($item['guid']) && empty($item['id']) && empty($item['link'])) {
-                continue;
-            }
+        } else {
+            // XML-Parsing-Fehler protokollieren
+            $errors = libxml_get_errors();
+            libxml_clear_errors();
             
-            // Extract GUID with fallbacks
-            $guid = '';
-            if (isset($item['guid']) && !empty($item['guid'])) {
-                $guid = (string) $item['guid'];
-            } elseif (isset($item['id']) && !empty($item['id'])) {
-                $guid = (string) $item['id'];
-            } elseif (isset($item['link']) && !empty($item['link'])) {
-                $guid = (string) $item['link'];
-            } elseif (isset($item['title']) && !empty($item['title'])) {
-                $guid = 'title-' . \md5((string) $item['title']);
-            } else {
-                $guid = 'feed-item-' . \uniqid();
-            }
-            
-            // Generate hash for primary key
-            $item_hash = \md5($guid);
-            
-            // Check if the item already exists
-            $exists = $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$items_table} WHERE item_hash = %s AND feed_id = %d",
-                    $item_hash,
-                    $feed_id
-                )
-            );
-            
-            if ($exists) {
-                continue;
-            }
-            
-            // Extract publication date with fallbacks
-            $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
-            if (isset($item['pubDate']) && !empty($item['pubDate'])) {
-                $pub_date = (string) $item['pubDate'];
-            } elseif (isset($item['published']) && !empty($item['published'])) {
-                $pub_date = (string) $item['published'];
-            } elseif (isset($item['date']) && !empty($item['date'])) {
-                $pub_date = (string) $item['date'];
-            }
-            
-            // Try to format the date properly
-            try {
-                $date = new \DateTime($pub_date);
-                $pub_date = $date->format('Y-m-d H:i:s');
-            } catch (\Exception $e) {
-                $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
-            }
-            
-            // Prepare JSON content
-            $json_content = function_exists('wp_json_encode') ? \wp_json_encode($item, JSON_UNESCAPED_UNICODE) : json_encode($item, JSON_UNESCAPED_UNICODE);
-            if ($json_content === false) {
-                $this->logger->error("Failed to encode item JSON");
-                continue;
-            }
-            
-            // Insert the data
-            $result = $wpdb->insert(
-                $items_table,
-                [
-                    'item_hash' => $item_hash,
-                    'feed_id' => $feed_id,
-                    'guid' => $guid,
-                    'pub_date' => $pub_date,
-                    'raw_content' => $json_content,
-                    'created_at' => function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s')
-                ],
-                [
-                    '%s', // item_hash
-                    '%d', // feed_id
-                    '%s', // guid
-                    '%s', // pub_date
-                    '%s', // raw_content
-                    '%s'  // created_at
-                ]
-            );
-            
-            if ($result) {
-                $new_items_count++;
-            } else {
-                $this->logger->error("Failed to insert item: " . $wpdb->last_error);
-            }
-        }
-        
-        // Update feed metadata
-        $this->repository->update_feed_metadata($feed, $new_items_count);
-        
-        return true;
-    }
-    
-    /**
-     * Convert SimpleXML object to array format
-     * 
-     * @param \SimpleXMLElement $xml The XML element to convert
-     * @return array The array of feed items
-     */
-    private function convertXmlToArray(\SimpleXMLElement $xml): array {
-        $items = [];
-        
-        // Different XML formats have items in different locations
-        // Try to detect RSS or Atom format
-        
-        // First check for RSS format (items are in <item> tags)
-        if (isset($xml->channel) && isset($xml->channel->item)) {
-            foreach ($xml->channel->item as $item) {
-                $items[] = $this->processRssItem($item);
-            }
-        } 
-        // Check for Atom format (items are in <entry> tags)
-        elseif (isset($xml->entry)) {
-            foreach ($xml->entry as $entry) {
-                $items[] = $this->processAtomEntry($entry);
-            }
-        }
-        // Try another RSS format variation
-        elseif (isset($xml->item)) {
-            foreach ($xml->item as $item) {
-                $items[] = $this->processRssItem($item);
-            }
-        }
-        // Try for custom XML formats (Hubspot, etc)
-        else {
-            // Last resort - try to find any element that looks like an item
-            $possibleItemTags = ['post', 'article', 'content', 'result', 'record'];
-            
-            foreach ($possibleItemTags as $tag) {
-                if (isset($xml->$tag)) {
-                    foreach ($xml->$tag as $item) {
-                        $items[] = $this->extractGenericItemData($item);
-                    }
-                    break;
+            if (!empty($errors)) {
+                $error_msg = "XML-Parsing-Fehler: ";
+                foreach ($errors as $error) {
+                    $error_msg .= "Zeile {$error->line}, Spalte {$error->column}: {$error->message}; ";
+                }
+                $this->logger->error($error_msg);
+                if (method_exists($feed, 'update_feed_error')) {
+                    $feed->update_feed_error($error_msg);
                 }
             }
         }
-        
+
+        // Versuche, den Feed als JSON zu parsen
+        $json = @json_decode($content, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $this->logger->info("Feed-Inhalt als JSON erkannt.");
+            $items = $this->processJsonFeed($json, $feed);
+            if (!empty($items)) {
+                return $items;
+            }
+        } else {
+            $error = "JSON-Parsing-Fehler: " . json_last_error_msg();
+            $this->logger->error($error);
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error($error);
+            }
+        }
+
+        // Wenn weder XML noch JSON, gib false zurück
+        $preview = substr($content, 0, 100);
+        $this->logger->error("Feed-Format nicht erkannt. Inhalt-Vorschau: {$preview}...");
+        if (method_exists($feed, 'update_feed_error')) {
+            $feed->update_feed_error("Feed-Format nicht erkannt.");
+        }
+        return false;
+    }
+    
+    /**
+     * Verarbeitet einen JSON-Feed und extrahiert die Items.
+     *
+     * @param array $json JSON-Feed.
+     * @param Feed  $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
+     */
+    private function processJsonFeed(array $json, Feed $feed) {
+        return $this->extractItemsFromJson($json, $feed);
+    }
+    
+    /**
+     * Extrahiert Items aus einem JSON-Feed.
+     *
+     * @param array $json JSON-Feed.
+     * @param Feed  $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
+     */
+    private function extractItemsFromJson(array $json, Feed $feed) {
+        $items = [];
+
+        // JSON-Feed verarbeiten
+        if (isset($json['items']) && is_array($json['items'])) {
+            $this->logger->info("JSON-Feed erkannt. Items: " . count($json['items']));
+            
+            foreach ($json['items'] as $item) {
+                $extracted = $this->extractJsonFeedItem($item, $feed);
+                if (!empty($extracted)) {
+                    $items[] = $extracted;
+                }
+            }
+        } else {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Unbekanntes JSON-Format.");
+            }
+            $this->logger->error("Unbekanntes JSON-Format. Weder JSON-Feed noch JSON-Array erkannt.");
+        }
+
+        if (empty($items)) {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Keine Items im JSON-Feed gefunden.");
+            }
+            $this->logger->warn("Keine Items im JSON-Feed gefunden.");
+        } else {
+            $this->logger->info(count($items) . " Items aus dem JSON-Feed extrahiert.");
+        }
+
         return $items;
     }
     
     /**
-     * Process an RSS item
-     * 
-     * @param \SimpleXMLElement $item The RSS item
-     * @return array The processed item data
+     * Speichert die Feed-Items in der Datenbank.
+     *
+     * @param Feed  $feed  Feed-Objekt.
+     * @param array $items Array mit Feed-Items.
+     *
+     * @return bool Erfolgsstatus.
      */
-    private function processRssItem(\SimpleXMLElement $item): array {
-        $result = [];
+    private function saveItems(Feed $feed, array $items): bool {
+        global $wpdb;
+
+        if (empty($items)) {
+            $this->logger->error("Keine Items zum Speichern vorhanden.");
+            return false;
+        }
+
+        $table_name = $wpdb->prefix . 'feed_raw_items';
+        $feed_id    = $feed->get_post_id();
+        $success    = true;
+        $new_items  = 0;
+        $errors     = 0;
+
+        // Prüfe, ob die Tabelle existiert
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
         
-        // Extract common RSS fields
-        $result['title'] = (string)($item->title ?? '');
-        $result['link'] = (string)($item->link ?? '');
-        $result['guid'] = (string)($item->guid ?? $item->link ?? '');
-        $result['pubDate'] = (string)($item->pubDate ?? $item->date ?? date('Y-m-d H:i:s'));
-        $result['description'] = (string)($item->description ?? '');
-        
-        // Handle namespaces and additional properties
-        $namespaces = $item->getNamespaces(true);
-        foreach ($namespaces as $prefix => $namespace) {
-            $nsData = $item->children($namespace);
-            foreach ($nsData as $key => $value) {
-                $nsKey = $prefix . ':' . $key;
-                $result[$nsKey] = (string)$value;
+        if (!$table_exists) {
+            $error = "Tabelle {$table_name} existiert nicht. Feed-Items können nicht gespeichert werden.";
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error($error);
+            }
+            $this->logger->error($error);
+            return false;
+        }
+
+        $this->logger->info("Speichere " . count($items) . " Feed-Items in die Datenbank...");
+
+        foreach ($items as $item) {
+            if (empty($item['guid'])) {
+                $this->logger->warn("Item ohne GUID übersprungen.");
+                continue;
+            }
+            
+            // Prüfe, ob das Item bereits existiert
+            $exists = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table_name} WHERE feed_id = %d AND guid = %s",
+                    $feed_id,
+                    $item['guid']
+                )
+            );
+
+            if ($exists) {
+                $this->logger->debug("Item mit GUID {$item['guid']} existiert bereits.");
+                continue;
+            }
+
+            // Füge das Item hinzu
+            $result = $wpdb->insert(
+                $table_name,
+                [
+                    'feed_id'     => $feed_id,
+                    'guid'        => $item['guid'],
+                    'title'       => $item['title'] ?? '',
+                    'link'        => $item['link'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'content'     => $item['content'] ?? '',
+                    'author'      => $item['author'] ?? '',
+                    'published'   => $item['published'] ?? \current_time('mysql'),
+                    'updated'     => $item['updated'] ?? \current_time('mysql'),
+                    'raw_data'    => json_encode($item['raw_data'] ?? []),
+                    'created'     => \current_time('mysql'),
+                ]
+            );
+
+            if ($result === false) {
+                $errors++;
+                $db_error = $wpdb->last_error;
+                $this->logger->error("Fehler beim Speichern des Items: {$db_error}");
+                $success = false;
+            } else {
+                $new_items++;
+                $this->logger->debug("Item mit GUID {$item['guid']} erfolgreich gespeichert.");
             }
         }
+
+        // Aktualisiere den Feed-Status
+        if (method_exists($feed, 'update_last_checked')) {
+            $feed->update_last_checked();
+        }
         
-        return $result;
+        $this->logger->info("Feed-Items-Speicherung abgeschlossen. Neue Items: {$new_items}, Fehler: {$errors}");
+
+        return $success;
     }
     
     /**
-     * Process an Atom entry
-     * 
-     * @param \SimpleXMLElement $entry The Atom entry
-     * @return array The processed entry data
+     * Verarbeitet einen XML-Feed und extrahiert die Items.
+     *
+     * @param SimpleXMLElement $xml  XML-Feed.
+     * @param Feed             $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
      */
-    private function processAtomEntry(\SimpleXMLElement $entry): array {
-        $result = [];
-        
-        // Extract common Atom fields
-        $result['title'] = (string)($entry->title ?? '');
-        $result['id'] = (string)($entry->id ?? '');
-        $result['published'] = (string)($entry->published ?? $entry->updated ?? date('Y-m-d H:i:s'));
-        $result['content'] = (string)($entry->content ?? '');
-        $result['summary'] = (string)($entry->summary ?? '');
-        
-        // Handle link
-        if (isset($entry->link)) {
-            foreach ($entry->link as $link) {
-                $rel = (string)$link['rel'];
-                if ($rel === 'alternate' || empty($rel)) {
-                    $result['link'] = (string)$link['href'];
-                    break;
+    private function processXmlFeed(\SimpleXMLElement $xml, Feed $feed) {
+        return $this->extractItemsFromXml($xml, $feed);
+    }
+    
+    /**
+     * Extrahiert Items aus einem XML-Feed.
+     *
+     * @param SimpleXMLElement $xml  XML-Feed.
+     * @param Feed             $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
+     */
+    private function extractItemsFromXml(\SimpleXMLElement $xml, Feed $feed) {
+        $items = [];
+
+        // RSS-Feed verarbeiten
+        if (isset($xml->channel) && isset($xml->channel->item)) {
+            $this->logger->info("RSS-Feed erkannt. Titel: " . (string)$xml->channel->title . ", Items: " . count($xml->channel->item));
+            
+            foreach ($xml->channel->item as $item) {
+                $extracted = $this->extractRssItem($item, $feed);
+                if (!empty($extracted)) {
+                    $items[] = $extracted;
                 }
             }
         }
-        
-        // Ensure we have a guid/id
-        if (empty($result['id']) && !empty($result['link'])) {
-            $result['id'] = $result['link'];
+        // Atom-Feed verarbeiten
+        elseif (isset($xml->entry)) {
+            $this->logger->info("Atom-Feed erkannt. Titel: " . (string)$xml->title . ", Entries: " . count($xml->entry));
+            
+            foreach ($xml->entry as $entry) {
+                $extracted = $this->extractAtomItem($entry, $feed);
+                if (!empty($extracted)) {
+                    $items[] = $extracted;
+                }
+            }
+        } else {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
+            }
+            $this->logger->error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
         }
-        
-        return $result;
+
+        if (empty($items)) {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Keine Items im XML-Feed gefunden.");
+            }
+            $this->logger->warn("Keine Items im XML-Feed gefunden.");
+        } else {
+            $this->logger->info(count($items) . " Items aus dem XML-Feed extrahiert.");
+        }
+
+        return $items;
     }
     
     /**
-     * Extract data from a generic XML item
-     * 
-     * @param \SimpleXMLElement $item The XML item
-     * @return array The extracted data
+     * Extrahiert ein RSS-Item aus einem XML-Feed.
+     *
+     * @param SimpleXMLElement $item RSS-Item.
+     * @param Feed             $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit RSS-Item-Daten.
      */
-    private function extractGenericItemData(\SimpleXMLElement $item): array {
-        $result = [];
-        
-        // Try to extract common fields regardless of the format
-        foreach ($item as $key => $value) {
-            $result[$key] = (string)$value;
-        }
-        
-        // Try to ensure we have required fields
-        if (!isset($result['guid']) && isset($result['id'])) {
-            $result['guid'] = $result['id'];
-        }
-        
-        if (!isset($result['guid']) && isset($result['link'])) {
-            $result['guid'] = $result['link'];
-        }
-        
-        if (!isset($result['pubDate']) && !isset($result['published']) && !isset($result['date'])) {
-            // Default to current date if no date field exists
-            $result['pubDate'] = \date('Y-m-d H:i:s');
-        }
-        
-        return $result;
+    private function extractRssItem(\SimpleXMLElement $item, Feed $feed) {
+        $data = [];
+
+        // Titel
+        $data['title'] = (string)$item->title;
+
+        // Link
+        $data['link'] = (string)$item->link;
+
+        // Beschreibung
+        $data['description'] = (string)$item->description;
+
+        // Autor
+        $data['author'] = (string)$item->author;
+
+        // Veröffentlichungsdatum
+        $data['published'] = (string)$item->pubDate;
+
+        // Aktualisierungsdatum
+        $data['updated'] = (string)$item->lastBuildDate;
+
+        // GUID
+        $data['guid'] = (string)$item->guid;
+
+        return $data;
     }
     
     /**
-     * Fetch and process a feed.
-     * 
-     * @param Feed $feed The feed to process.
-     * @param bool $verbose_console Whether to output verbose console logs.
-     * @return bool Whether the processing was successful.
+     * Extrahiert ein Atom-Item aus einem XML-Feed.
+     *
+     * @param SimpleXMLElement $entry Atom-Item.
+     * @param Feed             $feed  Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Atom-Item-Daten.
+     */
+    private function extractAtomItem(\SimpleXMLElement $entry, Feed $feed) {
+        $data = [];
+
+        // Titel
+        $data['title'] = (string)$entry->title;
+
+        // Link
+        $data['link'] = (string)$entry->link['href'];
+
+        // Beschreibung
+        $data['description'] = (string)$entry->summary;
+
+        // Autor
+        $data['author'] = (string)$entry->author->name;
+
+        // Veröffentlichungsdatum
+        $data['published'] = (string)$entry->published;
+
+        // Aktualisierungsdatum
+        $data['updated'] = (string)$entry->updated;
+
+        // GUID
+        $data['guid'] = (string)$entry->id;
+
+        return $data;
+    }
+    
+    /**
+     * Extrahiert ein JSON-Item aus einem JSON-Feed.
+     *
+     * @param array $item JSON-Item.
+     * @param Feed  $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit JSON-Item-Daten.
+     */
+    private function extractJsonFeedItem(array $item, Feed $feed) {
+        $data = [];
+
+        // Titel
+        $data['title'] = $item['title'] ?? '';
+
+        // Link
+        $data['link'] = $item['link'] ?? '';
+
+        // Beschreibung
+        $data['description'] = $item['description'] ?? '';
+
+        // Autor
+        $data['author'] = $item['author'] ?? '';
+
+        // Veröffentlichungsdatum
+        $data['published'] = $item['published'] ?? '';
+
+        // Aktualisierungsdatum
+        $data['updated'] = $item['updated'] ?? '';
+
+        // GUID
+        $data['guid'] = $item['guid'] ?? '';
+
+        return $data;
+    }
+    
+    /**
+     * Ruft einen Feed ab und verarbeitet ihn.
+     *
+     * @param Feed $feed            Feed-Objekt.
+     * @param bool $verbose_console Ausführliche Konsolenausgabe aktivieren.
+     *
+     * @return bool Erfolgsstatus.
      */
     public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
-        // Set verbose mode if required
         if ($verbose_console) {
-            if (method_exists($this, 'setVerboseMode')) {
-                $this->setVerboseMode(true);
-            }
-            
-            if (method_exists($this->http_client, 'setVerboseMode')) {
-                $this->http_client->setVerboseMode(true);
-            }
+            $this->setVerboseMode(true);
         }
         
+        $this->logger->info("Starte Abruf des Feeds: {$feed->get_url()}");
+        
         try {
-            // Fetch the feed content
+            // Feed-Inhalt abrufen
             $content = $this->http_client->fetch($feed->get_url());
             
             if (empty($content)) {
-                // Handle error case: no content
-                if ($verbose_console) {
-                    $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
-                    echo '<script>console.error("No content found for feed: ' . $url . '");</script>';
+                $error = $this->http_client->get_last_error() ?: 'Leerer Feed-Inhalt erhalten';
+                if (method_exists($feed, 'update_feed_error')) {
+                    $feed->update_feed_error($error);
                 }
+                $this->logger->error("Feed-Abruf fehlgeschlagen: {$error}");
                 return false;
             }
             
-            // Determine content type and process accordingly
+            // Feed-Inhalt verarbeiten
+            $items = $this->processFeedContent($content, $feed);
             $items = [];
             // Try to process the content as XML feed
             $simple_xml = @simplexml_load_string($content);

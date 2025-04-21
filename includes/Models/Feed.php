@@ -101,6 +101,60 @@ class Feed {
     }
     
     /**
+     * Aktualisiert die Fehlermeldung im Objekt und in der Datenbank
+     *
+     * @param string $error Die Fehlermeldung
+     * @return self
+     */
+    public function update_feed_error(string $error): self {
+        $this->set_last_error($error);
+        
+        // Wenn eine Post-ID vorhanden ist, aktualisiere den Fehler in der Datenbank
+        if ($this->post_id) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'feed_metadata';
+            
+            // Prüfe, ob die Tabelle existiert
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
+            
+            if ($table_exists) {
+                // Prüfe, ob bereits ein Eintrag für diesen Feed existiert
+                $exists = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$table_name} WHERE feed_id = %d",
+                        $this->post_id
+                    )
+                );
+                
+                if ($exists) {
+                    // Aktualisiere den bestehenden Eintrag
+                    $wpdb->update(
+                        $table_name,
+                        ['last_error' => $error],
+                        ['feed_id' => $this->post_id],
+                        ['%s'],
+                        ['%d']
+                    );
+                } else {
+                    // Erstelle einen neuen Eintrag
+                    $wpdb->insert(
+                        $table_name,
+                        [
+                            'feed_id' => $this->post_id,
+                            'last_error' => $error,
+                            'last_fetched' => \current_time('mysql'),
+                            'fetch_count' => 0
+                        ],
+                        ['%d', '%s', '%s', '%d']
+                    );
+                }
+            }
+        }
+        
+        return $this;
+    }
+    
+    /**
      * Get the feed URL
      *
      * @return string|null The feed URL
@@ -161,6 +215,68 @@ class Feed {
     }
     
     /**
+     * Aktualisiert den Zeitstempel des letzten Abrufs im Objekt und in der Datenbank
+     *
+     * @return self
+     */
+    public function update_last_checked(): self {
+        $now = new \DateTime();
+        $this->set_last_checked($now);
+        
+        // Wenn eine Post-ID vorhanden ist, aktualisiere den Zeitstempel in der Datenbank
+        if ($this->post_id) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'feed_metadata';
+            
+            // Prüfe, ob die Tabelle existiert
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
+            
+            if ($table_exists) {
+                // Prüfe, ob bereits ein Eintrag für diesen Feed existiert
+                $exists = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$table_name} WHERE feed_id = %d",
+                        $this->post_id
+                    )
+                );
+                
+                if ($exists) {
+                    // Aktualisiere den bestehenden Eintrag
+                    $wpdb->update(
+                        $table_name,
+                        [
+                            'last_fetched' => \current_time('mysql'),
+                            'fetch_count' => $wpdb->get_var(
+                                $wpdb->prepare(
+                                    "SELECT fetch_count FROM {$table_name} WHERE feed_id = %d",
+                                    $this->post_id
+                                )
+                            ) + 1
+                        ],
+                        ['feed_id' => $this->post_id],
+                        ['%s', '%d'],
+                        ['%d']
+                    );
+                } else {
+                    // Erstelle einen neuen Eintrag
+                    $wpdb->insert(
+                        $table_name,
+                        [
+                            'feed_id' => $this->post_id,
+                            'last_fetched' => \current_time('mysql'),
+                            'fetch_count' => 1,
+                            'last_error' => ''
+                        ],
+                        ['%d', '%s', '%d', '%s']
+                    );
+                }
+            }
+        }
+        
+        return $this;
+    }
+    
+    /**
      * Get the update interval
      *
      * @return int The update interval in seconds
@@ -217,24 +333,71 @@ class Feed {
      * Sie aktualisiert auch die Feed-Metadaten in der Datenbank.
      * 
      * @param bool $verbose_console Ob detaillierte Konsolenausgaben erzeugt werden sollen
+     * @param string|null $url Optional: Alternative URL zum Abrufen des Feeds
      * @return bool Ob der Abruf und die Verarbeitung erfolgreich waren
      */
-    public function fetch(bool $verbose_console = false): bool {
+    public function fetch(bool $verbose_console = false, ?string $url = null): bool {
         // Erstelle eine Instanz des FeedService
         $feed_service = FeedService::create();
+        
+        // Aktiviere den Verbose-Modus, wenn gewünscht
+        if ($verbose_console && method_exists($feed_service, 'setVerboseMode')) {
+            $feed_service->setVerboseMode(true);
+        }
         
         // Setze den letzten Fehler zurück
         $this->last_error = '';
         
-        // Rufe den Feed ab und verarbeite ihn
-        $result = $feed_service->fetch_and_process_feed($this, $verbose_console);
+        // Verwende die angegebene URL oder die Feed-URL
+        $fetch_url = $url ?: $this->url;
         
-        // Wenn der Abruf fehlgeschlagen ist, setze einen generischen Fehlermeldung
-        if (!$result) {
-            $this->last_error = 'Fehler beim Abrufen oder Verarbeiten des Feeds';
+        // Prüfe, ob eine URL vorhanden ist
+        if (empty($fetch_url)) {
+            $error = 'Keine URL zum Abrufen angegeben';
+            $this->update_feed_error($error);
+            
+            if ($verbose_console) {
+                echo '<script>console.error("' . \esc_js($error) . '");</script>';
+            }
+            
+            return false;
         }
         
-        return $result;
+        try {
+            // Rufe den Feed ab und verarbeite ihn
+            $result = $feed_service->fetch_and_process_feed($this, $verbose_console);
+            
+            // Wenn der Abruf erfolgreich war, aktualisiere den Zeitstempel
+            if ($result) {
+                $this->update_last_checked();
+                
+                if ($verbose_console) {
+                    echo '<script>console.info("Feed erfolgreich abgerufen und verarbeitet: ' . \esc_js($fetch_url) . '");</script>';
+                }
+            } else {
+                // Wenn der Abruf fehlgeschlagen ist und keine spezifische Fehlermeldung gesetzt wurde
+                if (empty($this->last_error)) {
+                    $this->update_feed_error('Fehler beim Abrufen oder Verarbeiten des Feeds');
+                }
+                
+                if ($verbose_console) {
+                    echo '<script>console.error("Fehler beim Abrufen des Feeds: ' . \esc_js($this->last_error) . '");</script>';
+                }
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            // Bei einer Exception, setze eine Fehlermeldung
+            $error = 'Exception beim Abrufen des Feeds: ' . $e->getMessage();
+            $this->update_feed_error($error);
+            
+            if ($verbose_console) {
+                echo '<script>console.error("' . \esc_js($error) . '");</script>';
+                echo '<script>console.error("Stack-Trace: ' . \esc_js($e->getTraceAsString()) . '");</script>';
+            }
+            
+            return false;
+        }
     }
     
     /**

@@ -74,6 +74,9 @@ class AdminBootstrap {
         // Feed-Klassen initialisieren - diese sollten eventuell in Services verschoben werden
         FeedFetcher::init();
         Maintenance::init();
+        
+        // Debug-Seite initialisieren
+        DebugPage::init();
     }
     
     /**
