@@ -321,7 +321,9 @@ class FeedDisplay {
                         echo '<span class="athena-feed-date">' . esc_html(date_i18n(get_option('date_format'), $item['date'])) . '</span>';
                     }
                     
-                    echo '<div class="athena-feed-description">' . wp_kses_post(wp_trim_words($item['description'], 30, '...')) . '</div>';
+                    // Stelle sicher, dass die Beschreibung ein String ist und nicht NULL
+                    $description = isset($item['description']) && is_string($item['description']) ? $item['description'] : '';
+                    echo '<div class="athena-feed-description">' . wp_kses_post(wp_trim_words($description, 30, '...')) . '</div>';
                     echo '</li>';
                 }
                 

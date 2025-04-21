@@ -555,7 +555,7 @@ class FeedHttpClient {
                     $options['headers']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
                     $options['headers']['Accept-Language'] = 'en-US,en;q=0.9';
                     // Entferne den Google-Referer, da dieser blockiert werden könnte
-                    if (isset($options['headers']['Referer']) && strpos($options['headers']['Referer'], 'google.com') !== false) {
+                    if (isset($options['headers']['Referer']) && is_string($options['headers']['Referer']) && $options['headers']['Referer'] !== '' && strpos($options['headers']['Referer'], 'google.com') !== false) {
                         unset($options['headers']['Referer']);
                     }
                 } else {
