@@ -115,11 +115,17 @@ class FeedHttpClient {
     /**
      * Spezialisierte Methode zum Abrufen von socialmediaexaminer.com Feeds
      * 
+     * Diese Methode umgeht die Feed-Blockierung, indem sie die Hauptseite abruft
+     * und die Artikel direkt aus dem HTML extrahiert.
+     * 
      * @param string $url Die Feed-URL
      * @return string|false Der Feed-Inhalt oder false bei Fehler
      */
     private function fetchSocialMediaExaminerFeed(string $url): string|false {
         $this->consoleLog("Using specialized method for Social Media Examiner feed", 'info');
+        
+        // Verwende die Hauptseite statt des Feeds
+        $main_url = 'https://www.socialmediaexaminer.com/';
         
         // Spezielle Header für Social Media Examiner
         $options = [
@@ -141,7 +147,7 @@ class FeedHttpClient {
         ];
         
         // Verwende cURL für maximale Kontrolle
-        $ch = curl_init($url);
+        $ch = curl_init($main_url);
         
         // Grundlegende cURL-Optionen
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -195,7 +201,95 @@ class FeedHttpClient {
             return false;
         }
         
-        return $response;
+        // Extrahiere Artikel aus dem HTML und erstelle einen XML-Feed
+        return $this->convertHtmlToFeed($response, $main_url);
+    }
+    
+    /**
+     * Konvertiert HTML von socialmediaexaminer.com in einen XML-Feed
+     * 
+     * @param string $html Der HTML-Inhalt
+     * @param string $base_url Die Basis-URL für relative Links
+     * @return string Der generierte XML-Feed
+     */
+    private function convertHtmlToFeed(string $html, string $base_url): string {
+        $this->consoleLog("Converting HTML to feed format", 'info');
+        
+        // Erstelle ein DOMDocument-Objekt
+        $dom = new \DOMDocument();
+        
+        // Unterdrücke Fehler beim Parsen von ungültigem HTML
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html);
+        libxml_clear_errors();
+        
+        // Erstelle einen DOMXPath für einfachere Abfragen
+        $xpath = new \DOMXPath($dom);
+        
+        // Suche nach Artikeln (passe die XPath-Abfrage an die Struktur der Website an)
+        $articles = $xpath->query('//article | //div[contains(@class, "post") or contains(@class, "article")] | //div[contains(@class, "entry")]');
+        
+        // Wenn keine Artikel gefunden wurden, versuche es mit einer allgemeineren Abfrage
+        if ($articles->length === 0) {
+            $articles = $xpath->query('//div[contains(@class, "content")] | //div[contains(@class, "main")]//a[contains(@href, "/20")]/..');
+        }
+        
+        $this->consoleLog("Found {$articles->length} potential articles", 'info');
+        
+        // Erstelle einen XML-Feed im RSS-Format
+        $feed = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>';
+        $feed .= '<title>Social Media Examiner</title>';
+        $feed .= '<link>' . htmlspecialchars($base_url) . '</link>';
+        $feed .= '<description>Social Media Marketing Articles</description>';
+        
+        $count = 0;
+        
+        // Durchlaufe alle gefundenen Artikel
+        foreach ($articles as $article) {
+            // Versuche, den Titel zu finden
+            $title_elem = $xpath->query('.//h1 | .//h2 | .//h3 | .//h4 | .//a[contains(@class, "title")]', $article)->item(0);
+            $title = $title_elem ? trim($title_elem->textContent) : 'Untitled Article';
+            
+            // Versuche, den Link zu finden
+            $link = '';
+            $link_elem = $xpath->query('.//a[@href]', $article)->item(0);
+            if ($link_elem) {
+                $link = $link_elem->getAttribute('href');
+                // Konvertiere relative URLs zu absoluten URLs
+                if (strpos($link, 'http') !== 0) {
+                    $link = rtrim($base_url, '/') . '/' . ltrim($link, '/');
+                }
+            }
+            
+            // Versuche, die Beschreibung zu finden
+            $desc_elem = $xpath->query('.//p | .//div[contains(@class, "excerpt") or contains(@class, "summary")]', $article)->item(0);
+            $description = $desc_elem ? trim($desc_elem->textContent) : '';
+            
+            // Versuche, das Datum zu finden
+            $date_elem = $xpath->query('.//time | .//*[contains(@class, "date")]', $article)->item(0);
+            $date = $date_elem ? $date_elem->textContent : date('r');
+            
+            // Erstelle eine eindeutige GUID für diesen Artikel
+            $guid = !empty($link) ? $link : md5($title . $description);
+            
+            // Füge den Artikel zum Feed hinzu, wenn ein Titel und ein Link vorhanden sind
+            if (!empty($title) && !empty($link)) {
+                $feed .= '<item>';
+                $feed .= '<title>' . htmlspecialchars($title) . '</title>';
+                $feed .= '<link>' . htmlspecialchars($link) . '</link>';
+                $feed .= '<guid>' . htmlspecialchars($guid) . '</guid>';
+                $feed .= '<pubDate>' . htmlspecialchars($date) . '</pubDate>';
+                $feed .= '<description>' . htmlspecialchars($description) . '</description>';
+                $feed .= '</item>';
+                $count++;
+            }
+        }
+        
+        $feed .= '</channel></rss>';
+        
+        $this->consoleLog("Generated feed with {$count} items", 'info');
+        
+        return $feed;
     }
 
     /**
