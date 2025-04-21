@@ -645,10 +645,15 @@ class FeedService {
      * Escaped einen String für die Verwendung in JavaScript.
      * Fallback für die WordPress-Funktion esc_js().
      *
-     * @param string $text Zu escapender Text.
+     * @param string|null $text Zu escapender Text.
      * @return string Escapeter Text.
      */
-    private function escapeJs(string $text): string {
+    private function escapeJs(?string $text): string {
+        // Behandle NULL-Werte
+        if ($text === null) {
+            return '';
+        }
+        
         if (function_exists('esc_js')) {
             return \esc_js($text);
         }
