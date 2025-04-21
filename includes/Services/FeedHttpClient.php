@@ -83,7 +83,16 @@ class FeedHttpClient {
         $valid_types = ['log', 'info', 'warn', 'error', 'group', 'groupEnd'];
         $type = in_array($type, $valid_types) ? $type : 'log';
         
-        $escaped_message = function_exists('esc_js') ? \esc_js($message) : htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+        // Eigene Implementierung von esc_js
+        $escaped_message = strtr($message, [
+            '\\' => '\\\\',
+            "\n" => '\\n',
+            "\r" => '\\r',
+            "\t" => '\\t',
+            '"' => '\\"',
+            "'" => "\\'",
+            '</' => '<\\/',
+        ]);
         echo '<script>console.' . $type . '("Athena AI Feed: ' . $escaped_message . '");</script>';
     }
 
@@ -353,7 +362,7 @@ class FeedHttpClient {
             if ($link_elem) {
                 $link = $link_elem->getAttribute('href');
                 // Konvertiere relative URLs zu absoluten URLs
-                if (strpos($link, 'http') !== 0) {
+                if ($link !== null && $link !== '' && strpos($link, 'http') !== 0) {
                     $link = rtrim($base_url, '/') . '/' . ltrim($link, '/');
                 }
             }
@@ -423,38 +432,29 @@ class FeedHttpClient {
         usleep(mt_rand(1000000, 3000000));
         
         // Debug options
-        if (function_exists('wp_json_encode')) {
-            $options_json = \wp_json_encode($request_options);
-        } else {
-            $options_json = json_encode($request_options);
-        }
+        // Eigene Implementierung statt wp_json_encode
+        $options_json = json_encode($request_options);
         $this->consoleLog("Request options: {$options_json}", 'log');
         
-        // Make the request using WordPress functions if available, otherwise fallback to curl
-        if (function_exists('wp_remote_get')) {
-            // Tell PHP we're accessing the global function in the root namespace
-            $response = \wp_remote_get($url, $request_options);
-            
-            // Check for errors
-            if (function_exists('is_wp_error')) {
-                if (\is_wp_error($response)) {
-                    $error_message = $response->get_error_message();
-                    $this->set_last_error("WordPress error fetching feed: {$error_message}");
-                    $this->consoleLog("WordPress error fetching feed: {$error_message}", 'error');
-                    return false;
-                }
-            }
-            
-            // Check response code
-            if (function_exists('wp_remote_retrieve_response_code')) {
-                $status_code = \wp_remote_retrieve_response_code($response);
-                if ($status_code !== 200) {
-                    $error = "Invalid response code: {$status_code}";
-                    $this->set_last_error($error);
-                    $this->consoleLog($error, 'error');
-                    return false;
-                }
-            }
+        // Immer den Curl-Fallback verwenden, da wir WordPress-Funktionen vermeiden
+        $response = $this->curlFetch($url, $request_options);
+        
+        // Prüfen, ob die Antwort ein Fehler ist
+        if ($response === false || isset($response['error'])) {
+            $error_message = isset($response['error']) ? $response['error'] : 'Unknown error';
+            $this->set_last_error("Error fetching feed: {$error_message}");
+            $this->consoleLog("Error fetching feed: {$error_message}", 'error');
+            return false;
+        }
+        
+        // Prüfen des Statuscodes
+        if (isset($response['status_code']) && $response['status_code'] !== 200) {
+            $status_code = $response['status_code'];
+            $error = "Invalid response code: {$status_code}";
+            $this->set_last_error($error);
+            $this->consoleLog($error, 'error');
+            return false;
+        }
             
             // Get the body
             if (function_exists('wp_remote_retrieve_body')) {

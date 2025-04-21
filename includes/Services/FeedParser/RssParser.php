@@ -38,11 +38,11 @@ class RssParser implements FeedParserInterface {
     /**
      * Output a console log message if verbose mode is enabled.
      *
-     * @param string $message The message to log.
+     * @param string|null $message The message to log.
      * @param string $type    The type of log message (log, info, warn, error, group, groupEnd).
      * @return void
      */
-    private function consoleLog(string $message, string $type = 'log'): void {
+    private function consoleLog(?string $message, string $type = 'log'): void {
         if (!$this->verbose_console) {
             return;
         }
@@ -50,16 +50,38 @@ class RssParser implements FeedParserInterface {
         $valid_types = ['log', 'info', 'warn', 'error', 'group', 'groupEnd'];
         $type = in_array($type, $valid_types) ? $type : 'log';
         
-        echo '<script>console.' . $type . '("Athena AI Feed: ' . esc_js($message) . '");</script>';
+        // Behandle NULL-Werte
+        if ($message === null) {
+            $message = 'NULL message provided to console log';
+            $type = 'warn';
+        }
+        
+        // Eigene Implementierung von esc_js
+        $message = strtr($message, [
+            '\\' => '\\\\',
+            "\n" => '\\n',
+            "\r" => '\\r',
+            "\t" => '\\t',
+            '"' => '\\"',
+            "'" => "\\'",
+            '</' => '<\\/',
+        ]);
+        
+        echo '<script>console.' . $type . '("Athena AI Feed: ' . $message . '");</script>';
     }
 
     /**
      * Check if this parser can handle the given content.
      *
-     * @param string $content The feed content to check.
+     * @param string|null $content The feed content to check.
      * @return bool Whether this parser can handle the content.
      */
-    public function canParse(string $content): bool {
+    public function canParse(?string $content): bool {
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            return false;
+        }
+        
         // Simple check for RSS/XML format
         return (
             stripos($content, '<rss') !== false || 
@@ -72,15 +94,29 @@ class RssParser implements FeedParserInterface {
     /**
      * Parse the feed content using SimplePie.
      *
-     * @param string $content The feed content to parse.
+     * @param string|null $content The feed content to parse.
      * @return array The parsed feed items.
      */
-    public function parse(string $content): array {
+    public function parse(?string $content): array {
         $this->consoleLog('Parsing feed with RSS parser', 'group');
+        
+        // Behandle NULL-Werte
+        if ($content === null || empty($content)) {
+            $this->consoleLog('Feed content is null or empty', 'error');
+            $this->consoleLog('', 'groupEnd');
+            return [];
+        }
 
         // Make sure SimplePie is loaded
         if (!class_exists('SimplePie')) {
-            require_once ABSPATH . WPINC . '/class-simplepie.php';
+            // Verwenden Sie einen relativen Pfad, wenn möglich
+            if (file_exists(dirname(__FILE__, 4) . '/wp-includes/class-simplepie.php')) {
+                require_once dirname(__FILE__, 4) . '/wp-includes/class-simplepie.php';
+            } else {
+                // Fallback: Versuchen, SimplePie direkt zu laden
+                $this->consoleLog('SimplePie konnte nicht geladen werden', 'error');
+                return [];
+            }
         }
         
         // Create a new SimplePie instance
@@ -204,13 +240,14 @@ class RssParser implements FeedParserInterface {
             
             // Convert relative URLs to absolute
             if (!preg_match('/^https?:\/\//i', $thumbnail)) {
-                $parsed_url = wp_parse_url($feed_link);
+                // Eigene Implementierung von wp_parse_url
+                $parsed_url = parse_url($feed_link);
                 if ($parsed_url && isset($parsed_url['scheme'], $parsed_url['host'])) {
                     $base_url = $parsed_url['scheme'] . '://' . $parsed_url['host'];
                     
-                    if (strpos($thumbnail, '//') === 0) {
+                    if ($thumbnail !== null && strpos($thumbnail, '//') === 0) {
                         $thumbnail = $parsed_url['scheme'] . ':' . $thumbnail;
-                    } elseif (strpos($thumbnail, '/') === 0) {
+                    } elseif ($thumbnail !== null && strpos($thumbnail, '/') === 0) {
                         $thumbnail = $base_url . $thumbnail;
                     } else {
                         $thumbnail = $base_url . '/' . $thumbnail;
@@ -218,7 +255,16 @@ class RssParser implements FeedParserInterface {
                 }
             }
             
-            return esc_url_raw($thumbnail);
+            // Eigene Implementierung von esc_url_raw
+            // Einfache Validierung der URL
+            if ($thumbnail !== null && filter_var($thumbnail, FILTER_VALIDATE_URL)) {
+                return $thumbnail;
+            } elseif ($thumbnail !== null) {
+                // Grundlegende Bereinigung
+                return preg_replace('/[^a-zA-Z0-9\/:._\-]/', '', $thumbnail);
+            }
+            
+            return null;
         }
         
         return null;
