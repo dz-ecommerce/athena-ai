@@ -590,18 +590,20 @@ class FeedRepository {
                 $result = $wpdb->insert(
                     $wpdb->prefix . 'feed_raw_items',
                     [
+                        'item_hash' => \md5($guid),  // Generiere einen Hash als Primary Key
                         'feed_id' => $feed->get_post_id(),
                         'guid' => $guid,
                         'pub_date' => $pub_date,
-                        'content' => $json_content,
+                        'raw_content' => $json_content, // Korrigiert von 'content' zu 'raw_content'
                         'created_at' => \current_time('mysql')
                     ],
                     [
-                        '%d',
-                        '%s',
-                        '%s',
-                        '%s',
-                        '%s'
+                        '%s',  // item_hash
+                        '%d',  // feed_id
+                        '%s',  // guid
+                        '%s',  // pub_date
+                        '%s',  // raw_content
+                        '%s'   // created_at
                     ]
                 );
                 
