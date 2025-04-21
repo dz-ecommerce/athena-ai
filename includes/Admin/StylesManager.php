@@ -29,12 +29,17 @@ class StylesManager extends BaseAdmin {
      * @param string $hook_suffix Der aktuelle Admin-Hook
      */
     public function enqueue_admin_styles($hook_suffix) {
+        // Stelle sicher, dass $hook_suffix ein String ist
+        if (!is_string($hook_suffix)) {
+            $hook_suffix = '';
+        }
+        
         // Auf allen Plugin-Seiten laden: Athena AI, Feed Items und eigenen Admin-Seiten
-        if (strpos($hook_suffix, 'athena-ai') !== false || 
+        if (($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) || 
             isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed' ||
-            strpos($hook_suffix, 'athena-feed-items') !== false ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            strpos($hook_suffix, 'athena_page') !== false) {
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)) {
             
             // Tailwind CSS
             wp_enqueue_style(
@@ -71,12 +76,17 @@ class StylesManager extends BaseAdmin {
     public function add_admin_body_class($classes) {
         global $hook_suffix;
         
+        // Stelle sicher, dass $hook_suffix ein String ist
+        if (!is_string($hook_suffix)) {
+            $hook_suffix = '';
+        }
+        
         // Auf allen Plugin-Seiten anwenden
-        if (strpos($hook_suffix, 'athena-ai') !== false ||
+        if (($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
             (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
-            strpos($hook_suffix, 'athena-feed-items') !== false ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            strpos($hook_suffix, 'athena_page') !== false) {
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)) {
             $classes .= ' athena-ai-admin';
         }
         

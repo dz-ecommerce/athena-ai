@@ -190,12 +190,17 @@ class Plugin {
      * Enqueue admin assets
      */
     public function enqueue_admin_assets($hook) {
+        // Stelle sicher, dass $hook ein String ist
+        if (!is_string($hook)) {
+            $hook = '';
+        }
+        
         // Check if we're on an Athena AI admin page
         $is_athena_page = (
-            strpos($hook, 'athena-ai') !== false ||
-            (strpos($hook, 'post.php') !== false && get_post_type() === 'athena-feed') ||
-            (strpos($hook, 'post-new.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
-            (strpos($hook, 'edit.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed')
+            ($hook !== '' && strpos($hook, 'athena-ai') !== false) ||
+            ($hook !== '' && strpos($hook, 'post.php') !== false && function_exists('get_post_type') && get_post_type() === 'athena-feed') ||
+            ($hook !== '' && strpos($hook, 'post-new.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
+            ($hook !== '' && strpos($hook, 'edit.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed')
         );
 
         if (!$is_athena_page) {
