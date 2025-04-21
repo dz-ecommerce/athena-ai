@@ -7,6 +7,8 @@
 
 namespace AthenaAI\Admin;
 
+use AthenaAI\Admin\DatabaseUpgrade;
+
 /**
  * Initialisiert alle Admin-spezifischen Komponenten.
  */
@@ -57,6 +59,16 @@ class AdminBootstrap {
             'athena-feed-maintenance',
             [Maintenance::class, 'render_maintenance_page']
         );
+        
+        // Datenbank-Upgrade-Seite als Untermenü
+        \add_submenu_page(
+            'athena-feed-items',
+            \__('Datenbank-Upgrade', 'athena-ai'),
+            \__('Datenbank-Upgrade', 'athena-ai'),
+            'manage_options',
+            'athena-database-upgrade',
+            [DatabaseUpgrade::class, 'render_upgrade_page']
+        );
     }
     
     /**
@@ -77,6 +89,9 @@ class AdminBootstrap {
         
         // Debug-Seite initialisieren
         DebugPage::init();
+        
+        // Datenbank-Upgrade-Seite initialisieren
+        DatabaseUpgrade::init();
     }
     
     /**

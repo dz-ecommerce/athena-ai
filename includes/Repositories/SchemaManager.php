@@ -13,16 +13,16 @@ if (!defined('ABSPATH')) {
  * Moved from AthenaAI\Database\DatabaseSetup (legacy alias created for BC).
  */
 class SchemaManager {
-    private const VERSION = '1.0.0';
+    private const VERSION = '1.0.1'; // Erhöhte Version für Datenbankschema-Update
     private const VERSION_OPTION = 'athena_ai_db_version';
 
     public static function init(): void {
-        add_action('plugins_loaded', [self::class, 'check_version']);
-        add_action('admin_init', [self::class, 'check_tables']);
+        \add_action('plugins_loaded', [self::class, 'check_version']);
+        \add_action('admin_init', [self::class, 'check_tables']);
     }
 
     public static function check_version(): void {
-        if (get_option(self::VERSION_OPTION) !== self::VERSION) {
+        if (\get_option(self::VERSION_OPTION) !== self::VERSION) {
             self::setup_tables();
         }
     }
@@ -33,11 +33,13 @@ class SchemaManager {
     public static function check_tables(): void {
         global $wpdb;
 
-        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if (!$screen || !isset($_GET['page']) || $_GET['page'] !== 'athena-feed-items') {
-            return;
-        }
-
+        // Only check on specific admin pages to avoid unnecessary DB queries
+        if (\function_exists('get_current_screen')) {
+            $screen = \get_current_screen();
+            if (!$screen || !\in_array($screen->id, ['athena-feed', 'athena_page_athena-feed-items'])) {
+                return;
+            }
+        } 
         // Only verify the main table – others are handled in setup_tables().
         $table_exists = $wpdb->get_var($wpdb->prepare(
             'SHOW TABLES LIKE %s',
@@ -68,36 +70,40 @@ class SchemaManager {
      */
     public static function setup_tables(): void {
         global $wpdb;
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        require_once \ABSPATH . 'wp-admin/includes/upgrade.php';
 
         $charset_collate = $wpdb->get_charset_collate();
 
         // Feed Metadata
-        dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_metadata (
+        \dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_metadata (
             feed_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
             last_fetched DATETIME DEFAULT NULL,
             fetch_interval INT DEFAULT 3600,
             fetch_count INT DEFAULT 0,
             last_error_date DATETIME DEFAULT NULL,
             last_error_message TEXT,
+            last_error TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) $charset_collate;");
 
         // Raw Items
-        dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_raw_items (
-            item_hash CHAR(32) PRIMARY KEY,
+        \dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_raw_items (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            item_hash CHAR(32) NOT NULL,
             feed_id BIGINT UNSIGNED NOT NULL,
             raw_content LONGTEXT,
             pub_date DATETIME,
             guid VARCHAR(255),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX (feed_id),
-            INDEX (pub_date)
+            INDEX (pub_date),
+            INDEX (item_hash),
+            UNIQUE KEY (item_hash, feed_id)
         ) $charset_collate;");
 
         // Errors
-        dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_errors (
+        \dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_errors (
             error_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             feed_id BIGINT UNSIGNED NOT NULL,
             error_code VARCHAR(32),
@@ -107,7 +113,8 @@ class SchemaManager {
             INDEX (created)
         ) $charset_collate;");
 
-        update_option(self::VERSION_OPTION, self::VERSION);
+        // Aktualisiere die Schemaversion in der Datenbank
+        \update_option(self::VERSION_OPTION, self::VERSION);
     }
 }
 
