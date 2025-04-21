@@ -66,13 +66,18 @@ class FeedHttpClient {
     /**
      * Output a console log message if verbose mode is enabled.
      *
-     * @param string $message The message to log.
+     * @param string|null $message The message to log.
      * @param string $type    The type of log message (log, info, warn, error, group, groupEnd).
      * @return void
      */
-    private function consoleLog(string $message, string $type = 'log'): void {
+    private function consoleLog(?string $message, string $type = 'log'): void {
         if (!$this->verbose_console) {
             return;
+        }
+
+        // Behandle NULL-Werte
+        if ($message === null) {
+            $message = '(null)';
         }
 
         $valid_types = ['log', 'info', 'warn', 'error', 'group', 'groupEnd'];
@@ -94,21 +99,24 @@ class FeedHttpClient {
     /**
      * Set the last error message
      * 
-     * @param string $error The error message
+     * @param string|null $error The error message
      * @return self
      */
-    private function set_last_error(string $error): self {
-        $this->last_error = $error;
+    private function set_last_error(?string $error): self {
+        $this->last_error = $error ?? 'Unbekannter Fehler';
         return $this;
     }
 
     /**
      * Prüft, ob eine URL zu socialmediaexaminer.com gehört
      * 
-     * @param string $url Die zu prüfende URL
+     * @param string|null $url Die zu prüfende URL
      * @return bool True, wenn die URL zu socialmediaexaminer.com gehört, sonst false
      */
-    private function isSocialMediaExaminerUrl(string $url): bool {
+    private function isSocialMediaExaminerUrl(?string $url): bool {
+        if ($url === null) {
+            return false;
+        }
         return strpos($url, 'socialmediaexaminer.com') !== false;
     }
     
