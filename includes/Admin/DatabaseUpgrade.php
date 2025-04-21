@@ -179,7 +179,7 @@ class DatabaseUpgrade {
             }
             
             // Aktualisiere die Schemaversion
-            \update_option('athena_ai_db_version', \AthenaAI\Repositories\SchemaManager::VERSION);
+            \update_option('athena_ai_db_version', '1.0.1'); // Verwende die aktuelle Schemaversion direkt
             
             // Verwerfe gepufferte Ausgabe
             ob_end_clean();
