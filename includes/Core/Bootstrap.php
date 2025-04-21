@@ -27,14 +27,14 @@ class Bootstrap {
      */
     public static function init(): void {
         // Plugin-Aktivierungs- und Deaktivierungshooks registrieren
-        register_activation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'activate']);
-        register_deactivation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'deactivate']);
+        \register_activation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'activate']);
+        \register_deactivation_hook(ATHENA_AI_PLUGIN_FILE, [self::class, 'deactivate']);
         
-        // Text-Domain laden
-        add_action('init', [self::class, 'load_textdomain']);
+        // Text-Domain laden - Wichtig: Nach init hook ausführen
+        \add_action('init', [self::class, 'load_textdomain'], 10);
         
         // Plugin-Komponenten initialisieren
-        add_action('plugins_loaded', [self::class, 'load_components']);
+        \add_action('plugins_loaded', [self::class, 'load_components']);
     }
     
     /**
@@ -48,7 +48,7 @@ class Bootstrap {
         $plugin->setup_capabilities();
         
         // Rewrite-Rules aktualisieren
-        flush_rewrite_rules();
+        \flush_rewrite_rules();
     }
     
     /**
@@ -61,7 +61,7 @@ class Bootstrap {
         CronScheduler::clear_feed_fetch();
         
         // Rewrite-Rules aktualisieren
-        flush_rewrite_rules();
+        \flush_rewrite_rules();
     }
     
     /**
@@ -70,10 +70,12 @@ class Bootstrap {
      * @return void
      */
     public static function load_textdomain(): void {
-        load_plugin_textdomain(
+        // Keine Prüfung auf init mehr notwendig, da wir bereits im init hook sind
+        // durch den add_action('init', ...) Aufruf
+        \load_plugin_textdomain(
             'athena-ai',
             false,
-            dirname(plugin_basename(ATHENA_AI_PLUGIN_FILE)) . '/languages'
+            \dirname(\plugin_basename(ATHENA_AI_PLUGIN_FILE)) . '/languages'
         );
     }
     
@@ -91,7 +93,7 @@ class Bootstrap {
         self::init_services();
         
         // Admin-Komponenten nur im Admin-Bereich initialisieren
-        if (is_admin()) {
+        if (\is_admin()) {
             AdminBootstrap::init();
         } else {
             // Frontend-spezifischen Code hier initialisieren
