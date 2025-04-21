@@ -466,7 +466,7 @@ class FeedService {
         
         if (!isset($result['pubDate']) && !isset($result['published']) && !isset($result['date'])) {
             // Default to current date if no date field exists
-            $result['pubDate'] = date('Y-m-d H:i:s');
+            $result['pubDate'] = \date('Y-m-d H:i:s');
         }
         
         return $result;
@@ -480,8 +480,16 @@ class FeedService {
      * @return bool Whether the processing was successful.
      */
     public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
-        // Set logger to verbose mode if required
-        // No need to set verbose mode on logger as we're handling it directly here
+        // Set verbose mode if required
+        if ($verbose_console) {
+            if (method_exists($this, 'setVerboseMode')) {
+                $this->setVerboseMode(true);
+            }
+            
+            if (method_exists($this->http_client, 'setVerboseMode')) {
+                $this->http_client->setVerboseMode(true);
+            }
+        }
         
         try {
             // Fetch the feed content
@@ -505,11 +513,11 @@ class FeedService {
                 $items = $this->convertXmlToArray($simple_xml);
             } else {
                 // Fallback: try to parse as JSON
-                $json_data = json_decode($content, true);
+                $json_data = \json_decode($content, true);
                 if (is_array($json_data) && !empty($json_data)) {
                     $items = $json_data;
                 } else if ($verbose_console) {
-                    echo '<script>console.error("Unable to process feed content format");</script>';
+                    echo '<script>console.error("Unable to process feed content format for ' . htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8') . '");</script>';
                 }
             }
             
