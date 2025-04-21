@@ -92,22 +92,22 @@ class Feed {
     /**
      * Set the last error message
      * 
-     * @param string $error The error message
+     * @param string|null $error The error message
      * @return self
      */
-    public function set_last_error(string $error): self {
-        $this->last_error = $error;
+    public function set_last_error(?string $error): self {
+        $this->last_error = $error ?? 'Unbekannter Fehler';
         return $this;
     }
     
     /**
      * Aktualisiert die Fehlermeldung im Objekt und in der Datenbank
      *
-     * @param string $error Die Fehlermeldung
+     * @param string|null $error Die Fehlermeldung
      * @return self
      */
-    public function update_feed_error(string $error): self {
-        $this->set_last_error($error);
+    public function update_feed_error(?string $error): self {
+        $this->set_last_error($error ?? 'Unbekannter Fehler');
         
         // Wenn eine Post-ID vorhanden ist, aktualisiere den Fehler in der Datenbank
         if ($this->post_id) {

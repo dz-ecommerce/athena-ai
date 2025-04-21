@@ -126,10 +126,10 @@ class FeedHttpClient {
      * Diese Methode umgeht die Feed-Blockierung, indem sie die Hauptseite abruft
      * und die Artikel direkt aus dem HTML extrahiert.
      * 
-     * @param string $url Die Feed-URL
+     * @param string|null $url Die Feed-URL
      * @return string|false Der Feed-Inhalt oder false bei Fehler
      */
-    private function fetchSocialMediaExaminerFeed(string $url): string|false {
+    private function fetchSocialMediaExaminerFeed(?string $url): string|false {
         $this->consoleLog("Using specialized method for Social Media Examiner feed", 'info');
         
         // Da wir Probleme mit dem Feed-Abruf haben, erstellen wir einen simulierten Feed
@@ -294,12 +294,23 @@ class FeedHttpClient {
     /**
      * Konvertiert HTML von socialmediaexaminer.com in einen XML-Feed
      * 
-     * @param string $html Der HTML-Inhalt
-     * @param string $base_url Die Basis-URL für relative Links
+     * @param string|null $html Der HTML-Inhalt
+     * @param string|null $base_url Die Basis-URL für relative Links
      * @return string Der generierte XML-Feed
      */
-    private function convertHtmlToFeed(string $html, string $base_url): string {
+    private function convertHtmlToFeed(?string $html, ?string $base_url): string {
         $this->consoleLog("Converting HTML to feed format", 'info');
+        
+        // Behandle NULL-Werte
+        if ($html === null) {
+            $this->consoleLog("HTML content is null, using empty string", 'warn');
+            $html = '';
+        }
+        
+        if ($base_url === null) {
+            $this->consoleLog("Base URL is null, using default", 'warn');
+            $base_url = 'https://www.socialmediaexaminer.com';
+        }
         
         // Erstelle ein DOMDocument-Objekt
         $dom = new \DOMDocument();
@@ -325,7 +336,7 @@ class FeedHttpClient {
         // Erstelle einen XML-Feed im RSS-Format
         $feed = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>';
         $feed .= '<title>Social Media Examiner</title>';
-        $feed .= '<link>' . htmlspecialchars($base_url) . '</link>';
+        $feed .= '<link>' . htmlspecialchars($base_url ?? 'https://www.socialmediaexaminer.com') . '</link>';
         $feed .= '<description>Social Media Marketing Articles</description>';
         
         $count = 0;
@@ -381,11 +392,11 @@ class FeedHttpClient {
     /**
      * Fetch content from a URL.
      *
-     * @param string $url     The URL to fetch.
-     * @param array  $options Additional options to merge with defaults.
+     * @param string|null $url     The URL to fetch.
+     * @param array|null  $options Additional options to merge with defaults.
      * @return string|false The fetched content or false on failure.
      */
-    public function fetch(string $url, array $options = []) {
+    public function fetch(?string $url, ?array $options = []) {
         // Reset last error
         $this->set_last_error('');
         
@@ -393,7 +404,7 @@ class FeedHttpClient {
         $this->consoleLog("Fetching feed from URL: {$url}", 'info');
 
         // Basic URL validation
-        if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+        if ($url === null || empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
             $error = "Invalid URL format: {$url}";
             $this->set_last_error($error);
             $this->consoleLog($error, 'error');
@@ -406,7 +417,7 @@ class FeedHttpClient {
         }
         
         // Merge default options with provided options
-        $request_options = array_merge($this->default_options, $options);
+        $request_options = array_merge($this->default_options, $options ?? []);
         
         // Add random delay to avoid rate limiting (between 1-3 seconds)
         usleep(mt_rand(1000000, 3000000));
@@ -478,11 +489,11 @@ class FeedHttpClient {
     /**
      * Fallback fetch implementation using cURL
      * 
-     * @param string $url     The URL to fetch
-     * @param array  $options Request options
+     * @param string|null $url     The URL to fetch
+     * @param array|null  $options Request options
      * @return string|false The fetched content or false on failure
      */
-    private function curlFetch(string $url, array $options = []): string|false {
+    private function curlFetch(?string $url, ?array $options = []): string|false {
         if (!function_exists('curl_init')) {
             $error = "cURL is not available";
             $this->set_last_error($error);

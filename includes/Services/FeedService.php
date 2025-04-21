@@ -105,13 +105,23 @@ class FeedService {
     /**
      * Verarbeitet den Feed-Inhalt und extrahiert die Items.
      *
-     * @param string $content Feed-Inhalt.
-     * @param Feed   $feed    Feed-Objekt für Fehlerbehandlung.
+     * @param string|null $content Feed-Inhalt.
+     * @param Feed        $feed    Feed-Objekt für Fehlerbehandlung.
      *
      * @return array|false Array mit Feed-Items oder false bei Fehler.
      */
-    private function processFeedContent(string $content, Feed $feed) {
+    private function processFeedContent(?string $content, Feed $feed) {
         $this->logger->info("Verarbeite Feed-Inhalt...");
+        
+        // Behandle NULL-Werte
+        if ($content === null) {
+            $error = "Feed-Inhalt ist null";
+            $this->logger->error($error);
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error($error);
+            }
+            return false;
+        }
         
         // Versuche, den Feed als XML zu parsen
         libxml_use_internal_errors(true);
@@ -526,10 +536,21 @@ class FeedService {
         $this->logger->info("Starte Abruf des Feeds: {$feed->get_url()}");
         
         try {
-            // Feed-Inhalt abrufen
-            $content = $this->http_client->fetch($feed->get_url());
+            // Feed-URL abrufen und NULL-Werte behandeln
+            $url = $feed->get_url();
+            if ($url === null) {
+                $error = 'Feed-URL ist null';
+                if (method_exists($feed, 'update_feed_error')) {
+                    $feed->update_feed_error($error);
+                }
+                $this->logger->error("Feed-Abruf fehlgeschlagen: {$error}");
+                return false;
+            }
             
-            if (empty($content)) {
+            // Feed-Inhalt abrufen
+            $content = $this->http_client->fetch($url);
+            
+            if ($content === null || empty($content)) {
                 $error = 'Leerer Feed-Inhalt erhalten';
                 if (method_exists($this->http_client, 'get_last_error')) {
                     $error = $this->http_client->get_last_error() ?: $error;
@@ -590,7 +611,7 @@ class FeedService {
         } catch (\Exception $e) {
             // Handle any exceptions that might occur
             if ($verbose_console) {
-                $error_message = $this->escapeJs($e->getMessage());
+                $error_message = $this->escapeJs($e->getMessage() ?? 'Unbekannter Fehler');
                 echo '<script>console.error("Error processing feed: ' . $error_message . '");</script>';
             }
             
@@ -606,10 +627,13 @@ class FeedService {
      * Gibt das aktuelle Datum und die Uhrzeit im MySQL-Format zurück.
      * Fallback für die WordPress-Funktion current_time().
      *
-     * @param string $type Format-Typ (default: 'mysql').
+     * @param string|null $type Format-Typ (default: 'mysql').
      * @return string Formatiertes Datum und Uhrzeit.
      */
-    private function getCurrentTime(string $type = 'mysql'): string {
+    private function getCurrentTime(?string $type = 'mysql'): string {
+        // Behandle NULL-Werte
+        $type = $type ?? 'mysql';
+        
         if (function_exists('current_time')) {
             return \current_time($type);
         }
@@ -623,10 +647,13 @@ class FeedService {
      * Fallback für die WordPress-Funktion wp_json_encode().
      *
      * @param mixed $data Zu kodierende Daten.
-     * @param int $options JSON-Kodierungsoptionen.
+     * @param int|null $options JSON-Kodierungsoptionen.
      * @return string|false JSON-String oder false bei Fehler.
      */
-    private function jsonEncode($data, int $options = 0) {
+    private function jsonEncode($data, ?int $options = 0) {
+        // Behandle NULL-Werte
+        $options = $options ?? 0;
+        
         if (function_exists('wp_json_encode')) {
             return \wp_json_encode($data, $options);
         }
