@@ -236,18 +236,33 @@ class FeedService {
         
         foreach ($items as $item) {
             // Skip items without required fields
-            if (empty($item['guid']) || (empty($item['link']) && empty($item['title']))) {
+            if (empty($item['guid']) && empty($item['id']) && empty($item['link'])) {
                 continue;
             }
             
-            // Generate a unique key for the item - preferring guid, falling back to link+title hash
-            $item_key = isset($item['guid']) ? \md5($item['guid']) : \md5(($item['link'] ?? '') . ($item['title'] ?? ''));
+            // Extract GUID with fallbacks
+            $guid = '';
+            if (isset($item['guid']) && !empty($item['guid'])) {
+                $guid = (string) $item['guid'];
+            } elseif (isset($item['id']) && !empty($item['id'])) {
+                $guid = (string) $item['id'];
+            } elseif (isset($item['link']) && !empty($item['link'])) {
+                $guid = (string) $item['link'];
+            } elseif (isset($item['title']) && !empty($item['title'])) {
+                $guid = 'title-' . \md5((string) $item['title']);
+            } else {
+                $guid = 'feed-item-' . \uniqid();
+            }
+            
+            // Generate hash for primary key
+            $item_hash = \md5($guid);
             
             // Check if the item already exists
             $exists = $wpdb->get_var(
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$items_table} WHERE item_key = %s",
-                    $item_key
+                    "SELECT COUNT(*) FROM {$items_table} WHERE item_hash = %s AND feed_id = %d",
+                    $item_hash,
+                    $feed_id
                 )
             );
             
@@ -255,32 +270,49 @@ class FeedService {
                 continue;
             }
             
-            // Format date properly
-            $pub_date = isset($item['pub_date']) ? $item['pub_date'] : date('Y-m-d H:i:s');
+            // Extract publication date with fallbacks
+            $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
+            if (isset($item['pubDate']) && !empty($item['pubDate'])) {
+                $pub_date = (string) $item['pubDate'];
+            } elseif (isset($item['published']) && !empty($item['published'])) {
+                $pub_date = (string) $item['published'];
+            } elseif (isset($item['date']) && !empty($item['date'])) {
+                $pub_date = (string) $item['date'];
+            }
             
-            // Prepare the data
-            $data = [
-                'feed_id' => $feed_id,
-                'item_key' => $item_key,
-                'title' => $item['title'] ?? '',
-                'link' => $item['link'] ?? '',
-                'pub_date' => $pub_date,
-                'raw_content' => json_encode($item, JSON_UNESCAPED_UNICODE),
-                'fetched_date' => date('Y-m-d H:i:s')
-            ];
+            // Try to format the date properly
+            try {
+                $date = new \DateTime($pub_date);
+                $pub_date = $date->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                $pub_date = function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s');
+            }
             
-            // Insert the item
+            // Prepare JSON content
+            $json_content = function_exists('wp_json_encode') ? \wp_json_encode($item, JSON_UNESCAPED_UNICODE) : json_encode($item, JSON_UNESCAPED_UNICODE);
+            if ($json_content === false) {
+                $this->logger->error("Failed to encode item JSON");
+                continue;
+            }
+            
+            // Insert the data
             $result = $wpdb->insert(
                 $items_table,
-                $data,
                 [
-                    '%d',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s',
-                    '%s'
+                    'item_hash' => $item_hash,
+                    'feed_id' => $feed_id,
+                    'guid' => $guid,
+                    'pub_date' => $pub_date,
+                    'raw_content' => $json_content,
+                    'created_at' => function_exists('current_time') ? \current_time('mysql') : date('Y-m-d H:i:s')
+                ],
+                [
+                    '%s', // item_hash
+                    '%d', // feed_id
+                    '%s', // guid
+                    '%s', // pub_date
+                    '%s', // raw_content
+                    '%s'  // created_at
                 ]
             );
             
@@ -297,5 +329,223 @@ class FeedService {
         return true;
     }
     
-
+    /**
+     * Convert SimpleXML object to array format
+     * 
+     * @param \SimpleXMLElement $xml The XML element to convert
+     * @return array The array of feed items
+     */
+    private function convertXmlToArray(\SimpleXMLElement $xml): array {
+        $items = [];
+        
+        // Different XML formats have items in different locations
+        // Try to detect RSS or Atom format
+        
+        // First check for RSS format (items are in <item> tags)
+        if (isset($xml->channel) && isset($xml->channel->item)) {
+            foreach ($xml->channel->item as $item) {
+                $items[] = $this->processRssItem($item);
+            }
+        } 
+        // Check for Atom format (items are in <entry> tags)
+        elseif (isset($xml->entry)) {
+            foreach ($xml->entry as $entry) {
+                $items[] = $this->processAtomEntry($entry);
+            }
+        }
+        // Try another RSS format variation
+        elseif (isset($xml->item)) {
+            foreach ($xml->item as $item) {
+                $items[] = $this->processRssItem($item);
+            }
+        }
+        // Try for custom XML formats (Hubspot, etc)
+        else {
+            // Last resort - try to find any element that looks like an item
+            $possibleItemTags = ['post', 'article', 'content', 'result', 'record'];
+            
+            foreach ($possibleItemTags as $tag) {
+                if (isset($xml->$tag)) {
+                    foreach ($xml->$tag as $item) {
+                        $items[] = $this->extractGenericItemData($item);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        return $items;
+    }
+    
+    /**
+     * Process an RSS item
+     * 
+     * @param \SimpleXMLElement $item The RSS item
+     * @return array The processed item data
+     */
+    private function processRssItem(\SimpleXMLElement $item): array {
+        $result = [];
+        
+        // Extract common RSS fields
+        $result['title'] = (string)($item->title ?? '');
+        $result['link'] = (string)($item->link ?? '');
+        $result['guid'] = (string)($item->guid ?? $item->link ?? '');
+        $result['pubDate'] = (string)($item->pubDate ?? $item->date ?? date('Y-m-d H:i:s'));
+        $result['description'] = (string)($item->description ?? '');
+        
+        // Handle namespaces and additional properties
+        $namespaces = $item->getNamespaces(true);
+        foreach ($namespaces as $prefix => $namespace) {
+            $nsData = $item->children($namespace);
+            foreach ($nsData as $key => $value) {
+                $nsKey = $prefix . ':' . $key;
+                $result[$nsKey] = (string)$value;
+            }
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Process an Atom entry
+     * 
+     * @param \SimpleXMLElement $entry The Atom entry
+     * @return array The processed entry data
+     */
+    private function processAtomEntry(\SimpleXMLElement $entry): array {
+        $result = [];
+        
+        // Extract common Atom fields
+        $result['title'] = (string)($entry->title ?? '');
+        $result['id'] = (string)($entry->id ?? '');
+        $result['published'] = (string)($entry->published ?? $entry->updated ?? date('Y-m-d H:i:s'));
+        $result['content'] = (string)($entry->content ?? '');
+        $result['summary'] = (string)($entry->summary ?? '');
+        
+        // Handle link
+        if (isset($entry->link)) {
+            foreach ($entry->link as $link) {
+                $rel = (string)$link['rel'];
+                if ($rel === 'alternate' || empty($rel)) {
+                    $result['link'] = (string)$link['href'];
+                    break;
+                }
+            }
+        }
+        
+        // Ensure we have a guid/id
+        if (empty($result['id']) && !empty($result['link'])) {
+            $result['id'] = $result['link'];
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Extract data from a generic XML item
+     * 
+     * @param \SimpleXMLElement $item The XML item
+     * @return array The extracted data
+     */
+    private function extractGenericItemData(\SimpleXMLElement $item): array {
+        $result = [];
+        
+        // Try to extract common fields regardless of the format
+        foreach ($item as $key => $value) {
+            $result[$key] = (string)$value;
+        }
+        
+        // Try to ensure we have required fields
+        if (!isset($result['guid']) && isset($result['id'])) {
+            $result['guid'] = $result['id'];
+        }
+        
+        if (!isset($result['guid']) && isset($result['link'])) {
+            $result['guid'] = $result['link'];
+        }
+        
+        if (!isset($result['pubDate']) && !isset($result['published']) && !isset($result['date'])) {
+            // Default to current date if no date field exists
+            $result['pubDate'] = date('Y-m-d H:i:s');
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Fetch and process a feed.
+     * 
+     * @param Feed $feed The feed to process.
+     * @param bool $verbose_console Whether to output verbose console logs.
+     * @return bool Whether the processing was successful.
+     */
+    public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
+        // Set logger to verbose mode if required
+        // No need to set verbose mode on logger as we're handling it directly here
+        
+        try {
+            // Fetch the feed content
+            $content = $this->http_client->fetch($feed->get_url());
+            
+            if (empty($content)) {
+                // Handle error case: no content
+                if ($verbose_console) {
+                    $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
+                    echo '<script>console.error("No content found for feed: ' . $url . '");</script>';
+                }
+                return false;
+            }
+            
+            // Determine content type and process accordingly
+            $items = [];
+            // Try to process the content as XML feed
+            $simple_xml = @simplexml_load_string($content);
+            if ($simple_xml) {
+                // Convert SimpleXML to array
+                $items = $this->convertXmlToArray($simple_xml);
+            } else {
+                // Fallback: try to parse as JSON
+                $json_data = json_decode($content, true);
+                if (is_array($json_data) && !empty($json_data)) {
+                    $items = $json_data;
+                } else if ($verbose_console) {
+                    echo '<script>console.error("Unable to process feed content format");</script>';
+                }
+            }
+            
+            if (empty($items)) {
+                if ($verbose_console) {
+                    $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
+                    echo '<script>console.warn("No items found in feed: ' . $url . '");</script>';
+                }
+                
+                // Still update the feed metadata to record the attempt
+                $this->repository->update_feed_metadata($feed, 0);
+                return true; // Consider this a success with zero items
+            }
+            
+            // Save the items
+            $result = $this->saveItems($feed, $items);
+            
+            if ($verbose_console) {
+                $url = function_exists('esc_js') ? \esc_js($feed->get_url()) : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
+                echo '<script>console.info("Processed feed: ' . $url . '");</script>';
+            }
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            // Handle any exceptions that might occur
+            if ($verbose_console) {
+                $error_message = function_exists('esc_js') ? \esc_js($e->getMessage()) : htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+                echo '<script>console.error("Error processing feed: ' . $error_message . '");</script>';
+            }
+            
+            // Log the error if error handler is available
+            if (isset($this->error_handler) && method_exists($this->error_handler, 'logError')) {
+                $this->error_handler->logError($feed, 'process_exception', $e->getMessage());
+            }
+            return false;
+        }
+    }
 }
