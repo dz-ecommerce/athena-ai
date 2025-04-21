@@ -100,14 +100,14 @@ class FeedItemsList extends \WP_List_Table {
         $actions = [
             'view' => sprintf(
                 '<a href="%s" target="_blank">%s</a>',
-                esc_url(json_decode($item['raw_content'])->link ?? '#'),
+                esc_url(isset($item['raw_content']) && is_string($item['raw_content']) ? (json_decode($item['raw_content'])->link ?? '#') : '#'),
                 __('View Original', 'athena-ai')
             ),
         ];
 
         return sprintf(
             '<strong>%1$s</strong> %2$s',
-            esc_html($title),
+            esc_html($title ?? ''),
             $this->row_actions($actions)
         );
     }
@@ -115,8 +115,8 @@ class FeedItemsList extends \WP_List_Table {
     public function column_feed_url($item): string {
         return sprintf(
             '<a href="%1$s" target="_blank">%2$s</a>',
-            esc_url($item['feed_url']),
-            esc_html(wp_parse_url($item['feed_url'], PHP_URL_HOST))
+            esc_url(isset($item['feed_url']) && is_string($item['feed_url']) ? $item['feed_url'] : ''),
+            esc_html(isset($item['feed_url']) && is_string($item['feed_url']) ? wp_parse_url($item['feed_url'], PHP_URL_HOST) : '')
         );
     }
 
@@ -124,8 +124,8 @@ class FeedItemsList extends \WP_List_Table {
         $timestamp = strtotime($item['pub_date']);
         return sprintf(
             '<span title="%1$s">%2$s</span>',
-            esc_attr(date('Y-m-d H:i:s', $timestamp)),
-            esc_html(human_time_diff($timestamp) . ' ' . __('ago', 'athena-ai'))
+            esc_attr(date('Y-m-d H:i:s', $timestamp ?: time())),
+            esc_html(human_time_diff($timestamp ?: time()) . ' ' . __('ago', 'athena-ai'))
         );
     }
 
@@ -156,7 +156,7 @@ class FeedItemsList extends \WP_List_Table {
             </div>
 
             <form method="get">
-                <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page'] ?? ''); ?>" />
+                <input type="hidden" name="page" value="<?php echo esc_attr(isset($_REQUEST['page']) && is_string($_REQUEST['page']) ? $_REQUEST['page'] : ''); ?>" />
                 <?php $list_table->display(); ?>
             </form>
         </div>

@@ -77,6 +77,8 @@ class FeedFetcher {
             echo '<html><head></head><body>';
             echo $console_scripts;
             echo '<p>' . \__('Feed fetch completed. Redirecting in 3 seconds...', 'athena-ai') . '</p>';
+            // Stelle sicher, dass $redirect_url ein String ist
+            $redirect_url = is_string($redirect_url) ? $redirect_url : '';
             echo '<script>setTimeout(function(){ window.location.href = "' . \esc_url($redirect_url) . '"; }, 3000);</script>';
             echo '</body></html>';
             exit;

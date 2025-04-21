@@ -338,7 +338,10 @@ class DebugPage {
         $error_count = 0;
 
         foreach ($feeds as $feed) {
-            echo '<script>console.info("Verarbeite Feed: ' . esc_js($feed->get_url()) . '");</script>';
+            // Stelle sicher, dass get_url() keinen NULL-Wert zurückgibt
+            $feed_url = $feed->get_url();
+            $feed_url = is_string($feed_url) ? $feed_url : '';
+            echo '<script>console.info("Verarbeite Feed: ' . \esc_js($feed_url) . '");</script>';
             
             try {
                 // Versuche, den Feed abzurufen und zu verarbeiten
@@ -346,17 +349,30 @@ class DebugPage {
                 
                 if ($result) {
                     $success_count++;
-                    echo '<script>console.info("Feed erfolgreich verarbeitet: ' . esc_js($feed->get_url()) . '");</script>';
+                    // Stelle sicher, dass get_url() keinen NULL-Wert zurückgibt
+                    $feed_url = $feed->get_url();
+                    $feed_url = is_string($feed_url) ? $feed_url : '';
+                    echo '<script>console.info("Feed erfolgreich verarbeitet: ' . \esc_js($feed_url) . '");</script>';
                 } else {
                     $error_count++;
-                    echo '<script>console.error("Fehler beim Verarbeiten des Feeds: ' . esc_js($feed->get_url()) . ' - ' . esc_js($feed->get_last_error()) . '");</script>';
+                    // Stelle sicher, dass get_url() und get_last_error() keine NULL-Werte zurückgeben
+                    $feed_url = $feed->get_url();
+                    $feed_url = is_string($feed_url) ? $feed_url : '';
+                    $last_error = $feed->get_last_error();
+                    $last_error = is_string($last_error) ? $last_error : '';
+                    echo '<script>console.error("Fehler beim Verarbeiten des Feeds: ' . \esc_js($feed_url) . ' - ' . \esc_js($last_error) . '");</script>';
                     
                     // Versuche, mehr Informationen über den Fehler zu bekommen
                     $this->debug_feed_fetch($feed);
                 }
             } catch (\Exception $e) {
                 $error_count++;
-                echo '<script>console.error("Exception beim Verarbeiten des Feeds: ' . esc_js($feed->get_url()) . ' - ' . esc_js($e->getMessage()) . '");</script>';
+                // Stelle sicher, dass get_url() und getMessage() keine NULL-Werte zurückgeben
+                $feed_url = $feed->get_url();
+                $feed_url = is_string($feed_url) ? $feed_url : '';
+                $error_message = $e->getMessage();
+                $error_message = is_string($error_message) ? $error_message : '';
+                echo '<script>console.error("Exception beim Verarbeiten des Feeds: ' . \esc_js($feed_url) . ' - ' . \esc_js($error_message) . '");</script>';
             }
         }
 
@@ -391,7 +407,10 @@ class DebugPage {
             return;
         }
 
-        echo '<script>console.info("Starte Abruf des Feeds: ' . esc_js($feed->get_url()) . '");</script>';
+        // Stelle sicher, dass get_url() keinen NULL-Wert zurückgibt
+        $feed_url = $feed->get_url();
+        $feed_url = is_string($feed_url) ? $feed_url : '';
+        echo '<script>console.info("Starte Abruf des Feeds: ' . \esc_js($feed_url) . '");</script>';
 
         try {
             // Versuche, den Feed abzurufen und zu verarbeiten
@@ -469,7 +488,10 @@ class DebugPage {
      * @return void
      */
     private function debug_feed_fetch(Feed $feed): void {
-        echo '<script>console.info("Starte detailliertes Debugging für Feed: ' . esc_js($feed->get_url()) . '");</script>';
+        // Stelle sicher, dass get_url() keinen NULL-Wert zurückgibt
+        $feed_url = $feed->get_url();
+        $feed_url = is_string($feed_url) ? $feed_url : '';
+        echo '<script>console.info("Starte detailliertes Debugging für Feed: ' . \esc_js($feed_url) . '");</script>';
 
         // Erstelle einen HTTP-Client
         $http_client = new FeedHttpClient();
@@ -492,7 +514,9 @@ class DebugPage {
                 } else {
                     $preview = '';
                 }
-                echo '<script>console.info("Inhalt-Vorschau: ' . esc_js($preview) . '...");</script>';
+                // Stelle sicher, dass $preview ein String ist
+                $preview = is_string($preview) ? $preview : '';
+                echo '<script>console.info("Inhalt-Vorschau: ' . \esc_js($preview) . '...");</script>';
                 
                 // Versuche, den Inhalt zu parsen
                 echo '<script>console.info("Versuche, Feed-Inhalt zu parsen...");</script>';
