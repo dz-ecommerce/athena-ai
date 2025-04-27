@@ -1,73 +1,67 @@
 <?php
 /**
- * SafetyWrapper - Eine zentrale Klasse zur Vermeidung von PHP 8 Deprecated-Warnungen
+ * Zentrale Wrapper-Klasse für sichere WordPress-Funktionen.
  *
  * @package AthenaAI\Core
  */
 
 namespace AthenaAI\Core;
 
-use AthenaAI\Helpers\StringHelper;
 use AthenaAI\Helpers\UrlHelper;
+use AthenaAI\Helpers\StringHelper;
 
 /**
- * SafetyWrapper
- * 
- * Diese Klasse bietet statische Wrapper-Methoden für WordPress-Funktionen,
- * die null-Werte erhalten könnten, und verhindert dadurch PHP 8 Deprecated-Warnungen.
- * 
- * @since 1.0.0
+ * SafetyWrapper bietet zentrale statische Methoden für alle kritischen WordPress-Funktionen,
+ * um NULL-Werte abzufangen und PHP 8 Deprecated-Warnungen zu vermeiden.
  */
 class SafetyWrapper {
-    
     /**
-     * Sichere Version von esc_url
+     * Sichere Version von esc_url, die NULL-Werte abfängt.
      *
-     * @param mixed $url Die URL, die bereinigt werden soll
-     * @return string Die bereinigte URL
+     * @param string|null $url Die URL, die escaped werden soll.
+     * @return string Die escaped URL oder ein leerer String, wenn $url null ist.
      */
     public static function esc_url($url): string {
         return UrlHelper::safe_esc_url($url);
     }
     
     /**
-     * Sichere Version von esc_url_raw
+     * Sichere Version von esc_url_raw, die NULL-Werte abfängt.
      *
-     * @param mixed $url Die URL, die bereinigt werden soll
-     * @return string Die bereinigte URL
+     * @param string|null $url Die URL, die escaped werden soll.
+     * @return string Die escaped URL oder ein leerer String, wenn $url null ist.
      */
     public static function esc_url_raw($url): string {
         return UrlHelper::safe_esc_url_raw($url);
     }
     
     /**
-     * Sichere Version von esc_attr
+     * Sichere Version von esc_attr, die NULL-Werte abfängt.
      *
-     * @param mixed $text Der Text, der bereinigt werden soll
-     * @return string Der bereinigte Text
+     * @param string|null $text Der Text, der escaped werden soll.
+     * @return string Der escaped Text oder ein leerer String, wenn $text null ist.
      */
     public static function esc_attr($text): string {
         return StringHelper::safe_esc_attr($text);
     }
     
     /**
-     * Sichere Version von esc_html
+     * Sichere Version von esc_html, die NULL-Werte abfängt.
      *
-     * @param mixed $text Der Text, der bereinigt werden soll
-     * @return string Der bereinigte Text
+     * @param string|null $text Der Text, der escaped werden soll.
+     * @return string Der escaped Text oder ein leerer String, wenn $text null ist.
      */
     public static function esc_html($text): string {
         return StringHelper::safe_esc_html($text);
     }
     
     /**
-     * Sichere Version von esc_js
+     * Sichere Version von esc_js, die NULL-Werte abfängt.
      *
-     * @param mixed $text Der Text, der für JavaScript bereinigt werden soll
-     * @return string Der bereinigte Text
+     * @param string|null $text Der Text, der für JavaScript escaped werden soll.
+     * @return string Der escaped Text oder ein leerer String, wenn $text null ist.
      */
     public static function esc_js($text): string {
-        // Prüfe auf null-Wert
         if ($text === null) {
             return '';
         }
@@ -78,17 +72,16 @@ class SafetyWrapper {
         }
         
         // WordPress esc_js verwenden, falls verfügbar
-        if (function_exists('\\esc_js')) {
+        if (function_exists('esc_js')) {
             return \esc_js($text);
         }
         
-        // Einfache Fallback-Implementierung
-        $text = str_replace(["\r", "\n", '</', "'", '"'], ['\\r', '\\n', '<\\/', "\\'", '\\"'], $text);
-        return $text;
+        // Einfache Fallback-Implementierung - unsicher, aber besser als nichts
+        return addslashes($text);
     }
     
     /**
-     * Sichere Version von sanitize_text_field
+     * Sichere Version von sanitize_text_field, die NULL-Werte abfängt.
      *
      * @param mixed $text Der Text, der bereinigt werden soll
      * @return string Der bereinigte Text
@@ -115,7 +108,7 @@ class SafetyWrapper {
         }
         
         // WordPress wp_kses_post verwenden, falls verfügbar
-        if (function_exists('\\wp_kses_post')) {
+        if (function_exists('wp_kses_post')) {
             return \wp_kses_post($content);
         }
         

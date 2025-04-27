@@ -97,7 +97,9 @@ function get_feed_item_thumbnail($item, $feed_link) {
     if ($thumbnail) {
         // Convert relative URLs to absolute
         if (!str_starts_with($thumbnail, 'http')) {
-            $parsed_url = wp_parse_url($feed_link);
+            // Sicherstellen, dass feed_link kein null ist, bevor wp_parse_url aufgerufen wird
+            $safe_feed_link = ($feed_link === null) ? '' : $feed_link;
+            $parsed_url = \AthenaAI\Core\SafetyWrapper::wp_parse_url($safe_feed_link);
             if ($parsed_url && isset($parsed_url['scheme'], $parsed_url['host'])) {
                 $base_url = $parsed_url['scheme'] . '://' . $parsed_url['host'];
                 
@@ -111,7 +113,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
             }
         }
         
-        return esc_url($thumbnail);
+        return \AthenaAI\Core\SafetyWrapper::esc_url($thumbnail);
     }
     
     return '';
@@ -188,8 +190,8 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                                             <div class="feed-item-content">
                                                                 <?php if ($thumbnail): ?>
                                                                 <div class="feed-thumbnail">
-                                                                    <img src="<?php echo esc_url($thumbnail); ?>" 
-                                                                         alt="<?php echo esc_attr($item->get_title()); ?>"
+                                                                    <img src="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url($thumbnail); ?>" 
+                                                                         alt="<?php echo \AthenaAI\Core\SafetyWrapper::esc_attr($item->get_title()); ?>"
                                                                          loading="lazy"
                                                                          crossorigin="anonymous"
                                                                          onerror="this.style.display='none'; console.log('Failed to load image:', this.src);"
@@ -198,8 +200,8 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                                                 <?php endif; ?>
                                                                 <div class="feed-text">
                                                                     <strong>
-                                                                        <a href="<?php echo esc_url($item->get_permalink()); ?>" target="_blank">
-                                                                            <?php echo esc_html($item->get_title()); ?>
+                                                                        <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url($item->get_permalink()); ?>" target="_blank">
+                                                                            <?php echo \AthenaAI\Core\SafetyWrapper::esc_html($item->get_title()); ?>
                                                                             <span class="dashicons dashicons-external"></span>
                                                                         </a>
                                                                     </strong>

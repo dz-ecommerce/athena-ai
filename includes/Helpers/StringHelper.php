@@ -48,6 +48,69 @@ class StringHelper {
         return strpos($haystack, $needle, $offset);
     }
     
+
+    
+    /**
+     * Sichere Version von add_query_arg, die mit null-Werten umgehen kann
+     * 
+     * @param mixed $key Entweder ein Schlüssel oder ein Array mit Schlüssel-Wert-Paaren
+     * @param mixed $value Der Wert zum Hinzufügen, oder URL wenn $key ein Array ist
+     * @param mixed $url Die URL, an die Query-Parameter angehängt werden sollen
+     * @return string Die modifizierte URL
+     */
+    public static function safe_add_query_arg($key, $value = null, $url = null) {
+        // Wenn alle Parameter null sind
+        if ($key === null && $value === null && $url === null) {
+            return '';
+        }
+        
+        // Spezialfall, wenn $key ein Array ist und $url === null
+        if (is_array($key) && $url === null) {
+            // $value ist hier die URL
+            if (function_exists('add_query_arg')) {
+                return \add_query_arg($key, $value === null ? '' : $value);
+            }
+            return $value === null ? '' : $value; // Fallback
+        }
+        
+        // Null-Werte für Schlüssel und Wert in leere Strings umwandeln
+        $key = $key === null ? '' : $key;
+        $value = $value === null ? '' : $value;
+        $url = $url === null ? '' : $url;
+        
+        // Standard add_query_arg verwenden mit nun sicheren Werten
+        if (function_exists('add_query_arg')) {
+            return \add_query_arg($key, $value, $url);
+        }
+        
+        // Einfacher Fallback für den Fall, dass add_query_arg nicht verfügbar ist
+        $url = parse_url($url);
+        $query = isset($url['query']) ? $url['query'] : '';
+        parse_str($query, $query_args);
+        $query_args[$key] = $value;
+        $url['query'] = http_build_query($query_args);
+        return self::build_url($url);
+    }
+    
+    /**
+     * Hilfsmethode zum Aufbau einer URL aus parse_url Komponenten
+     *
+     * @param array $url Die URL-Komponenten aus parse_url
+     * @return string Die aufgebaute URL
+     */
+    private static function build_url(array $url): string {
+        $scheme   = isset($url['scheme']) ? $url['scheme'] . '://' : '';
+        $host     = isset($url['host']) ? $url['host'] : '';
+        $port     = isset($url['port']) ? ':' . $url['port'] : '';
+        $user     = isset($url['user']) ? $url['user'] : '';
+        $pass     = isset($url['pass']) ? ':' . $url['pass']  : '';
+        $pass     = ($user || $pass) ? "$pass@" : '';
+        $path     = isset($url['path']) ? $url['path'] : '';
+        $query    = isset($url['query']) ? '?' . $url['query'] : '';
+        $fragment = isset($url['fragment']) ? '#' . $url['fragment'] : '';
+        return "$scheme$user$pass$host$port$path$query$fragment";
+    }
+    
     /**
      * Sichere Version von str_replace, die mit null-Werten umgehen kann
      *
@@ -116,7 +179,7 @@ class StringHelper {
         }
         
         // WordPress esc_attr verwenden, falls verfügbar
-        if (function_exists('\\esc_attr')) {
+        if (function_exists('esc_attr')) {
             return \esc_attr($text);
         }
         
@@ -142,7 +205,7 @@ class StringHelper {
         }
         
         // WordPress esc_html verwenden, falls verfügbar
-        if (function_exists('\\esc_html')) {
+        if (function_exists('esc_html')) {
             return \esc_html($text);
         }
         
@@ -168,7 +231,7 @@ class StringHelper {
         }
         
         // WordPress sanitize_text_field verwenden, falls verfügbar
-        if (function_exists('\\sanitize_text_field')) {
+        if (function_exists('sanitize_text_field')) {
             return \sanitize_text_field($text);
         }
         
