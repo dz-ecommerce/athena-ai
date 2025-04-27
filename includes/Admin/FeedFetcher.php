@@ -563,6 +563,7 @@ class FeedFetcher {
         // Prüfen, ob die Tabelle existiert
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'") === $wpdb->prefix . 'feed_raw_items';
         
+        // Wenn die Tabelle nicht existiert, erstellen wir sie mit der korrekten Struktur
         if (!$table_exists) {
             // Tabelle existiert nicht, daher müssen wir sie erstellen
             if ($logger) {
@@ -578,12 +579,15 @@ class FeedFetcher {
             
             $charset_collate = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE {$wpdb->prefix}feed_raw_items (
-                item_hash CHAR(32) PRIMARY KEY,
+                id BIGINT UNSIGNED AUTO_INCREMENT,
+                item_hash CHAR(32) NOT NULL,
                 feed_id BIGINT UNSIGNED NOT NULL,
                 raw_content LONGTEXT,
                 pub_date DATETIME,
                 guid VARCHAR(255),
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY (item_hash),
                 INDEX (feed_id),
                 INDEX (pub_date)
             ) $charset_collate;";
@@ -591,12 +595,12 @@ class FeedFetcher {
             \dbDelta($sql);
             
             if ($logger) {
-                $logger->info('Created feed_raw_items table');
+                $logger->info('Created feed_raw_items table with correct structure');
             }
             return;
         }
         
-        // Alle Spalten abrufen, um den aktuellen Zustand der Tabelle zu prüfen
+        // Die Tabelle existiert, wir prüfen die Spalten
         $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_raw_items");
         
         if ($columns === false || $columns === null) {
@@ -612,38 +616,12 @@ class FeedFetcher {
             $logger->debug('Current feed_raw_items table columns: ' . implode(', ', $column_names));
         }
         
-        // Prüfen und Hinzufügen der item_hash-Spalte, die in den Fehlermeldungen fehlt
-        if (!in_array('item_hash', $column_names)) {
-            // Wir müssen prüfen, ob die Tabelle bereits Daten enthält
-            $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        // Prüfen, ob die ID-Spalte existiert, falls nicht, fügen wir sie hinzu
+        if (!in_array('id', $column_names)) {
+            // Wir müssen eine ID-Spalte hinzufügen
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN id BIGINT UNSIGNED AUTO_INCREMENT FIRST");
             
-            if ($count > 0 && $logger) {
-                // Use error or info method instead of warning if warning is not available
-                $logger->info('feed_raw_items table already contains data. Adding item_hash column and generating hash values for existing records.');
-            }
-            
-            // Zuerst fügen wir die Spalte hinzu, ohne sie als Primärschlüssel zu definieren
-            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN item_hash CHAR(32)");
-            
-            if ($result === false) {
-                if ($logger) {
-                    $logger->error('Failed to add item_hash column to feed_raw_items table. Error: ' . $wpdb->last_error);
-                }
-                return;
-            }
-            
-            // Wenn Daten vorhanden sind, generieren wir Hash-Werte für bestehende Einträge
-            if ($count > 0) {
-                // Wir verwenden eine Kombination aus feed_id und guid als Basis für den Hash
-                $wpdb->query("UPDATE {$wpdb->prefix}feed_raw_items SET item_hash = MD5(CONCAT(feed_id, '-', guid)) WHERE item_hash IS NULL");
-                
-                if ($logger) {
-                    $logger->info('Generated hash values for existing feed items');
-                }
-            }
-            
-            // Jetzt machen wir die Spalte zum Primärschlüssel, wenn möglich
-            // Zuerst müssen wir prüfen, ob es einen bestehenden Primärschlüssel gibt
+            // Prüfen, ob es einen bestehenden Primärschlüssel gibt
             $primary_key = $wpdb->get_results("SHOW KEYS FROM {$wpdb->prefix}feed_raw_items WHERE Key_name = 'PRIMARY'");
             
             if (!empty($primary_key)) {
@@ -655,29 +633,78 @@ class FeedFetcher {
                 }
             }
             
-            // Jetzt setzen wir item_hash als Primärschlüssel
-            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD PRIMARY KEY (item_hash)");
+            // Jetzt setzen wir id als Primärschlüssel
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD PRIMARY KEY (id)");
             
             if ($logger) {
-                $logger->info('Set item_hash as primary key for feed_raw_items table. Result: ' . ($result !== false ? 'success' : 'failed'));
+                $logger->info('Added id column and set it as primary key for feed_raw_items table');
+            }
+        }
+        
+        // Prüfen und Hinzufügen der item_hash-Spalte, die in den Fehlermeldungen fehlt
+        if (!in_array('item_hash', $column_names)) {
+            // Wir fügen die Spalte hinzu
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN item_hash CHAR(32) NOT NULL AFTER id");
+            
+            if ($result === false) {
+                if ($logger) {
+                    $logger->error('Failed to add item_hash column to feed_raw_items table. Error: ' . $wpdb->last_error);
+                }
+                return;
+            }
+            
+            // Wir müssen prüfen, ob die Tabelle bereits Daten enthält
+            $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+            
+            // Wenn Daten vorhanden sind, generieren wir Hash-Werte für bestehende Einträge
+            if ($count > 0) {
+                // Wir verwenden eine Kombination aus feed_id und guid als Basis für den Hash
+                $wpdb->query("UPDATE {$wpdb->prefix}feed_raw_items SET item_hash = MD5(CONCAT(feed_id, '-', guid)) WHERE item_hash = ''");
+                
+                if ($logger) {
+                    $logger->info('Generated hash values for existing feed items');
+                }
+            }
+            
+            // Wir fügen einen UNIQUE KEY für item_hash hinzu
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD UNIQUE KEY (item_hash)");
+            
+            if ($logger) {
+                $logger->info('Added UNIQUE KEY constraint for item_hash column');
             }
         }
         
         // Weitere Spalten prüfen und hinzufügen
         if (!in_array('raw_content', $column_names)) {
             $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN raw_content LONGTEXT");
+            
+            if ($logger) {
+                $logger->info('Added raw_content column to feed_raw_items table');
+            }
         }
         
         if (!in_array('pub_date', $column_names)) {
             $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN pub_date DATETIME");
+            
+            if ($logger) {
+                $logger->info('Added pub_date column to feed_raw_items table');
+            }
         }
         
         if (!in_array('guid', $column_names)) {
             $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN guid VARCHAR(255)");
+            
+            if ($logger) {
+                $logger->info('Added guid column to feed_raw_items table');
+            }
         }
         
         if (!in_array('created_at', $column_names)) {
             $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+            
+            if ($logger) {
+                $logger->info('Added created_at column to feed_raw_items table');
+            }
         }
     }
     
