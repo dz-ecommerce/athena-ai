@@ -131,7 +131,7 @@ class FeedItemsManager extends BaseAdmin {
         // Link zum Original
         if (!empty($link)) {
             $content .= '<div class="mb-4">';
-            $content .= '<a href="' . esc_url($link) . '" target="_blank" class="text-blue-600 hover:text-blue-800 underline">';
+            $content .= '<a href="' . \AthenaAI\Core\SafetyWrapper::esc_url($link) . '" target="_blank" class="text-blue-600 hover:text-blue-800 underline">';
             $content .= '<i class="fa-solid fa-external-link-alt mr-1"></i> ' . esc_html__('View Original', 'athena-ai');
             $content .= '</a>';
             $content .= '</div>';

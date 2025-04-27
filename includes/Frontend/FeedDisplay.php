@@ -313,7 +313,7 @@ class FeedDisplay {
                 
                 foreach ($feed['items'] as $item) {
                     echo '<li class="athena-feed-item">';
-                    echo '<a href="' . esc_url($item['permalink']) . '" target="_blank" rel="noopener">';
+                    echo '<a href="' . \AthenaAI\Core\SafetyWrapper::esc_url($item['permalink']) . '" target="_blank" rel="noopener">';
                     echo esc_html($item['title']);
                     echo '</a>';
                     

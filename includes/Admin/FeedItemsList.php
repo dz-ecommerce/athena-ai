@@ -100,7 +100,7 @@ class FeedItemsList extends \WP_List_Table {
         $actions = [
             'view' => sprintf(
                 '<a href="%s" target="_blank">%s</a>',
-                esc_url(isset($item['raw_content']) && is_string($item['raw_content']) ? (json_decode($item['raw_content'])->link ?? '#') : '#'),
+                \AthenaAI\Core\SafetyWrapper::esc_url(isset($item['raw_content']) && is_string($item['raw_content']) ? (json_decode($item['raw_content'])->link ?? '#') : '#'),
                 __('View Original', 'athena-ai')
             ),
         ];
@@ -115,7 +115,7 @@ class FeedItemsList extends \WP_List_Table {
     public function column_feed_url($item): string {
         return sprintf(
             '<a href="%1$s" target="_blank">%2$s</a>',
-            esc_url(isset($item['feed_url']) && is_string($item['feed_url']) ? $item['feed_url'] : ''),
+            \AthenaAI\Core\SafetyWrapper::esc_url(isset($item['feed_url']) && is_string($item['feed_url']) ? $item['feed_url'] : ''),
             esc_html(isset($item['feed_url']) && is_string($item['feed_url']) ? wp_parse_url($item['feed_url'], PHP_URL_HOST) : '')
         );
     }

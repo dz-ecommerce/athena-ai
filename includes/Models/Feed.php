@@ -332,68 +332,58 @@ class Feed {
      * Diese Methode verwendet den FeedService, um den Feed abzurufen und zu verarbeiten.
      * Sie aktualisiert auch die Feed-Metadaten in der Datenbank.
      * 
-     * @param bool $verbose_console Ob detaillierte Konsolenausgaben erzeugt werden sollen
-     * @param string|null $url Optional: Alternative URL zum Abrufen des Feeds
-     * @return bool Ob der Abruf und die Verarbeitung erfolgreich waren
-     */
-    public function fetch(bool $verbose_console = false, ?string $url = null): bool {
-        // Erstelle eine Instanz des FeedService
-        $feed_service = FeedService::create();
-        
-        // Aktiviere den Verbose-Modus, wenn gewünscht
-        if ($verbose_console && method_exists($feed_service, 'setVerboseMode')) {
-            $feed_service->setVerboseMode(true);
-        }
-        
         // Setze den letzten Fehler zurück
         $this->last_error = '';
         
         // Verwende die angegebene URL oder die Feed-URL
         $fetch_url = $url ?: $this->url;
         
-        // Prüfe, ob eine URL vorhanden ist
         if (empty($fetch_url)) {
             $error = 'Keine URL zum Abrufen angegeben';
             $this->update_feed_error($error);
             
             if ($verbose_console) {
-                echo '<script>console.error("' . \esc_js($error) . '");</script>';
+                // Verwende StringHelper für sichere esc_js-Aufrufe
+                $js_safe_url = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($safe_url);
+                echo '<script>console.info("Rufe Feed ab: ' . $js_safe_url . '");</script>';
             }
             
             return false;
         }
         
         try {
-            // Rufe den Feed ab und verarbeite ihn
-            $result = $feed_service->fetch_and_process_feed($this, $verbose_console);
+            // Feed-Service-Instanz erstellen und Feed abrufen
+            $service = new FeedService();
+            $success = $service->fetch_and_process_feed($this, $verbose_console);
             
-            // Wenn der Abruf erfolgreich war, aktualisiere den Zeitstempel
-            if ($result) {
-                $this->update_last_checked();
-                
-                if ($verbose_console) {
-                    echo '<script>console.info("Feed erfolgreich abgerufen und verarbeitet: ' . \esc_js($fetch_url) . '");</script>';
-                }
-            } else {
-                // Wenn der Abruf fehlgeschlagen ist und keine spezifische Fehlermeldung gesetzt wurde
-                if (empty($this->last_error)) {
-                    $this->update_feed_error('Fehler beim Abrufen oder Verarbeiten des Feeds');
+            // Fehler aus dem Service übernehmen
+            if (!$success) {
+                $error = $service->get_last_error();
+                if (!empty($error)) {
+                    $this->set_last_error($error);
+                } else {
+                    $this->set_last_error('Unbekannter Fehler beim Abrufen des Feeds');
                 }
                 
                 if ($verbose_console) {
-                    echo '<script>console.error("Fehler beim Abrufen des Feeds: ' . \esc_js($this->last_error) . '");</script>';
+                    // Verwende StringHelper für sichere esc_js-Aufrufe
+                    $error_message = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($this->get_last_error() ?? '');
+                    echo '<script>console.error("Feed konnte nicht abgerufen werden: ' . $error_message . '");</script>';
                 }
             }
             
-            return $result;
+            return $success;
         } catch (\Exception $e) {
             // Bei einer Exception, setze eine Fehlermeldung
             $error = 'Exception beim Abrufen des Feeds: ' . $e->getMessage();
             $this->update_feed_error($error);
             
             if ($verbose_console) {
-                echo '<script>console.error("' . \esc_js($error) . '");</script>';
-                echo '<script>console.error("Stack-Trace: ' . \esc_js($e->getTraceAsString()) . '");</script>';
+                // Verwende StringHelper für sichere esc_js-Aufrufe
+                $safe_error = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($error);
+                $safe_trace = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($e->getTraceAsString());
+                echo '<script>console.error("' . $safe_error . '");</script>';
+                echo '<script>console.error("Stack-Trace: ' . $safe_trace . '");</script>';
             }
             
             return false;

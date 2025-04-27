@@ -79,7 +79,7 @@ class FeedFetcher {
             echo '<p>' . \__('Feed fetch completed. Redirecting in 3 seconds...', 'athena-ai') . '</p>';
             // Stelle sicher, dass $redirect_url ein String ist
             $redirect_url = is_string($redirect_url) ? $redirect_url : '';
-            echo '<script>setTimeout(function(){ window.location.href = "' . \esc_url($redirect_url) . '"; }, 3000);</script>';
+            echo '<script>setTimeout(function(){ window.location.href = "' . \AthenaAI\Core\SafetyWrapper::esc_url($redirect_url) . '"; }, 3000);</script>';
             echo '</body></html>';
             exit;
         });
@@ -212,7 +212,7 @@ class FeedFetcher {
             if (!empty($results['details'])) {
                 echo '<script>console.group("Athena AI Feed Fetcher: Error Details");</script>';
                 foreach ($results['details'] as $index => $error_message) {
-                    echo '<script>console.error("Error ' . ($index + 1) . ': ' . \esc_js($error_message) . '");</script>';
+                    echo '<script>console.error("Error ' . ($index + 1) . ': ' . \AthenaAI\Core\SafetyWrapper::esc_js($error_message) . '");</script>';
                 }
                 echo '<script>console.groupEnd();</script>';
             }
@@ -245,7 +245,7 @@ class FeedFetcher {
             if (!self::ensure_feed_metadata_exists($feed_post->ID)) {
                 $logger->error('Failed to ensure feed metadata for feed ID ' . $feed_post->ID);
                 if ($verbose_console) {
-                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to ensure feed metadata for feed: ' . \esc_js($feed_post->post_title) . '");</script>';
+                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to ensure feed metadata for feed: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . '");</script>';
                 }
                 $result['error']++;
                 $result['details'][] = 'Failed to ensure feed metadata for feed: ' . $feed_post->post_title;
@@ -258,7 +258,7 @@ class FeedFetcher {
             if (empty($feed_url)) {
                 $logger->error('Feed URL is empty for feed ID ' . $feed_post->ID);
                 if ($verbose_console) {
-                    echo '<script>console.error("Athena AI Feed Fetcher: Feed URL is empty for feed: ' . \esc_js($feed_post->post_title) . '");</script>';
+                    echo '<script>console.error("Athena AI Feed Fetcher: Feed URL is empty for feed: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . '");</script>';
                 }
                 $result['error']++;
                 $result['details'][] = 'Feed URL is empty for feed: ' . $feed_post->post_title;
@@ -272,7 +272,7 @@ class FeedFetcher {
             ));
             
             if ($verbose_console) {
-                echo '<script>console.log("Athena AI Feed Fetcher: Processing feed: ' . \esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ', URL: ' . \esc_js($feed_url) . ')");</script>';
+                echo '<script>console.log("Athena AI Feed Fetcher: Processing feed: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . ' (ID: ' . $feed_post->ID . ', URL: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_url) . ')");</script>';
             }
             
             // Zähle die aktuellen Feed-Items vor dem Abruf
@@ -341,9 +341,9 @@ class FeedFetcher {
                     $last_error = $feed->get_last_error();
                 }
                 if (!empty($last_error)) {
-                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \esc_js($feed_post->post_title) . ' - Error: ' . \esc_js($last_error) . '");</script>';
+                    echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . ' - Error: ' . \AthenaAI\Core\SafetyWrapper::esc_js($last_error) . '");</script>';
                     } else {
-                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \esc_js($feed_post->post_title) . ' - Unknown error");</script>';
+                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to fetch feed: ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . ' - Unknown error");</script>';
                     }
                 }
             }
@@ -354,7 +354,7 @@ class FeedFetcher {
             $logger->error(sprintf('Exception while processing feed: %s', $e->getMessage()));              
             
             if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed Fetcher: Exception while processing feed ' . \esc_js($feed_post->post_title) . ': ' . \esc_js($e->getMessage()) . '");</script>';
+                echo '<script>console.error("Athena AI Feed Fetcher: Exception while processing feed ' . \AthenaAI\Core\SafetyWrapper::esc_js($feed_post->post_title) . ': ' . \AthenaAI\Core\SafetyWrapper::esc_js($e->getMessage()) . '");</script>';
             }
         }
         
@@ -831,7 +831,8 @@ class FeedFetcher {
                 
                 // Prüfen, ob url-Spalte existiert und URL-Wert setzen
                 if (in_array('url', $column_names) && !empty($feed_url)) {
-                    $data['url'] = \esc_url_raw($feed_url);
+                    $feed_url = \AthenaAI\Helpers\UrlHelper::safe_esc_url_raw($feed_url);
+                    $data['url'] = $feed_url;
                 }
                 
                 // Formatierungstypen für die Daten
@@ -857,7 +858,7 @@ class FeedFetcher {
                         \error_log("Athena AI: Failed to insert feed metadata for feed ID {$feed_id}. Error: " . $wpdb->last_error);
                     }
                     if ($verbose_console) {
-                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to insert feed metadata for feed ID ' . $feed_id . '. Database error: ' . \esc_js($wpdb->last_error) . '");</script>';
+                        echo '<script>console.error("Athena AI Feed Fetcher: Failed to insert feed metadata for feed ID ' . $feed_id . '. Database error: ' . \AthenaAI\Core\SafetyWrapper::esc_js($wpdb->last_error) . '");</script>';
                         echo '<script>console.log("Data being inserted: ", ' . \json_encode($data) . ');</script>';
                         echo '<script>console.log("Format types: ", ' . \json_encode($format_types) . ');</script>';
                     }
@@ -877,8 +878,8 @@ class FeedFetcher {
                 \error_log("Athena AI: Exception in ensure_feed_metadata_exists: " . $e->getMessage());
             }
             if ($verbose_console) {
-                echo '<script>console.error("Athena AI Feed Fetcher: Exception in ensure_feed_metadata_exists for feed ID ' . $feed_id . ': ' . \esc_js($e->getMessage()) . '");</script>';
-                echo '<script>console.log("Exception trace: ", "' . \esc_js($e->getTraceAsString()) . '");</script>';
+                echo '<script>console.error("Athena AI Feed Fetcher: Exception in ensure_feed_metadata_exists for feed ID ' . $feed_id . ': ' . \AthenaAI\Core\SafetyWrapper::esc_js($e->getMessage()) . '");</script>';
+                echo '<script>console.log("Exception trace: ", "' . \AthenaAI\Core\SafetyWrapper::esc_js($e->getTraceAsString()) . '");</script>';
             }
             return false;
         }
