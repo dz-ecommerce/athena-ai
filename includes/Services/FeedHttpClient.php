@@ -400,56 +400,6 @@ class FeedHttpClient {
         $feed .= '</channel></rss>';
         
         $this->consoleLog("Generated feed with {$count} items", 'info');
-        
-        return $feed;
-    }
-
-    /**
-     * Fetch content from a URL.
-     *
-     * @param string|null $url     The URL to fetch.
-     * @param array|null  $options Additional options to merge with defaults.
-     * @return string|false The fetched content or false on failure.
-     */
-    public function fetch(?string $url, ?array $options = []) {
-        // Reset last error
-        $this->set_last_error('');
-        
-        // Log fetching attempt
-        $this->consoleLog("Fetching feed from URL: {$url}", 'info');
-
-        // Basic URL validation
-        if ($url === null || empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-            $error = "Invalid URL format: {$url}";
-            $this->set_last_error($error);
-            $this->consoleLog($error, 'error');
-            return false;
-        }
-        
-        // Spezialbehandlung für Social Media Examiner
-        if ($this->isSocialMediaExaminerUrl($url)) {
-            return $this->fetchSocialMediaExaminerFeed($url);
-        }
-        
-        // Merge default options with provided options
-        $request_options = array_merge($this->default_options, $options ?? []);
-        
-        // Add random delay to avoid rate limiting (between 1-3 seconds)
-        usleep(mt_rand(1000000, 3000000));
-        
-        // Debug options
-        // Eigene Implementierung statt wp_json_encode
-        $options_json = json_encode($request_options);
-        $this->consoleLog("Request options: {$options_json}", 'log');
-        
-        // Immer den Curl-Fallback verwenden, da wir WordPress-Funktionen vermeiden
-        $response = $this->curlFetch($url, $request_options);
-        
-        // Prüfen, ob die Antwort ein Fehler ist
-        if ($response === false || isset($response['error'])) {
-            $error_message = isset($response['error']) ? $response['error'] : 'Unknown error';
-            $this->set_last_error("Error fetching feed: {$error_message}");
-            $this->consoleLog("Error fetching feed: {$error_message}", 'error');
             return false;
         }
         
