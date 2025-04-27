@@ -458,76 +458,21 @@ class FeedFetcher {
         $wpdb->show_errors = false;
         
         try {
-            // Prüfen, ob die Tabelle existiert
-            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'") === $wpdb->prefix . 'feed_metadata';
-            
-            if (!$table_exists) {
-                // Tabelle existiert nicht, daher nichts zu aktualisieren
-                if ($debug_mode) {
-                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
-                    $logger->error('feed_metadata table does not exist, cannot update schema');
-                }
-                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
-                return;
-            }
-            
-            // Alle Spalten abrufen, um den aktuellen Zustand der Tabelle zu prüfen
-            $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
-            
-            if ($columns === false || $columns === null) {
-                if ($debug_mode) {
-                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
-                    $logger->error('Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
-                }
-                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
-                return;
-            }
-            
-            $column_names = array_map(function($col) { return $col->Field; }, $columns);
-            
+            // Logger-Instanz für Debug-Modus vorbereiten
+            $logger = null;
             if ($debug_mode) {
-                $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
-                $logger->debug('Current feed_metadata table columns: ' . implode(', ', $column_names));
-            }
-            // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
-            
-            // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
-            if (!in_array('last_fetched', $column_names)) {
-                $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
-                if ($debug_mode) {
-                    $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
-                    $logger->info('Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
-                }
-                // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
+                $logger = \AthenaAI\Services\LoggerService::getInstance()->setComponent('FeedFetcher');
             }
             
-            // Add missing columns one by one without referencing other columns
-            if (!in_array('fetch_interval', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_interval INT DEFAULT 3600");
-            }
+            // 1. Prüfe und aktualisiere feed_metadata Tabelle
+            self::check_and_update_feed_metadata_table($logger);
             
-            if (!in_array('fetch_count', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0");
-            }
+            // 2. Prüfe und aktualisiere feed_raw_items Tabelle
+            self::check_and_update_feed_raw_items_table($logger);
             
-            if (!in_array('last_error_date', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL");
-            }
-            
-            if (!in_array('last_error_message', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT");
-            }
-            
-            if (!in_array('created_at', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-            }
-            
-            if (!in_array('updated_at', $column_names)) {
-                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-            }
         } catch (\Exception $e) {
             if ($debug_mode) {
-                $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
+                $logger = \AthenaAI\Services\LoggerService::getInstance()->setComponent('FeedFetcher');
                 $logger->error('Exception in check_and_update_schema: ' . $e->getMessage());
             }
             // Keine Konsolenausgaben hier, um "Headers already sent"-Probleme zu vermeiden
@@ -536,6 +481,204 @@ class FeedFetcher {
         // Restore error display settings
         $wpdb->show_errors = $show_errors;
         $wpdb->suppress_errors(false);
+    }
+
+    /**
+     * Check and update the feed_metadata table structure
+     * 
+     * @param \AthenaAI\Services\LoggerService|null $logger Logger instance for debug output
+     */
+    private static function check_and_update_feed_metadata_table($logger = null): void {
+        global $wpdb;
+        
+        // Prüfen, ob die Tabelle existiert
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'") === $wpdb->prefix . 'feed_metadata';
+        
+        if (!$table_exists) {
+            // Tabelle existiert nicht, daher nichts zu aktualisieren
+            if ($logger) {
+                $logger->error('feed_metadata table does not exist, cannot update schema');
+            }
+            return;
+        }
+        
+        // Alle Spalten abrufen, um den aktuellen Zustand der Tabelle zu prüfen
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_metadata");
+        
+        if ($columns === false || $columns === null) {
+            if ($logger) {
+                $logger->error('Failed to get columns from feed_metadata table. Error: ' . $wpdb->last_error);
+            }
+            return;
+        }
+        
+        $column_names = array_map(function($col) { return $col->Field; }, $columns);
+        
+        if ($logger) {
+            $logger->debug('Current feed_metadata table columns: ' . implode(', ', $column_names));
+        }
+        
+        // Prüfen und Hinzufügen der last_fetched-Spalte, die in den Fehlermeldungen fehlt
+        if (!in_array('last_fetched', $column_names)) {
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_fetched DATETIME DEFAULT NULL");
+            if ($logger) {
+                $logger->info('Added missing column last_fetched to feed_metadata table. Result: ' . ($result !== false ? 'success' : 'failed'));
+            }
+        }
+        
+        // Add missing columns one by one without referencing other columns
+        if (!in_array('fetch_interval', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_interval INT DEFAULT 3600");
+        }
+        
+        if (!in_array('fetch_count', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN fetch_count INT DEFAULT 0");
+        }
+        
+        if (!in_array('last_error_date', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_date DATETIME DEFAULT NULL");
+        }
+        
+        if (!in_array('last_error_message', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN last_error_message TEXT");
+        }
+        
+        if (!in_array('created_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+        
+        if (!in_array('updated_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_metadata ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
+    }
+
+    /**
+     * Check and update the feed_raw_items table structure
+     * 
+     * @param \AthenaAI\Services\LoggerService|null $logger Logger instance for debug output
+     */
+    private static function check_and_update_feed_raw_items_table($logger = null): void {
+        global $wpdb;
+        
+        // Prüfen, ob die Tabelle existiert
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'") === $wpdb->prefix . 'feed_raw_items';
+        
+        if (!$table_exists) {
+            // Tabelle existiert nicht, daher müssen wir sie erstellen
+            if ($logger) {
+                $logger->error('feed_raw_items table does not exist, creating it');
+            }
+            
+            // Tabelle erstellen
+            if (!defined('ABSPATH')) {
+                require_once dirname(dirname(dirname(__FILE__))) . '/wp-admin/includes/upgrade.php';
+            } else {
+                require_once \ABSPATH . 'wp-admin/includes/upgrade.php';
+            }
+            
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql = "CREATE TABLE {$wpdb->prefix}feed_raw_items (
+                item_hash CHAR(32) PRIMARY KEY,
+                feed_id BIGINT UNSIGNED NOT NULL,
+                raw_content LONGTEXT,
+                pub_date DATETIME,
+                guid VARCHAR(255),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (feed_id),
+                INDEX (pub_date)
+            ) $charset_collate;";
+            
+            \dbDelta($sql);
+            
+            if ($logger) {
+                $logger->info('Created feed_raw_items table');
+            }
+            return;
+        }
+        
+        // Alle Spalten abrufen, um den aktuellen Zustand der Tabelle zu prüfen
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}feed_raw_items");
+        
+        if ($columns === false || $columns === null) {
+            if ($logger) {
+                $logger->error('Failed to get columns from feed_raw_items table. Error: ' . $wpdb->last_error);
+            }
+            return;
+        }
+        
+        $column_names = array_map(function($col) { return $col->Field; }, $columns);
+        
+        if ($logger) {
+            $logger->debug('Current feed_raw_items table columns: ' . implode(', ', $column_names));
+        }
+        
+        // Prüfen und Hinzufügen der item_hash-Spalte, die in den Fehlermeldungen fehlt
+        if (!in_array('item_hash', $column_names)) {
+            // Wir müssen prüfen, ob die Tabelle bereits Daten enthält
+            $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+            
+            if ($count > 0 && $logger) {
+                // Use error or info method instead of warning if warning is not available
+                $logger->info('feed_raw_items table already contains data. Adding item_hash column and generating hash values for existing records.');
+            }
+            
+            // Zuerst fügen wir die Spalte hinzu, ohne sie als Primärschlüssel zu definieren
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN item_hash CHAR(32)");
+            
+            if ($result === false) {
+                if ($logger) {
+                    $logger->error('Failed to add item_hash column to feed_raw_items table. Error: ' . $wpdb->last_error);
+                }
+                return;
+            }
+            
+            // Wenn Daten vorhanden sind, generieren wir Hash-Werte für bestehende Einträge
+            if ($count > 0) {
+                // Wir verwenden eine Kombination aus feed_id und guid als Basis für den Hash
+                $wpdb->query("UPDATE {$wpdb->prefix}feed_raw_items SET item_hash = MD5(CONCAT(feed_id, '-', guid)) WHERE item_hash IS NULL");
+                
+                if ($logger) {
+                    $logger->info('Generated hash values for existing feed items');
+                }
+            }
+            
+            // Jetzt machen wir die Spalte zum Primärschlüssel, wenn möglich
+            // Zuerst müssen wir prüfen, ob es einen bestehenden Primärschlüssel gibt
+            $primary_key = $wpdb->get_results("SHOW KEYS FROM {$wpdb->prefix}feed_raw_items WHERE Key_name = 'PRIMARY'");
+            
+            if (!empty($primary_key)) {
+                // Es gibt bereits einen Primärschlüssel, wir müssen ihn zuerst entfernen
+                $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items DROP PRIMARY KEY");
+                
+                if ($logger) {
+                    $logger->info('Dropped existing primary key from feed_raw_items table');
+                }
+            }
+            
+            // Jetzt setzen wir item_hash als Primärschlüssel
+            $result = $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD PRIMARY KEY (item_hash)");
+            
+            if ($logger) {
+                $logger->info('Set item_hash as primary key for feed_raw_items table. Result: ' . ($result !== false ? 'success' : 'failed'));
+            }
+        }
+        
+        // Weitere Spalten prüfen und hinzufügen
+        if (!in_array('raw_content', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN raw_content LONGTEXT");
+        }
+        
+        if (!in_array('pub_date', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN pub_date DATETIME");
+        }
+        
+        if (!in_array('guid', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN guid VARCHAR(255)");
+        }
+        
+        if (!in_array('created_at', $column_names)) {
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}feed_raw_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+        }
     }
     
     /**
