@@ -337,7 +337,7 @@ class FeedHttpClient {
         
         // Wenn keine Artikel gefunden wurden, versuche es mit einer allgemeineren Abfrage
         if ($articles->length === 0) {
-            $articles = $xpath->query('//div[contains(@class, "content")] | //div[contains(@class, "main")]//a[contains(@href, "/20")]/..');
+            $articles = $xpath->query('//div[contains(@class, "content")] | //div[contains(@class, "main")]//a[contains(@href, "/20")]/..'); 
         }
         
         $this->consoleLog("Found {$articles->length} potential articles", 'info');
@@ -345,7 +345,7 @@ class FeedHttpClient {
         // Erstelle einen XML-Feed im RSS-Format
         $feed = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>';
         $feed .= '<title>Social Media Examiner</title>';
-        $feed .= '<link>' . htmlspecialchars($base_url ?? 'https://www.socialmediaexaminer.com') . '</link>';
+        $feed .= '<link>' . htmlspecialchars($base_url) . '</link>';
         $feed .= '<description>Social Media Marketing Articles</description>';
         
         $count = 0;
@@ -363,12 +363,13 @@ class FeedHttpClient {
                 // Sichere Methode zum Abrufen des href-Attributs
                 $link = '';
                 if (method_exists($link_elem, 'getAttribute')) {
-                    $link = $link_elem->getAttribute('href');
+                    $href = $link_elem->getAttribute('href');
+                    $link = $href !== null ? $href : '';
                 } elseif (property_exists($link_elem, 'attributes') && isset($link_elem->attributes['href'])) {
                     $link = $link_elem->attributes['href']->value;
                 }
                 // Konvertiere relative URLs zu absoluten URLs
-                if ($link !== null && $link !== '' && strpos($link, 'http') !== 0) {
+                if ($link !== '' && strpos((string)$link, 'http') !== 0) {
                     $link = rtrim($base_url, '/') . '/' . ltrim($link, '/');
                 }
             }
@@ -400,12 +401,38 @@ class FeedHttpClient {
         $feed .= '</channel></rss>';
         
         $this->consoleLog("Generated feed with {$count} items", 'info');
+        return $feed;
+    }
+    
+    /**
+     * Fetch content from a URL
+     * 
+     * @param string|null $url     The URL to fetch
+     * @param array|null  $options Request options
+     * @return string|false The fetched content or false on failure
+     */
+    public function fetch(?string $url, ?array $options = []): string|false {
+        if ($url === null) {
+            $error = "URL is null";
+            $this->set_last_error($error);
+            $this->consoleLog($error, 'error');
+            return false;
+        }
+        
+        // Make the request using WordPress wp_remote_get function
+        $response = \wp_remote_get($url, $options ?: $this->default_options);
+        
+        // Check for WordPress HTTP API errors
+        if (\is_wp_error($response)) {
+            $error = $response->get_error_message();
+            $this->set_last_error($error);
+            $this->consoleLog("WP HTTP API error: {$error}", 'error');
             return false;
         }
         
         // Prüfen des Statuscodes
-        if (isset($response['status_code']) && $response['status_code'] !== 200) {
-            $status_code = $response['status_code'];
+        if (isset($response['response']['code']) && $response['response']['code'] !== 200) {
+            $status_code = $response['response']['code'];
             $error = "Invalid response code: {$status_code}";
             $this->set_last_error($error);
             $this->consoleLog($error, 'error');
@@ -422,7 +449,7 @@ class FeedHttpClient {
             return false;
         }
         
-        $this->consoleLog("Successfully fetched feed content (" . strlen($body) . " bytes)", 'info');
+        $this->consoleLog("Successfully fetched feed content (" . strlen((string)$body) . " bytes)", 'info');
         
         // Preview the first part of the content for debugging
         if (!empty($body) && is_string($body)) {
