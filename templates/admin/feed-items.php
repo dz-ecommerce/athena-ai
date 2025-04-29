@@ -27,9 +27,10 @@ if (!empty($items)) {
             <?php esc_html_e('Feed Items', 'athena-ai'); ?>
         </h1>
         <div class="flex space-x-2">
-            <form method="post" class="inline-block">
+            <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="inline-block">
+                <input type="hidden" name="action" value="athena_fetch_feeds">
                 <?php wp_nonce_field('athena_fetch_feeds_nonce'); ?>
-                <button type="submit" name="athena_fetch_feeds" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg transition-all hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                <button type="submit" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg transition-all hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                     <i class="fa-solid fa-sync-alt mr-2"></i>
                     <?php esc_html_e('Fetch Feeds Now', 'athena-ai'); ?>
                 </button>
