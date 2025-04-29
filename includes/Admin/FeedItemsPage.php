@@ -64,30 +64,97 @@ class FeedItemsPage {
         // Get feed items
         global $wpdb;
         
+        // Get filter values from GET parameters
+        $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
+        $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) ? sanitize_text_field($_GET['date_filter']) : '';
+        
         $items_per_page = 20;
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $offset = ($current_page - 1) * $items_per_page;
         
+        // Build query conditions for filters
+        $where_conditions = ["p.post_type = 'athena-feed' AND p.post_status = 'publish'"];
+        $query_params = [];
+        
+        // Add feed filter if specified
+        if ($feed_filter) {
+            $where_conditions[] = "ri.feed_id = %d";
+            $query_params[] = $feed_filter;
+        }
+        
+        // Add date filter if specified
+        if ($date_filter) {
+            $today = date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day'));
+            $week_start = date('Y-m-d', strtotime('this week'));
+            $last_week_start = date('Y-m-d', strtotime('last week'));
+            $last_week_end = date('Y-m-d', strtotime('last week +6 days'));
+            $month_start = date('Y-m-01');
+            $last_month_start = date('Y-m-01', strtotime('last month'));
+            $last_month_end = date('Y-m-t', strtotime('last month'));
+            
+            switch ($date_filter) {
+                case 'today':
+                    $where_conditions[] = "DATE(ri.pub_date) = %s";
+                    $query_params[] = $today;
+                    break;
+                case 'yesterday':
+                    $where_conditions[] = "DATE(ri.pub_date) = %s";
+                    $query_params[] = $yesterday;
+                    break;
+                case 'this_week':
+                    $where_conditions[] = "DATE(ri.pub_date) >= %s";
+                    $query_params[] = $week_start;
+                    break;
+                case 'last_week':
+                    $where_conditions[] = "DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s";
+                    $query_params[] = $last_week_start;
+                    $query_params[] = $last_week_end;
+                    break;
+                case 'this_month':
+                    $where_conditions[] = "DATE(ri.pub_date) >= %s";
+                    $query_params[] = $month_start;
+                    break;
+                case 'last_month':
+                    $where_conditions[] = "DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s";
+                    $query_params[] = $last_month_start;
+                    $query_params[] = $last_month_end;
+                    break;
+            }
+        }
+        
+        // Combine conditions
+        $where_clause = implode(' AND ', $where_conditions);
+        
         // Get feed items with feed info
-        $items = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT ri.*, p.post_title as feed_title 
+        $sql = "SELECT ri.*, p.post_title as feed_title 
                 FROM {$wpdb->prefix}feed_raw_items ri
                 JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
-                WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
+                WHERE {$where_clause}
                 ORDER BY ri.pub_date DESC
-                LIMIT %d OFFSET %d",
-                $items_per_page,
-                $offset
-            )
+                LIMIT %d OFFSET %d";
+        
+        // Add pagination parameters
+        $query_params[] = $items_per_page;
+        $query_params[] = $offset;
+        
+        // Execute query
+        $items = $wpdb->get_results(
+            $wpdb->prepare($sql, $query_params)
         );
         
-        // Get total count for pagination
+        // Get total count for pagination with the same filters
+        $count_sql = "SELECT COUNT(*) 
+                      FROM {$wpdb->prefix}feed_raw_items ri
+                      JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
+                      WHERE {$where_clause}";
+        
+        // Remove pagination parameters for count query
+        array_pop($query_params); // Remove offset
+        array_pop($query_params); // Remove limit
+        
         $total_items = $wpdb->get_var(
-            "SELECT COUNT(*) 
-            FROM {$wpdb->prefix}feed_raw_items ri
-            JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
-            WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'"
+            $wpdb->prepare($count_sql, $query_params)
         );
         
         // Get feed count

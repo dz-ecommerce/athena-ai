@@ -155,6 +155,38 @@ if (!empty($items)) {
     <!-- Filter und Suche -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100">
         <h2 class="text-lg font-semibold text-gray-900 mb-4"><?php esc_html_e('Filter Feeds', 'athena-ai'); ?></h2>
+        <?php if ($feed_filter || $date_filter): ?>
+        <div class="mb-4 p-2 bg-blue-50 text-blue-700 rounded-md border border-blue-200">
+            <p>
+                <i class="fa-solid fa-filter mr-2"></i>
+                <?php 
+                $filter_text = [];
+                if ($feed_filter) {
+                    $feed_name = '';
+                    foreach ($feeds as $feed) {
+                        if ($feed->ID == $feed_filter) {
+                            $feed_name = $feed->post_title;
+                            break;
+                        }
+                    }
+                    $filter_text[] = sprintf(__('Feed: %s', 'athena-ai'), esc_html($feed_name));
+                }
+                if ($date_filter) {
+                    $date_labels = [
+                        'today' => __('Today', 'athena-ai'),
+                        'yesterday' => __('Yesterday', 'athena-ai'),
+                        'this_week' => __('This Week', 'athena-ai'),
+                        'last_week' => __('Last Week', 'athena-ai'),
+                        'this_month' => __('This Month', 'athena-ai'),
+                        'last_month' => __('Last Month', 'athena-ai')
+                    ];
+                    $filter_text[] = sprintf(__('Date: %s', 'athena-ai'), $date_labels[$date_filter] ?? $date_filter);
+                }
+                echo esc_html__('Active Filters: ', 'athena-ai') . implode(', ', $filter_text);
+                ?>
+            </p>
+        </div>
+        <?php endif; ?>
         <form method="get" action="<?php echo admin_url('admin.php'); ?>" class="flex flex-wrap gap-4">
             <input type="hidden" name="page" value="athena-feed-items" />
             
