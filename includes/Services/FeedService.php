@@ -533,7 +533,7 @@ class FeedService {
         
         $url = $feed->get_url();
         if (empty($url)) {
-            $feed->add_error('missing_url', __('Feed URL is empty', 'athena-ai'));
+            $feed->update_feed_error(__('Feed URL is empty', 'athena-ai'));
             return false;
         }
 
@@ -550,7 +550,7 @@ class FeedService {
                 $this->logger->info('Special handling for feed at ' . $url . ': ' . $error_message);
             }
             
-            $feed->add_error('fetch_failed', $error_message);
+            $feed->update_feed_error($error_message);
             return false;
         }
 
@@ -605,7 +605,7 @@ class FeedService {
      */
     private function process_feed_content(Feed $feed, ?string $content, string $content_type): bool {
         if ($content === null || empty($content)) {
-            $feed->add_error('empty_content', __('Feed content is empty', 'athena-ai'));
+            $feed->update_feed_error(__('Feed content is empty', 'athena-ai'));
             return false;
         }
         
@@ -623,7 +623,7 @@ class FeedService {
                     foreach ($errors as $error) {
                         $error_msg .= "Zeile {$error->line}, Spalte {$error->column}: {$error->message}; ";
                     }
-                    $feed->add_error('xml_parsing_error', $error_msg);
+                    $feed->update_feed_error($error_msg);
                     return false;
                 }
                 $items = $this->processXmlFeed($xml, $feed);
@@ -633,7 +633,7 @@ class FeedService {
                 // JSON-String in Array umwandeln
                 $json = @json_decode($content, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    $feed->add_error('json_parsing_error', json_last_error_msg());
+                    $feed->update_feed_error(json_last_error_msg());
                     return false;
                 }
                 $items = $this->processJsonFeed($json, $feed);
@@ -648,7 +648,7 @@ class FeedService {
         
         // Prüfe, ob Items extrahiert wurden
         if ($items === false || empty($items)) {
-            $feed->add_error('no_items', __('No items found in feed', 'athena-ai'));
+            $feed->update_feed_error(__('No items found in feed', 'athena-ai'));
             return false;
         }
         
