@@ -524,9 +524,13 @@ class FeedService {
      * Fetch and process a feed
      *
      * @param Feed $feed The feed to process
+     * @param bool $verbose_console Whether to output verbose console logs (default: false)
      * @return bool True if successful, false otherwise
      */
-    public function fetch_and_process_feed(Feed $feed): bool {
+    public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
+        // Aktualisiere verbose mode entsprechend dem Parameter
+        $this->setVerboseMode($verbose_console);
+        
         $url = $feed->get_url();
         if (empty($url)) {
             $feed->add_error('missing_url', __('Feed URL is empty', 'athena-ai'));
