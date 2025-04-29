@@ -195,12 +195,56 @@ class Feed {
     }
     
     /**
-     * Get the last checked timestamp
+     * Gibt den Zeitstempel des letzten Abrufs zurück
      *
-     * @return \DateTime|null The last checked timestamp
+     * @return \DateTime|null
      */
     public function get_last_checked(): ?\DateTime {
-        return $this->last_checked;
+        // Wenn Objekt bereits einen Wert hat, verwende diesen
+        if ($this->last_checked instanceof \DateTime) {
+            return $this->last_checked;
+        }
+        
+        // Versuche den Wert aus der Datenbank zu laden
+        if ($this->post_id) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'feed_metadata';
+            
+            // Prüfe zunächst in der feed_metadata Tabelle
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
+            
+            if ($table_exists) {
+                $last_fetched = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT last_fetched FROM {$table_name} WHERE feed_id = %d",
+                        $this->post_id
+                    )
+                );
+                
+                if (!empty($last_fetched)) {
+                    try {
+                        $this->last_checked = new \DateTime($last_fetched);
+                        return $this->last_checked;
+                    } catch (\Exception $e) {
+                        // Fehler bei der Umwandlung, ignorieren und weiter versuchen
+                    }
+                }
+            }
+            
+            // Wenn kein Wert in der Tabelle gefunden, prüfe das post_meta
+            $meta_value = \get_post_meta($this->post_id, '_athena_feed_last_checked', true);
+            if (!empty($meta_value)) {
+                try {
+                    $this->last_checked = new \DateTime($meta_value);
+                    return $this->last_checked;
+                } catch (\Exception $e) {
+                    // Fehler bei der Umwandlung, ignorieren
+                }
+            }
+        }
+        
+        // Kein Wert gefunden oder keine Post-ID
+        return null;
     }
     
     /**
@@ -232,6 +276,12 @@ class Feed {
             $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
             
             if ($table_exists) {
+                // Aktuelles Datum/Uhrzeit im MySQL-Format
+                $current_time = \current_time('mysql');
+                
+                // Aktualisiere auch das post_meta für Kompatibilität
+                \update_post_meta($this->post_id, '_athena_feed_last_checked', $current_time);
+                
                 // Prüfe, ob bereits ein Eintrag für diesen Feed existiert
                 $exists = $wpdb->get_var(
                     $wpdb->prepare(
@@ -245,7 +295,7 @@ class Feed {
                     $wpdb->update(
                         $table_name,
                         [
-                            'last_fetched' => \current_time('mysql'),
+                            'last_fetched' => $current_time,
                             'fetch_count' => $wpdb->get_var(
                                 $wpdb->prepare(
                                     "SELECT fetch_count FROM {$table_name} WHERE feed_id = %d",
@@ -263,7 +313,7 @@ class Feed {
                         $table_name,
                         [
                             'feed_id' => $this->post_id,
-                            'last_fetched' => \current_time('mysql'),
+                            'last_fetched' => $current_time,
                             'fetch_count' => 1,
                             'last_error' => ''
                         ],
