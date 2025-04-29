@@ -126,36 +126,41 @@ class FeedItemsPage {
         // Combine conditions
         $where_clause = implode(' AND ', $where_conditions);
         
-        // Get feed items with feed info
+        // Build the main query
         $sql = "SELECT ri.*, p.post_title as feed_title 
                 FROM {$wpdb->prefix}feed_raw_items ri
                 JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
                 WHERE {$where_clause}
-                ORDER BY ri.pub_date DESC
-                LIMIT %d OFFSET %d";
+                ORDER BY ri.pub_date DESC";
         
-        // Add pagination parameters
-        $query_params[] = $items_per_page;
-        $query_params[] = $offset;
+        // Add pagination parameters - these are always needed
+        if (empty($query_params)) {
+            // If no filter parameters, add pagination without prepare
+            $sql .= " LIMIT {$items_per_page} OFFSET {$offset}";
+            $items = $wpdb->get_results($sql);
+        } else {
+            // If we have filter parameters, use prepare with pagination
+            $sql .= " LIMIT %d OFFSET %d";
+            $query_params[] = $items_per_page;
+            $query_params[] = $offset;
+            $items = $wpdb->get_results($wpdb->prepare($sql, $query_params));
+        }
         
-        // Execute query
-        $items = $wpdb->get_results(
-            $wpdb->prepare($sql, $query_params)
-        );
-        
-        // Get total count for pagination with the same filters
+        // Get total count query
         $count_sql = "SELECT COUNT(*) 
                       FROM {$wpdb->prefix}feed_raw_items ri
                       JOIN {$wpdb->posts} p ON ri.feed_id = p.ID 
                       WHERE {$where_clause}";
         
-        // Remove pagination parameters for count query
-        array_pop($query_params); // Remove offset
-        array_pop($query_params); // Remove limit
-        
-        $total_items = $wpdb->get_var(
-            $wpdb->prepare($count_sql, $query_params)
-        );
+        // Execute count query (no need for pagination parameters)
+        if (!empty($query_params)) {
+            // Remove the pagination parameters we just added
+            array_pop($query_params); // Remove offset
+            array_pop($query_params); // Remove limit
+            $total_items = $wpdb->get_var($wpdb->prepare($count_sql, $query_params));
+        } else {
+            $total_items = $wpdb->get_var($count_sql);
+        }
         
         // Get feed count
         $feed_count = $wpdb->get_var(
