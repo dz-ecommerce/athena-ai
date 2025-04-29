@@ -332,20 +332,21 @@ class Feed {
      * Diese Methode verwendet den FeedService, um den Feed abzurufen und zu verarbeiten.
      * Sie aktualisiert auch die Feed-Metadaten in der Datenbank.
      * 
+     * @param bool $verbose_console Ob detaillierte Konsolenausgaben erzeugt werden sollen
+     * @return bool Gibt true zurück, wenn der Feed erfolgreich abgerufen und verarbeitet wurde, sonst false
+     */
+    public function fetch(bool $verbose_console = false): bool {
         // Setze den letzten Fehler zurück
         $this->last_error = '';
         
-        // Verwende die angegebene URL oder die Feed-URL
-        $fetch_url = $url ?: $this->url;
-        
-        if (empty($fetch_url)) {
+        // Prüfe, ob eine URL vorhanden ist
+        if (empty($this->url)) {
             $error = 'Keine URL zum Abrufen angegeben';
             $this->update_feed_error($error);
             
             if ($verbose_console) {
-                // Verwende StringHelper für sichere esc_js-Aufrufe
-                $js_safe_url = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($safe_url);
-                echo '<script>console.info("Rufe Feed ab: ' . $js_safe_url . '");</script>';
+                // Sicheres Escaping für die Konsole
+                echo '<script>console.error("Feed konnte nicht abgerufen werden: Keine URL angegeben");</script>';
             }
             
             return false;
@@ -353,24 +354,9 @@ class Feed {
         
         try {
             // Feed-Service-Instanz erstellen und Feed abrufen
-            $service = new FeedService();
+            $service = \AthenaAI\Services\FeedService::create();
+            $service->setVerboseMode($verbose_console);
             $success = $service->fetch_and_process_feed($this, $verbose_console);
-            
-            // Fehler aus dem Service übernehmen
-            if (!$success) {
-                $error = $service->get_last_error();
-                if (!empty($error)) {
-                    $this->set_last_error($error);
-                } else {
-                    $this->set_last_error('Unbekannter Fehler beim Abrufen des Feeds');
-                }
-                
-                if ($verbose_console) {
-                    // Verwende StringHelper für sichere esc_js-Aufrufe
-                    $error_message = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($this->get_last_error() ?? '');
-                    echo '<script>console.error("Feed konnte nicht abgerufen werden: ' . $error_message . '");</script>';
-                }
-            }
             
             return $success;
         } catch (\Exception $e) {
@@ -379,11 +365,12 @@ class Feed {
             $this->update_feed_error($error);
             
             if ($verbose_console) {
-                // Verwende StringHelper für sichere esc_js-Aufrufe
-                $safe_error = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($error);
-                $safe_trace = \AthenaAI\Helpers\StringHelper::safe_sanitize_text($e->getTraceAsString());
+                // Sicheres Escaping für die Konsole
+                $safe_error = function_exists('esc_js') ? 
+                    \esc_js($error) : 
+                    htmlspecialchars($error, ENT_QUOTES, 'UTF-8');
+                
                 echo '<script>console.error("' . $safe_error . '");</script>';
-                echo '<script>console.error("Stack-Trace: ' . $safe_trace . '");</script>';
             }
             
             return false;
