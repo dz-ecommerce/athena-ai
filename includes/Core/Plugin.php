@@ -112,14 +112,14 @@ class Plugin {
         );
         
         // Add ViewFeed News submenu
-        add_submenu_page(
+        /*add_submenu_page(
             'edit.php?post_type=athena-feed',
             __('ViewFeed News', 'athena-ai'),
             __('ViewFeed News', 'athena-ai'),
             'read',
             'athena-viewfeed-news',
             [$this, 'render_viewfeed_news_page']
-        );
+        );*/
 
         // Ensure proper menu order
         global $submenu;
@@ -145,19 +145,19 @@ class Plugin {
                 }
             }
             
-            foreach ($menu_items as $item) {
+            /*foreach ($menu_items as $item) {
                 if ($item[2] === 'edit-tags.php?taxonomy=athena-feed-category&amp;post_type=athena-feed') {
                     // Categories
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
-            }
+            }*/
             
-            foreach ($menu_items as $item) {
+            /*foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-viewfeed-news') {
                     // ViewFeed News
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
-            }
+            }*/
             
             foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-ai-settings') {
@@ -179,12 +179,12 @@ class Plugin {
     /**
      * Render the ViewFeed News page
      */
-    public function render_viewfeed_news_page() {
+    /*public function render_viewfeed_news_page() {
         if (!current_user_can('read')) {
             wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
         }
         require_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/view-feed-news.php';
-    }
+    }*/
 
     /**
      * Enqueue admin assets

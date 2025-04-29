@@ -18,7 +18,7 @@ class FeedManager extends BaseAdmin {
     public function add_hooks() {
         // Register post type and taxonomy on init
         add_action('init', [$this, 'register_post_type']);
-        add_action('init', [$this, 'register_taxonomy']);
+        //add_action('init', [$this, 'register_taxonomy']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post_athena-feed', [$this, 'save_meta_box_data']);
         add_filter('parent_file', [$this, 'set_current_menu']);
@@ -262,23 +262,23 @@ class FeedManager extends BaseAdmin {
             // Add "Add New" submenu - wir vertrauen darauf, dass WordPress diesen Menüpunkt bereits erstellt hat
 
             // Add categories submenu
-            add_submenu_page(
+            /*add_submenu_page(
                 'edit.php?post_type=athena-feed',
                 __('Feed Categories', 'athena-ai'),
                 __('Categories', 'athena-ai'),
                 'manage_options',
                 'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
-            );
+            );*/
             
             // Add ViewFeed News submenu
-            add_submenu_page(
+            /*add_submenu_page(
                 'edit.php?post_type=athena-feed',
                 __('ViewFeed News', 'athena-ai'),
                 __('ViewFeed News', 'athena-ai'),
                 'read',
                 'athena-viewfeed-news',
                 [\AthenaAI\Core\Plugin::class, 'render_viewfeed_news_page']
-            );
+            );*/
         }
     }
 }
