@@ -117,291 +117,30 @@ class FeedHttpClient {
     }
 
     /**
-     * Prüft, ob eine URL zu socialmediaexaminer.com gehört
+     * Prüft, ob eine bestimmte URL-Domain möglicherweise Probleme beim Abrufen verursacht
      * 
      * @param string|null $url Die zu prüfende URL
-     * @return bool True, wenn die URL zu socialmediaexaminer.com gehört, sonst false
+     * @return bool True, wenn die URL bekannte Probleme verursachen könnte
      */
-    private function isSocialMediaExaminerUrl(?string $url): bool {
+    public function isProblemURL(?string $url): bool {
         if ($url === null) {
             return false;
         }
-        return strpos($url, 'socialmediaexaminer.com') !== false;
-    }
-    
-    /**
-     * Spezialisierte Methode zum Abrufen von socialmediaexaminer.com Feeds
-     * 
-     * Diese Methode umgeht die Feed-Blockierung, indem sie die Hauptseite abruft
-     * und die Artikel direkt aus dem HTML extrahiert.
-     * 
-     * @param string|null $url Die Feed-URL
-     * @return string|false Der Feed-Inhalt oder false bei Fehler
-     */
-    private function fetchSocialMediaExaminerFeed(?string $url): string|false {
-        $this->consoleLog("Using specialized method for Social Media Examiner feed", 'info');
         
-        // Da wir Probleme mit dem Feed-Abruf haben, erstellen wir einen simulierten Feed
-        // basierend auf bekannten Artikeln von Social Media Examiner
-        $this->consoleLog("Creating simulated feed for Social Media Examiner", 'info');
-        
-        // Erstelle einen simulierten Feed mit aktuellen Artikeln
-        return $this->createSimulatedSocialMediaExaminerFeed();
-    }
-    
-    /**
-     * Erstellt einen simulierten Feed für Social Media Examiner
-     * 
-     * Diese Methode erstellt einen synthetischen RSS-Feed mit aktuellen Artikeln
-     * von Social Media Examiner, ohne die Website direkt abzurufen.
-     * 
-     * @return string Der generierte XML-Feed
-     */
-    private function createSimulatedSocialMediaExaminerFeed(): string {
-        $this->consoleLog("Generating simulated Social Media Examiner feed", 'info');
-        
-        // Basis-URL der Website
-        $base_url = 'https://www.socialmediaexaminer.com';
-        
-        // Aktuelle Artikel von Social Media Examiner (manuell gepflegt)
-        // Diese könnten regelmäßig aktualisiert werden
-        $articles = [
-            [
-                'title' => 'How to Create Instagram Reels That Get More Views',
-                'link' => 'https://www.socialmediaexaminer.com/how-to-create-instagram-reels-that-get-more-views/',
-                'description' => 'Discover how to create Instagram reels that get more views and engagement.',
-                'pubDate' => date('r', strtotime('-1 day')),
-                'guid' => 'sme-' . md5('how-to-create-instagram-reels-that-get-more-views')
-            ],
-            [
-                'title' => 'How to Use AI to Create Social Media Content',
-                'link' => 'https://www.socialmediaexaminer.com/how-to-use-ai-to-create-social-media-content/',
-                'description' => 'Learn how to leverage AI tools to create engaging social media content faster.',
-                'pubDate' => date('r', strtotime('-2 days')),
-                'guid' => 'sme-' . md5('how-to-use-ai-to-create-social-media-content')
-            ],
-            [
-                'title' => 'TikTok Marketing: How to Grow Your Business With TikTok',
-                'link' => 'https://www.socialmediaexaminer.com/tiktok-marketing-how-to-grow-your-business-with-tiktok/',
-                'description' => 'Discover strategies to effectively market your business on TikTok.',
-                'pubDate' => date('r', strtotime('-3 days')),
-                'guid' => 'sme-' . md5('tiktok-marketing-how-to-grow-your-business-with-tiktok')
-            ],
-            [
-                'title' => 'LinkedIn Marketing: How to Build a Powerful LinkedIn Presence',
-                'link' => 'https://www.socialmediaexaminer.com/linkedin-marketing-how-to-build-a-powerful-linkedin-presence/',
-                'description' => 'Learn how to optimize your LinkedIn profile and company page for better results.',
-                'pubDate' => date('r', strtotime('-4 days')),
-                'guid' => 'sme-' . md5('linkedin-marketing-how-to-build-a-powerful-linkedin-presence')
-            ],
-            [
-                'title' => 'Facebook Ads: How to Create Effective Facebook Ad Campaigns',
-                'link' => 'https://www.socialmediaexaminer.com/facebook-ads-how-to-create-effective-facebook-ad-campaigns/',
-                'description' => 'Discover strategies for creating high-performing Facebook ad campaigns.',
-                'pubDate' => date('r', strtotime('-5 days')),
-                'guid' => 'sme-' . md5('facebook-ads-how-to-create-effective-facebook-ad-campaigns')
-            ],
-            [
-                'title' => 'Social Media Strategy: How to Create a Successful Social Media Marketing Plan',
-                'link' => 'https://www.socialmediaexaminer.com/social-media-strategy-how-to-create-a-successful-social-media-marketing-plan/',
-                'description' => 'Learn how to develop a comprehensive social media marketing strategy.',
-                'pubDate' => date('r', strtotime('-6 days')),
-                'guid' => 'sme-' . md5('social-media-strategy-how-to-create-a-successful-social-media-marketing-plan')
-            ],
-            [
-                'title' => 'Instagram Marketing: How to Grow Your Instagram Following',
-                'link' => 'https://www.socialmediaexaminer.com/instagram-marketing-how-to-grow-your-instagram-following/',
-                'description' => 'Discover proven tactics to increase your Instagram followers and engagement.',
-                'pubDate' => date('r', strtotime('-7 days')),
-                'guid' => 'sme-' . md5('instagram-marketing-how-to-grow-your-instagram-following')
-            ],
-            [
-                'title' => 'YouTube Marketing: How to Optimize Your YouTube Channel',
-                'link' => 'https://www.socialmediaexaminer.com/youtube-marketing-how-to-optimize-your-youtube-channel/',
-                'description' => 'Learn how to optimize your YouTube channel for better visibility and growth.',
-                'pubDate' => date('r', strtotime('-8 days')),
-                'guid' => 'sme-' . md5('youtube-marketing-how-to-optimize-your-youtube-channel')
-            ],
-            [
-                'title' => 'Twitter Marketing: How to Use Twitter for Business',
-                'link' => 'https://www.socialmediaexaminer.com/twitter-marketing-how-to-use-twitter-for-business/',
-                'description' => 'Discover effective strategies for marketing your business on Twitter.',
-                'pubDate' => date('r', strtotime('-9 days')),
-                'guid' => 'sme-' . md5('twitter-marketing-how-to-use-twitter-for-business')
-            ],
-            [
-                'title' => 'Social Media Tools: Essential Tools for Social Media Marketers',
-                'link' => 'https://www.socialmediaexaminer.com/social-media-tools-essential-tools-for-social-media-marketers/',
-                'description' => 'Learn about the most useful tools for managing and optimizing your social media presence.',
-                'pubDate' => date('r', strtotime('-10 days')),
-                'guid' => 'sme-' . md5('social-media-tools-essential-tools-for-social-media-marketers')
-            ]
+        // Liste mit Domains, die Probleme beim Abrufen verursachen können
+        $problem_domains = [
+            'socialmediaexaminer.com',
+            // Hier können weitere problematische Domains hinzugefügt werden
         ];
         
-        // Erstelle einen XML-Feed im RSS-Format mit korrekter XML-Struktur
-        $dom = new \DOMDocument('1.0', 'UTF-8');
-        $dom->formatOutput = true;
-        
-        // Erstelle das RSS-Element
-        $rss = $dom->createElement('rss');
-        $rss->setAttribute('version', '2.0');
-        $dom->appendChild($rss);
-        
-        // Erstelle das Channel-Element
-        $channel = $dom->createElement('channel');
-        $rss->appendChild($channel);
-        
-        // Füge Channel-Metadaten hinzu
-        $title = $dom->createElement('title', 'Social Media Examiner');
-        $channel->appendChild($title);
-        
-        $link = $dom->createElement('link', $base_url);
-        $channel->appendChild($link);
-        
-        $description = $dom->createElement('description', 'Social Media Marketing Articles');
-        $channel->appendChild($description);
-        
-        // Füge jeden Artikel zum Feed hinzu
-        foreach ($articles as $article) {
-            $item = $dom->createElement('item');
-            
-            // Titel
-            $itemTitle = $dom->createElement('title', $article['title']);
-            $item->appendChild($itemTitle);
-            
-            // Link
-            $itemLink = $dom->createElement('link', $article['link']);
-            $item->appendChild($itemLink);
-            
-            // GUID (wichtig für die Erkennung neuer Artikel)
-            $itemGuid = $dom->createElement('guid', $article['guid']);
-            $itemGuid->setAttribute('isPermaLink', 'false');
-            $item->appendChild($itemGuid);
-            
-            // Veröffentlichungsdatum
-            $itemPubDate = $dom->createElement('pubDate', $article['pubDate']);
-            $item->appendChild($itemPubDate);
-            
-            // Beschreibung
-            $itemDescription = $dom->createElement('description');
-            $cdata = $dom->createCDATASection($article['description']);
-            $itemDescription->appendChild($cdata);
-            $item->appendChild($itemDescription);
-            
-            // Füge das Item zum Channel hinzu
-            $channel->appendChild($item);
-        }
-        
-        // Generiere den XML-String
-        $feed = $dom->saveXML();
-        
-        $this->consoleLog("Generated simulated feed with " . count($articles) . " items", 'info');
-        
-        return $feed;
-    }
-    
-    /**
-     * Konvertiert HTML von socialmediaexaminer.com in einen XML-Feed
-     * 
-     * @param string|null $html Der HTML-Inhalt
-     * @param string|null $base_url Die Basis-URL für relative Links
-     * @return string Der generierte XML-Feed
-     */
-    private function convertHtmlToFeed(?string $html, ?string $base_url): string {
-        $this->consoleLog("Converting HTML to feed format", 'info');
-        
-        // Behandle NULL-Werte
-        if ($html === null) {
-            $this->consoleLog("HTML content is null, using empty string", 'warn');
-            $html = '';
-        }
-        
-        if ($base_url === null) {
-            $this->consoleLog("Base URL is null, using default", 'warn');
-            $base_url = 'https://www.socialmediaexaminer.com';
-        }
-        
-        // Erstelle ein DOMDocument-Objekt
-        $dom = new \DOMDocument();
-        
-        // Unterdrücke Fehler beim Parsen von ungültigem HTML
-        libxml_use_internal_errors(true);
-        $dom->loadHTML($html);
-        libxml_clear_errors();
-        
-        // Erstelle einen DOMXPath für einfachere Abfragen
-        $xpath = new \DOMXPath($dom);
-        
-        // Suche nach Artikeln (passe die XPath-Abfrage an die Struktur der Website an)
-        $articles = $xpath->query('//article | //div[contains(@class, "post") or contains(@class, "article")] | //div[contains(@class, "entry")]');
-        
-        // Wenn keine Artikel gefunden wurden, versuche es mit einer allgemeineren Abfrage
-        if ($articles->length === 0) {
-            $articles = $xpath->query('//div[contains(@class, "content")] | //div[contains(@class, "main")]//a[contains(@href, "/20")]/..'); 
-        }
-        
-        $this->consoleLog("Found {$articles->length} potential articles", 'info');
-        
-        // Erstelle einen XML-Feed im RSS-Format
-        $feed = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>';
-        $feed .= '<title>Social Media Examiner</title>';
-        $feed .= '<link>' . htmlspecialchars($base_url) . '</link>';
-        $feed .= '<description>Social Media Marketing Articles</description>';
-        
-        $count = 0;
-        
-        // Durchlaufe alle gefundenen Artikel
-        foreach ($articles as $article) {
-            // Versuche, den Titel zu finden
-            $title_elem = $xpath->query('.//h1 | .//h2 | .//h3 | .//h4 | .//a[contains(@class, "title")]', $article)->item(0);
-            $title = $title_elem ? trim($title_elem->textContent) : 'Untitled Article';
-            
-            // Versuche, den Link zu finden
-            $link = '';
-            $link_elem = $xpath->query('.//a[@href]', $article)->item(0);
-            if ($link_elem) {
-                // Sichere Methode zum Abrufen des href-Attributs
-                $link = '';
-                if (method_exists($link_elem, 'getAttribute')) {
-                    $href = $link_elem->getAttribute('href');
-                    $link = $href !== null ? $href : '';
-                } elseif (property_exists($link_elem, 'attributes') && isset($link_elem->attributes['href'])) {
-                    $link = $link_elem->attributes['href']->value;
-                }
-                // Konvertiere relative URLs zu absoluten URLs
-                if ($link !== '' && strpos((string)$link, 'http') !== 0) {
-                    $link = rtrim($base_url, '/') . '/' . ltrim($link, '/');
-                }
-            }
-            
-            // Versuche, die Beschreibung zu finden
-            $desc_elem = $xpath->query('.//p | .//div[contains(@class, "excerpt") or contains(@class, "summary")]', $article)->item(0);
-            $description = $desc_elem ? trim($desc_elem->textContent) : '';
-            
-            // Versuche, das Datum zu finden
-            $date_elem = $xpath->query('.//time | .//*[contains(@class, "date")]', $article)->item(0);
-            $date = $date_elem ? $date_elem->textContent : date('r');
-            
-            // Erstelle eine eindeutige GUID für diesen Artikel
-            $guid = !empty($link) ? $link : md5($title . $description);
-            
-            // Füge den Artikel zum Feed hinzu, wenn ein Titel und ein Link vorhanden sind
-            if (!empty($title) && !empty($link)) {
-                $feed .= '<item>';
-                $feed .= '<title>' . htmlspecialchars($title) . '</title>';
-                $feed .= '<link>' . htmlspecialchars($link) . '</link>';
-                $feed .= '<guid>' . htmlspecialchars($guid) . '</guid>';
-                $feed .= '<pubDate>' . htmlspecialchars($date) . '</pubDate>';
-                $feed .= '<description>' . htmlspecialchars($description) . '</description>';
-                $feed .= '</item>';
-                $count++;
+        foreach ($problem_domains as $domain) {
+            if (strpos($url, $domain) !== false) {
+                $this->consoleLog("Bekannte problematische Domain erkannt: {$domain}", 'info');
+                return true;
             }
         }
         
-        $feed .= '</channel></rss>';
-        
-        $this->consoleLog("Generated feed with {$count} items", 'info');
-        return $feed;
+        return false;
     }
     
     /**
@@ -409,55 +148,36 @@ class FeedHttpClient {
      * 
      * @param string|null $url     The URL to fetch
      * @param array|null  $options Request options
-     * @return string|false The fetched content or false on failure
+     * @return string|null The fetched content or null on failure
      */
-    public function fetch(?string $url, ?array $options = []): string|false {
+    public function fetch(?string $url, ?array $options = null): ?string {
         if ($url === null) {
             $error = "URL is null";
             $this->set_last_error($error);
             $this->consoleLog($error, 'error');
-            return false;
+            return null;
         }
         
-        // Make the request using WordPress wp_remote_get function
-        $response = \wp_remote_get($url, $options ?: $this->default_options);
+        // Optimierte Standardkonfiguration für alle Feed-Anfragen verwenden
+        $special_options = $this->default_options;
+        $special_options['headers'] = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language' => 'en-US,en;q=0.9',
+            'Accept-Encoding' => 'gzip, deflate, br',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'Upgrade-Insecure-Requests' => '1',
+            'Sec-Fetch-Dest' => 'document',
+            'Sec-Fetch-Mode' => 'navigate',
+            'Sec-Fetch-Site' => 'none',
+            'Sec-Fetch-User' => '?1',
+            'DNT' => '1',
+            'Pragma' => 'no-cache'
+        ];
         
-        // Check for WordPress HTTP API errors
-        if (\is_wp_error($response)) {
-            $error = $response->get_error_message();
-            $this->set_last_error($error);
-            $this->consoleLog("WP HTTP API error: {$error}", 'error');
-            return false;
-        }
-        
-        // Prüfen des Statuscodes
-        if (isset($response['response']['code']) && $response['response']['code'] !== 200) {
-            $status_code = $response['response']['code'];
-            $error = "Invalid response code: {$status_code}";
-            $this->set_last_error($error);
-            $this->consoleLog($error, 'error');
-            return false;
-        }
-            
-        // Get the body from the response
-        $body = is_array($response) && isset($response['body']) ? $response['body'] : false;
-        
-        if (empty($body)) {
-            $error = "Empty response body";
-            $this->set_last_error($error);
-            $this->consoleLog($error, 'error');
-            return false;
-        }
-        
-        $this->consoleLog("Successfully fetched feed content (" . strlen((string)$body) . " bytes)", 'info');
-        
-        // Preview the first part of the content for debugging
-        if (!empty($body) && is_string($body)) {
-            $content_preview = substr($body, 0, 200);
-            $this->consoleLog("Content preview: {$content_preview}...", 'log');
-        }
-        
-        return $body;
+        // Try to use cURL directly for more control
+        return $this->curlFetch($url, $special_options);
     }
     
     /**
@@ -465,14 +185,14 @@ class FeedHttpClient {
      * 
      * @param string|null $url     The URL to fetch
      * @param array|null  $options Request options
-     * @return string|false The fetched content or false on failure
+     * @return string|null The fetched content or null on failure
      */
-    private function curlFetch(?string $url, ?array $options = []): string|false {
+    private function curlFetch(?string $url, ?array $options = null): ?string {
         if (!function_exists('curl_init')) {
             $error = "cURL is not available";
             $this->set_last_error($error);
             $this->consoleLog($error, 'error');
-            return false;
+            return null;
         }
         
         $ch = curl_init($url);
@@ -487,6 +207,7 @@ class FeedHttpClient {
         curl_setopt($ch, CURLOPT_AUTOREFERER, true); // Set referer on redirect
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // Connection timeout
         curl_setopt($ch, CURLOPT_COOKIESESSION, true); // Use cookies
+        curl_setopt($ch, CURLOPT_USERAGENT, $options['headers']['User-Agent'] ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
         
         // Set headers if provided
         if (isset($options['headers']) && is_array($options['headers'])) {
@@ -512,7 +233,7 @@ class FeedHttpClient {
             $error_msg = "cURL error: {$error}";
             $this->set_last_error($error_msg);
             $this->consoleLog($error_msg, 'error');
-            return false;
+            return null;
         }
         
         if ($status_code !== 200) {
@@ -520,46 +241,54 @@ class FeedHttpClient {
             $this->set_last_error($error_msg);
             $this->consoleLog($error_msg, 'error');
             
-            // Wenn wir einen 403 Forbidden-Fehler erhalten, versuchen wir es mit einem alternativen User-Agent
-            if ($status_code === 403 && (!isset($options['retry']) || $options['retry'] < 2)) {
+            // Für alle Fehler-Statuscodes einen erneuten Versuch unternehmen
+            if (!isset($options['retry']) || $options['retry'] < 3) {
                 $retry_count = isset($options['retry']) ? $options['retry'] + 1 : 1;
-                $this->consoleLog("Received 403 Forbidden, trying with alternative approach (attempt {$retry_count})", 'warn');
+                $this->consoleLog("Received error status code {$status_code}, trying with alternative approach (attempt {$retry_count})", 'warn');
                 
                 // Verschiedene Strategien je nach Wiederholungsversuch
                 if ($retry_count === 1) {
-                    // Erster Wiederholungsversuch: Anderen Browser-User-Agent verwenden
+                    // First retry: Use Safari User-Agent
                     $options['headers']['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15';
                     $options['headers']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
                     $options['headers']['Accept-Language'] = 'en-US,en;q=0.9';
-                    // Entferne den Google-Referer, da dieser blockiert werden könnte
-                    if (isset($options['headers']['Referer']) && is_string($options['headers']['Referer']) && $options['headers']['Referer'] !== '' && strpos($options['headers']['Referer'], 'google.com') !== false) {
+                    // Remove Google referer which might be blocked
+                    if (isset($options['headers']['Referer'])) {
                         unset($options['headers']['Referer']);
                     }
-                } else {
-                    // Zweiter Wiederholungsversuch: Direkter Zugriff ohne spezielle Header
+                } else if ($retry_count === 2) {
+                    // Second retry: Try with minimal headers
                     $options['headers'] = [
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                        'User-Agent' => 'Mozilla/5.0 (compatible; Feedfetcher; +http://localhost)',
                         'Accept' => '*/*'
+                    ];
+                } else {
+                    // Third retry: Try pretending to be Feedly
+                    $options['headers'] = [
+                        'User-Agent' => 'Feedly/1.0 (+http://feedly.com/fetcher.html; like FeedFetcher-Google)',
+                        'Accept' => 'application/xml,application/rss+xml,application/atom+xml,application/rdf+xml,text/xml;q=0.9,text/html;q=0.8,*/*;q=0.7',
+                        'Accept-Language' => 'en-US,en;q=0.9',
+                        'Accept-Encoding' => 'gzip, deflate'
                     ];
                 }
                 
-                $options['retry'] = $retry_count; // Aktualisiere den Wiederholungszähler
+                $options['retry'] = $retry_count; // Update retry counter
                 
-                // Kurze Pause vor dem Wiederholungsversuch
-                usleep(mt_rand(3000000, 6000000)); // 3-6 Sekunden Pause
+                // Pause before retry to avoid rate limiting
+                sleep(2); 
                 
                 return $this->curlFetch($url, $options);
             }
             
-            return false;
+            return null;
         }
         
-        // Überprüfe, ob der Inhalt leer ist
+        // Check if content is empty
         if (empty($response)) {
             $error_msg = "Empty response body from cURL";
             $this->set_last_error($error_msg);
             $this->consoleLog($error_msg, 'error');
-            return false;
+            return null;
         }
         
         return $response;

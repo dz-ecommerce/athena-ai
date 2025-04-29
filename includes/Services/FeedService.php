@@ -521,106 +521,135 @@ class FeedService {
     }
     
     /**
-     * Ruft einen Feed ab und verarbeitet ihn.
+     * Fetch and process a feed
      *
-     * @param Feed $feed            Feed-Objekt.
-     * @param bool $verbose_console Ausführliche Konsolenausgabe aktivieren.
-     *
-     * @return bool Erfolgsstatus.
+     * @param Feed $feed The feed to process
+     * @return bool True if successful, false otherwise
      */
-    public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
-        if ($verbose_console) {
-            $this->setVerboseMode(true);
-        }
-        
-        $this->logger->info("Starte Abruf des Feeds: {$feed->get_url()}");
-        
-        try {
-            // Feed-URL abrufen und NULL-Werte behandeln
-            $url = $feed->get_url();
-            if ($url === null) {
-                $error = 'Feed-URL ist null';
-                if (method_exists($feed, 'update_feed_error')) {
-                    $feed->update_feed_error($error);
-                }
-                $this->logger->error("Feed-Abruf fehlgeschlagen: {$error}");
-                return false;
-            }
-            
-            // Feed-Inhalt abrufen
-            $content = $this->http_client->fetch($url);
-            
-            if ($content === null || empty($content)) {
-                $error = 'Leerer Feed-Inhalt erhalten';
-                if (method_exists($this->http_client, 'get_last_error')) {
-                    $error = $this->http_client->get_last_error() ?: $error;
-                }
-                if (method_exists($feed, 'update_feed_error')) {
-                    $feed->update_feed_error($error);
-                }
-                $this->logger->error("Feed-Abruf fehlgeschlagen: {$error}");
-                return false;
-            }
-            
-            // Feed-Inhalt verarbeiten
-            $items = $this->processFeedContent($content, $feed);
-            
-            if ($items === false || empty($items)) {
-                $error = 'Keine Items im Feed gefunden oder Parsing-Fehler';
-                if (method_exists($feed, 'get_last_error')) {
-                    $error = $feed->get_last_error();
-                }
-                if (method_exists($feed, 'update_feed_error')) {
-                    $feed->update_feed_error($error);
-                }
-                $this->logger->error("Feed-Verarbeitung fehlgeschlagen: {$error}");
-                
-                if ($verbose_console) {
-                    $url = $this->escapeJs($feed->get_url());
-                    echo '<script>console.warn("No items found in feed: ' . $url . '");</script>';
-                }
-                
-                return false;
-            }
-            
-            $this->logger->info("Feed-Inhalt erfolgreich verarbeitet. " . count($items) . " Items gefunden.");
-            
-            if (empty($items)) {
-                if ($verbose_console) {
-                    $url = $this->escapeJs($feed->get_url());
-                    echo '<script>console.warn("No items found in feed: ' . $url . '");</script>';
-                }
-                
-                // Still update the feed metadata to record the attempt
-                $this->repository->update_feed_metadata($feed, 0);
-                return true; // Consider this a success with zero items
-            }
-            
-            // Save the items
-            $result = $this->saveItems($feed, $items);
-            
-            if ($verbose_console) {
-                $url = function_exists('esc_js') 
-                    ? \esc_js($feed->get_url()) 
-                    : htmlspecialchars($feed->get_url(), ENT_QUOTES, 'UTF-8');
-                echo '<script>console.info("Processed feed: ' . $url . '");</script>';
-            }
-            
-            return $result;
-            
-        } catch (\Exception $e) {
-            // Handle any exceptions that might occur
-            if ($verbose_console) {
-                $error_message = $this->escapeJs($e->getMessage() ?? 'Unbekannter Fehler');
-                echo '<script>console.error("Error processing feed: ' . $error_message . '");</script>';
-            }
-            
-            // Log the error if error handler is available
-            if (isset($this->error_handler) && method_exists($this->error_handler, 'logError')) {
-                $this->error_handler->logError($feed, 'process_exception', $e->getMessage());
-            }
+    public function fetch_and_process_feed(Feed $feed): bool {
+        $url = $feed->get_url();
+        if (empty($url)) {
+            $feed->add_error('missing_url', __('Feed URL is empty', 'athena-ai'));
             return false;
         }
+
+        // Fetch feed content
+        $content = $this->http_client->fetch($url);
+
+        // Handle null or empty content
+        if ($content === null || empty($content)) {
+            $error_message = $this->http_client->get_last_error() ?: __('Failed to fetch feed content (empty response)', 'athena-ai');
+            
+            // Allgemeine Fehlermeldung für problematische Feeds
+            if (method_exists($this->http_client, 'isProblemURL') && $this->http_client->isProblemURL($url)) {
+                $error_message .= '. ' . __('This feed may be blocking automated access. We\'ve implemented special handling to try and access it.', 'athena-ai');
+                $this->logger->log('info', 'Special handling for feed at ' . $url . ': ' . $error_message);
+            }
+            
+            $feed->add_error('fetch_failed', $error_message);
+            return false;
+        }
+
+        // Process the feed based on its content type
+        $content_type = $this->determine_content_type($content);
+        return $this->process_feed_content($feed, $content, $content_type);
+    }
+    
+    /**
+     * Bestimmt den Content-Type eines Feed-Inhalts.
+     *
+     * @param string|null $content Der Feed-Inhalt.
+     * @return string Der erkannte Content-Type ('xml', 'json', oder 'unknown').
+     */
+    private function determine_content_type(?string $content): string {
+        if ($content === null || empty($content)) {
+            return 'unknown';
+        }
+        
+        // Bereinige den Content von Whitespace am Anfang und Ende
+        $trimmed = trim($content);
+        
+        // Prüfe auf XML-Format
+        if (strpos($trimmed, '<?xml') !== false || 
+            strpos($trimmed, '<rss') !== false || 
+            strpos($trimmed, '<feed') !== false ||
+            strpos($trimmed, '<channel') !== false) {
+            $this->logger->info("Content-Type als XML/RSS erkannt");
+            return 'xml';
+        }
+        
+        // Prüfe auf JSON-Format
+        if ((strpos($trimmed, '{') === 0 || strpos($trimmed, '[') === 0) &&
+            json_decode($trimmed) !== null && 
+            json_last_error() === JSON_ERROR_NONE) {
+            $this->logger->info("Content-Type als JSON erkannt");
+            return 'json';
+        }
+        
+        // Wenn weder XML noch JSON erkannt wurde
+        $this->logger->warn("Content-Type konnte nicht erkannt werden");
+        return 'unknown';
+    }
+    
+    /**
+     * Verarbeitet den Feed-Inhalt basierend auf dem Content-Type.
+     *
+     * @param Feed        $feed         Das Feed-Objekt.
+     * @param string|null $content      Der Feed-Inhalt.
+     * @param string      $content_type Der Content-Type ('xml', 'json', oder 'unknown').
+     * @return bool True bei erfolgreicher Verarbeitung, sonst false.
+     */
+    private function process_feed_content(Feed $feed, ?string $content, string $content_type): bool {
+        if ($content === null || empty($content)) {
+            $feed->add_error('empty_content', __('Feed content is empty', 'athena-ai'));
+            return false;
+        }
+        
+        $items = [];
+        
+        switch ($content_type) {
+            case 'xml':
+                // XML als SimpleXMLElement parsen
+                libxml_use_internal_errors(true);
+                $xml = @simplexml_load_string($content);
+                if ($xml === false) {
+                    $errors = libxml_get_errors();
+                    libxml_clear_errors();
+                    $error_msg = "XML-Parsing-Fehler: ";
+                    foreach ($errors as $error) {
+                        $error_msg .= "Zeile {$error->line}, Spalte {$error->column}: {$error->message}; ";
+                    }
+                    $feed->add_error('xml_parsing_error', $error_msg);
+                    return false;
+                }
+                $items = $this->processXmlFeed($xml, $feed);
+                break;
+                
+            case 'json':
+                // JSON-String in Array umwandeln
+                $json = @json_decode($content, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $feed->add_error('json_parsing_error', json_last_error_msg());
+                    return false;
+                }
+                $items = $this->processJsonFeed($json, $feed);
+                break;
+                
+            default:
+                // Bei unbekanntem Format versuche es mit processFeedContent
+                $this->logger->info("Unbekannter Content-Type, versuche generische Verarbeitung");
+                $items = $this->processFeedContent($content, $feed);
+                break;
+        }
+        
+        // Prüfe, ob Items extrahiert wurden
+        if ($items === false || empty($items)) {
+            $feed->add_error('no_items', __('No items found in feed', 'athena-ai'));
+            return false;
+        }
+        
+        // Speichere die Items in der Datenbank
+        return $this->saveItems($feed, $items);
     }
     
     /**
