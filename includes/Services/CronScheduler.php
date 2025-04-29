@@ -135,7 +135,7 @@ class CronScheduler {
             $new_timestamp = wp_next_scheduled('athena_fetch_feeds');
             
             if ($new_timestamp) {
-                $logger->info('Feed fetch cron event scheduled successfully for: ' . date('Y-m-d H:i:s', $new_timestamp));
+                $logger->info('Feed fetch cron event scheduled successfully for: ' . date('Y-m-d H:i:s', (int) $new_timestamp));
             } else {
                 $logger->error('Failed to schedule feed fetch cron event');
             }
@@ -152,13 +152,13 @@ class CronScheduler {
             $new_timestamp = wp_next_scheduled('athena_fetch_feeds');
             
             if ($new_timestamp) {
-                $logger->info('Feed fetch cron event re-scheduled successfully for: ' . date('Y-m-d H:i:s', $new_timestamp));
+                $logger->info('Feed fetch cron event re-scheduled successfully for: ' . date('Y-m-d H:i:s', (int) $new_timestamp));
             } else {
                 $logger->error('Failed to re-schedule feed fetch cron event');
             }
         } else {
             // Everything seems fine, log that
-            $logger->debug('Feed fetch cron is healthy. Next scheduled run: ' . date('Y-m-d H:i:s', $timestamp) . ' with interval: ' . $interval);
+            $logger->debug('Feed fetch cron is healthy. Next scheduled run: ' . date('Y-m-d H:i:s', (int) $timestamp) . ' with interval: ' . $interval);
         }
         
         // Check if WordPress cron is being triggered correctly
@@ -169,7 +169,7 @@ class CronScheduler {
             
             if ($current_time - $last_cron_time > 3600) { // If no cron for more than an hour
                 $logger->warn('WordPress cron may not be running correctly. Last run: ' . 
-                    ($last_cron_time ? date('Y-m-d H:i:s', $last_cron_time) : 'Never'));
+                    ($last_cron_time ? date('Y-m-d H:i:s', (int) $last_cron_time) : 'Never'));
                 
                 // Check if an alternative WP Cron is needed
                 if (!defined('ALTERNATE_WP_CRON') || !ALTERNATE_WP_CRON) {
@@ -198,7 +198,7 @@ class CronScheduler {
         if ($debug_mode) {
             $logger = LoggerService::getInstance()->setComponent('CronScheduler');
             $logger->debug("Ensuring feed fetch is scheduled. Current timestamp: " . 
-                ($timestamp ? date('Y-m-d H:i:s', $timestamp) : 'None') . 
+                ($timestamp ? date('Y-m-d H:i:s', (int) $timestamp) : 'None') . 
                 ", Current interval: " . ($current_interval ?: 'None') . 
                 ", Expected interval: {$interval}");
         }
@@ -216,7 +216,7 @@ class CronScheduler {
             if ($debug_mode) {
                 $new_timestamp = wp_next_scheduled('athena_fetch_feeds');
                 $logger->info("Feed fetch cron job " . ($timestamp ? 're-' : '') . "scheduled with interval: {$interval}" . 
-                    ($new_timestamp ? ", next run at: " . date('Y-m-d H:i:s', $new_timestamp) : ", scheduling failed"));
+                    ($new_timestamp ? ", next run at: " . date('Y-m-d H:i:s', (int) $new_timestamp) : ", scheduling failed"));
                 
                 if ($result === false) {
                     $logger->error("Failed to schedule cron event. WP Error: " . print_r(error_get_last(), true));
