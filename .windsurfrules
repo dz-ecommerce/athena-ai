@@ -11,7 +11,7 @@
   - Favor hooks (actions and filters) for extending functionality.
   
   PHP/WordPress
-  - Use PHP 7.4+ features when appropriate (e.g., typed properties, arrow functions).
+  - Use PHP 8.0+ features when appropriate (e.g., typed properties, arrow functions).
   - Follow WordPress PHP Coding Standards.
   - Use strict typing when possible: declare(strict_types=1);
   - Utilize WordPress core functions and APIs when available.

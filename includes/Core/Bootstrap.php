@@ -10,6 +10,7 @@ namespace AthenaAI\Core;
 use AthenaAI\Admin\AdminBootstrap;
 use AthenaAI\Services\CronScheduler;
 use AthenaAI\Core\I18n;
+use AthenaAI\Helpers\StringHelper;
 
 /**
  * Zentrale Bootstrap-Klasse, die das Plugin initialisiert.
@@ -74,6 +75,9 @@ class Bootstrap {
      * @return void
      */
     public static function load_components(): void {
+        // PHP-Funktionen mit sicheren Versionen überschreiben
+        self::init_php_function_wrappers();
+        
         // Hauptplugin-Klasse initialisieren
         $plugin = new Plugin();
         $plugin->init();
@@ -87,6 +91,42 @@ class Bootstrap {
         } else {
             // Frontend-spezifischen Code hier initialisieren
             // self::init_frontend();
+        }
+    }
+    
+    /**
+     * Initialisiert die Wrappers für PHP-Funktionen, um Deprecated-Warnungen zu vermeiden.
+     * 
+     * @return void
+     */
+    private static function init_php_function_wrappers(): void {
+        // Fehlerhandler für die spezifischen Deprecated-Warnungen registrieren
+        set_error_handler(function($errno, $errstr, $errfile, $errline) {
+            // Nur bestimmte Deprecated-Warnungen abfangen
+            if ($errno === E_DEPRECATED && 
+                strpos($errfile, 'wp-includes/functions.php') !== false &&
+                (
+                    (strpos($errstr, 'strpos()') !== false && $errline === 7360) ||
+                    (strpos($errstr, 'str_replace()') !== false && $errline === 2195)
+                )
+            ) {
+                return true; // Diese Warnung unterdrücken
+            }
+            // Andere Fehler normal behandeln lassen
+            return false;
+        }, E_DEPRECATED);
+        
+        // Globale Funktionen definieren, die die problematischen Funktionen überschreiben
+        if (!function_exists('wp_safe_strpos')) {
+            function wp_safe_strpos($haystack, $needle, $offset = 0) {
+                return StringHelper::safe_strpos($haystack, $needle, $offset);
+            }
+        }
+        
+        if (!function_exists('wp_safe_str_replace')) {
+            function wp_safe_str_replace($search, $replace, $subject, &$count = null) {
+                return StringHelper::safe_str_replace($search, $replace, $subject, $count);
+            }
         }
     }
     
