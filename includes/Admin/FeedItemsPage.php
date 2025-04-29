@@ -28,6 +28,9 @@ class FeedItemsPage {
         
         // Add AJAX handlers
         add_action('wp_ajax_athena_fetch_feeds', [self::class, 'handle_manual_fetch']);
+        
+        // Add debug cron health handler
+        add_action('admin_post_athena_debug_cron_health', [self::class, 'handle_debug_cron_health']);
     }
     
     /**
@@ -311,5 +314,35 @@ class FeedItemsPage {
         } else {
             wp_send_json_error(['message' => __('Failed to fetch feed. Please check the feed URL and try again.', 'athena-ai')]);
         }
+    }
+
+    /**
+     * Debug cron health handler
+     */
+    public static function handle_debug_cron_health(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
+        }
+        
+        check_admin_referer('athena_debug_cron_health_nonce');
+        
+        // Force cron re-scheduling
+        \AthenaAI\Services\CronScheduler::debug_cron_health();
+        
+        // Get next scheduled time
+        $next_scheduled = wp_next_scheduled('athena_fetch_feeds');
+        $current_interval = wp_get_schedule('athena_fetch_feeds');
+        $expected_interval = get_option('athena_ai_feed_cron_interval', 'hourly');
+        
+        $redirect_url = add_query_arg([
+            'page' => 'athena-feed-items',
+            'cron_debugged' => 1,
+            'next_scheduled' => $next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'None',
+            'current_interval' => $current_interval ?: 'None',
+            'expected_interval' => $expected_interval
+        ], admin_url('admin.php'));
+        
+        wp_redirect($redirect_url);
+        exit;
     }
 }

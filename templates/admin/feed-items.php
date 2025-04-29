@@ -29,12 +29,43 @@ if (!empty($items)) {
                 </button>
             </form>
             
+            <?php if (current_user_can('manage_options')): ?>
+            <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" class="inline-block">
+                <input type="hidden" name="action" value="athena_debug_cron_health">
+                <?php wp_nonce_field('athena_debug_cron_health_nonce'); ?>
+                <button type="submit" class="athena-button-secondary ml-2">
+                    <i class="fa-solid fa-wrench mr-2"></i>
+                    <?php esc_html_e('Debug Cron Health', 'athena-ai'); ?>
+                </button>
+            </form>
+            <?php endif; ?>
+            
             <a href="<?php echo admin_url('post-new.php?post_type=athena-feed'); ?>" class="athena-button ml-2">
                 <i class="fa-solid fa-plus mr-2"></i>
                 <?php esc_html_e('Add New Feed', 'athena-ai'); ?>
             </a>
         </div>
     </div>
+    
+    <?php if (isset($_GET['cron_debugged'])): ?>
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fa-solid fa-info-circle text-blue-500"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    <?php esc_html_e('Cron health debug completed.', 'athena-ai'); ?>
+                </p>
+                <p class="text-sm text-blue-700">
+                    <?php echo sprintf(esc_html__('Next scheduled: %s', 'athena-ai'), esc_html($_GET['next_scheduled'])); ?><br>
+                    <?php echo sprintf(esc_html__('Current interval: %s', 'athena-ai'), esc_html($_GET['current_interval'])); ?><br>
+                    <?php echo sprintf(esc_html__('Expected interval: %s', 'athena-ai'), esc_html($_GET['expected_interval'])); ?>
+                </p>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
     
     <?php if ($show_success_message): ?>
     <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
