@@ -543,7 +543,7 @@ class FeedService {
             // Allgemeine Fehlermeldung für problematische Feeds
             if (method_exists($this->http_client, 'isProblemURL') && $this->http_client->isProblemURL($url)) {
                 $error_message .= '. ' . __('This feed may be blocking automated access. We\'ve implemented special handling to try and access it.', 'athena-ai');
-                $this->logger->log('info', 'Special handling for feed at ' . $url . ': ' . $error_message);
+                $this->logger->info('Special handling for feed at ' . $url . ': ' . $error_message);
             }
             
             $feed->add_error('fetch_failed', $error_message);
