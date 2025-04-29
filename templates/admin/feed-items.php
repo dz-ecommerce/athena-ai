@@ -354,23 +354,62 @@ if (!empty($items)) {
             <?php endif; ?>
             
             <!-- Page numbers -->
-            <div class="hidden md:flex">
+            <div class="flex">
                 <?php
-                $start_page = max(1, min($current_page - 2, $total_pages - 4));
-                $end_page = min($total_pages, max($current_page + 2, 5));
+                // Add First Page button if not on first page
+                if ($current_page > 1):
+                    $first_page_url = add_query_arg('paged', 1, $base_url);
+                ?>
+                <a href="<?php echo esc_url($first_page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150" title="<?php esc_attr_e('First Page', 'athena-ai'); ?>">
+                    <i class="fa-solid fa-angle-double-left"></i>
+                </a>
+                <?php endif; ?>
                 
+                <?php
+                // Calculate visible page ranges
+                $total_visible_pages = 5; // Number of page links to show
+                $start_page = max(1, min($current_page - floor($total_visible_pages/2), $total_pages - $total_visible_pages + 1));
+                $end_page = min($total_pages, $start_page + $total_visible_pages - 1);
+                
+                // Show ellipsis before first pages if needed
+                if ($start_page > 1): ?>
+                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        ...
+                    </span>
+                <?php endif; ?>
+                
+                <?php
+                // Display page numbers
                 for ($i = $start_page; $i <= $end_page; $i++):
                     $page_url = add_query_arg('paged', $i, $base_url);
                     if ($i == $current_page): 
                 ?>
-                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600 border-blue-300">
+                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
                         <?php echo $i; ?>
                     </span>
                 <?php else: ?>
-                    <a href="<?php echo esc_url($page_url); ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150">
+                    <a href="<?php echo esc_url($page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150">
                         <?php echo $i; ?>
                     </a>
                 <?php endif; endfor; ?>
+                
+                <?php 
+                // Show ellipsis after last visible page if needed
+                if ($end_page < $total_pages): ?>
+                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        ...
+                    </span>
+                <?php endif; ?>
+                
+                <?php 
+                // Add Last Page button if not on last page
+                if ($current_page < $total_pages):
+                    $last_page_url = add_query_arg('paged', $total_pages, $base_url);
+                ?>
+                <a href="<?php echo esc_url($last_page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150" title="<?php esc_attr_e('Last Page', 'athena-ai'); ?>">
+                    <i class="fa-solid fa-angle-double-right"></i>
+                </a>
+                <?php endif; ?>
             </div>
             
             <!-- Next button -->
