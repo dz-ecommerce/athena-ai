@@ -100,14 +100,11 @@ class FeedFetcher {
     /**
      * Fetch all feeds
      * 
-     * @param bool $force_fetch Whether to force fetch all feeds regardless of their update interval
-     * @param bool $verbose_console Whether to output verbose debugging information to the JavaScript console
-     * @return array Array with success, error, and new items counts
+     * @param bool $force_fetch Whether to force fetch all feeds, regardless of update interval
+     * @param bool $verbose_console Whether to output verbose console logs (only for manual fetches)
+     * @return array Results of the fetch operation
      */
     public static function fetch_all_feeds(bool $force_fetch = false, bool $verbose_console = false): array {
-        global $wpdb;
-        
-        // Initialisiere das Results-Array mit Standardwerten
         $results = [
             'success' => 0,
             'error' => 0,
@@ -115,8 +112,16 @@ class FeedFetcher {
             'details' => []
         ];
         
-        // Get debug mode setting
-        $debug_mode = \get_option('athena_debug_mode', '0') === '1';
+        // Check if we're being called from admin-post.php to avoid headers already sent errors
+        $is_admin_post = (strpos($_SERVER['REQUEST_URI'] ?? '', 'admin-post.php') !== false);
+        if ($is_admin_post) {
+            $verbose_console = false; // Disable console output when called from admin-post
+        }
+        
+        // Start output buffering to capture any output if needed
+        ob_start();
+        
+        $debug_mode = \get_option('athena_ai_enable_debug_mode', false);
         $logger = LoggerService::getInstance()->setComponent('FeedFetcher');
         
         if ($debug_mode) {
@@ -216,6 +221,13 @@ class FeedFetcher {
                 }
                 echo '<script>console.groupEnd();</script>';
             }
+        }
+        
+        // If we're being called from admin-post.php, discard the output
+        if (isset($is_admin_post) && $is_admin_post) {
+            ob_end_clean();
+        } else {
+            ob_end_flush();
         }
         
         return $results;

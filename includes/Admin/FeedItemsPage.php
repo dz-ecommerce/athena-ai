@@ -253,8 +253,13 @@ class FeedItemsPage {
             wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
         }
         
-        // Fetch feeds
-        $result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true, true);
+        // Verify nonce
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'athena_fetch_feeds_nonce')) {
+            wp_die(__('Security check failed. Please try again.', 'athena-ai'));
+        }
+        
+        // Fetch feeds - set verbose_console to false to prevent output before headers
+        $result = \AthenaAI\Admin\FeedFetcher::fetch_all_feeds(true, false);
         
         // Redirect back with results
         wp_redirect(add_query_arg([
