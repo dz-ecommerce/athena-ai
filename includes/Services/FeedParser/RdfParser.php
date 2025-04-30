@@ -123,6 +123,18 @@ class RdfParser implements FeedParserInterface {
         $content_preview = substr($content, 0, 500) . '...';
         $this->consoleLog('Feed content preview: ' . $content_preview, 'info');
         
+        // Spezielle Behandlung für tagesschau.de Feeds
+        if (stripos($content, 'tagesschau.de') !== false) {
+            $this->consoleLog('Tagesschau.de Feed erkannt - verwende spezielle Verarbeitung', 'info');
+            $items = $this->parseTagesschauFeed($content);
+            if (!empty($items)) {
+                $this->consoleLog('Tagesschau.de Feed erfolgreich geparst: ' . count($items) . ' Items gefunden', 'info');
+                $this->consoleLog('', 'groupEnd');
+                return $items;
+            }
+            $this->consoleLog('Spezielle Tagesschau-Verarbeitung fehlgeschlagen, versuche Standard-Methoden', 'warn');
+        }
+        
         // Normalisiere XML-Inhalt und Namespaces
         $content = $this->normalizeRdfContent($content);
         
@@ -681,5 +693,364 @@ class RdfParser implements FeedParserInterface {
         }
         
         return $result;
+    }
+
+    /**
+     * Spezielle Parser-Methode für tagesschau.de Feeds
+     * 
+     * @param string $content Der Feed-Inhalt
+     * @return array Die geparsten Feed-Items
+     */
+    private function parseTagesschauFeed(string $content): array {
+        $items = [];
+        
+        // Manuelle Extraktion der Items mit Regex für den speziellen Fall
+        $this->consoleLog('Versuche manuelle Extraktion mit Regex für tagesschau.de', 'info');
+        
+        // Extrahiere alle item-Elemente mit regulären Ausdrücken
+        $item_pattern = '/<item[^>]*>(.*?)<\/item>/s';
+        if (preg_match_all($item_pattern, $content, $item_matches)) {
+            $this->consoleLog('Gefunden: ' . count($item_matches[0]) . ' Item-Elemente mit Regex', 'info');
+            
+            foreach ($item_matches[0] as $item_xml) {
+                $item = [
+                    'title' => '',
+                    'link' => '',
+                    'date' => '',
+                    'author' => '',
+                    'content' => '',
+                    'description' => '',
+                    'permalink' => '',
+                    'id' => '',
+                    'thumbnail' => null,
+                    'categories' => []
+                ];
+                
+                // Extrahiere URL aus rdf:about Attribut
+                $about_pattern = '/<item[^>]*rdf:about="([^"]+)"[^>]*>/';
+                if (preg_match($about_pattern, $item_xml, $about_match)) {
+                    $item['link'] = $about_match[1];
+                    $item['permalink'] = $about_match[1];
+                    $item['id'] = $about_match[1];
+                }
+                
+                // Extrahiere Titel
+                $title_pattern = '/<title[^>]*>(.*?)<\/title>/s';
+                if (preg_match($title_pattern, $item_xml, $title_match)) {
+                    $item['title'] = trim(strip_tags($title_match[1]));
+                }
+                
+                // Extrahiere Beschreibung
+                $desc_pattern = '/<description[^>]*>(.*?)<\/description>/s';
+                if (preg_match($desc_pattern, $item_xml, $desc_match)) {
+                    $item['description'] = trim(strip_tags($desc_match[1]));
+                    $item['content'] = $item['description'];
+                }
+                
+                // Extrahiere Datum
+                $date_patterns = [
+                    '/<dc:date[^>]*>(.*?)<\/dc:date>/s',
+                    '/<pubDate[^>]*>(.*?)<\/pubDate>/s',
+                    '/<date[^>]*>(.*?)<\/date>/s'
+                ];
+                
+                foreach ($date_patterns as $pattern) {
+                    if (preg_match($pattern, $item_xml, $date_match)) {
+                        $item['date'] = trim($date_match[1]);
+                        break;
+                    }
+                }
+                
+                // Extrahiere Autor
+                $author_patterns = [
+                    '/<dc:creator[^>]*>(.*?)<\/dc:creator>/s',
+                    '/<author[^>]*>(.*?)<\/author>/s'
+                ];
+                
+                foreach ($author_patterns as $pattern) {
+                    if (preg_match($pattern, $item_xml, $author_match)) {
+                        $item['author'] = trim(strip_tags($author_match[1]));
+                        break;
+                    }
+                }
+                
+                // Setze Default-Werte für Tagesschau-spezifische Inhalte, falls nicht gefunden
+                if (empty($item['author']) && stripos($content, 'tagesschau.de') !== false) {
+                    $item['author'] = 'tagesschau.de';
+                }
+                
+                // Für tagesschau.de: Füge standard Kategorie hinzu
+                $item['categories'][] = 'Nachrichten';
+                
+                // Validiere das Item (benötigt mindestens Titel oder Beschreibung)
+                if (!empty($item['title']) || !empty($item['description'])) {
+                    $items[] = $item;
+                }
+            }
+        } else {
+            $this->consoleLog('Keine Items mit Regex gefunden, versuche DOM-Parsing', 'warn');
+            
+            // Fallback zu DOM-basiertem Parsing
+            $dom = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            if (@$dom->loadXML($content)) {
+                $items = $this->parseTagesschauWithDom($dom);
+            } else {
+                $this->consoleLog('Konnte XML nicht als DOM laden', 'error');
+            }
+            libxml_clear_errors();
+        }
+        
+        // Wenn immer noch keine Items gefunden wurden, letzter Fallback: Hardcoded Lösung
+        if (empty($items) && stripos($content, 'tagesschau.de') !== false) {
+            $this->consoleLog('Alle Parsing-Methoden fehlgeschlagen, verwende Notfall-Fallback für tagesschau.de', 'warn');
+            
+            // Versuche, Sequenz-Items direkt zu extrahieren
+            $seq_pattern = '/<rdf:Seq>(.*?)<\/rdf:Seq>/s';
+            $resource_pattern = '/<rdf:li rdf:resource="([^"]+)"/';
+            
+            if (preg_match($seq_pattern, $content, $seq_match) && 
+                preg_match_all($resource_pattern, $seq_match[1], $resources)) {
+                
+                $this->consoleLog('Extrahiere Links direkt aus Sequenz: ' . count($resources[1]) . ' gefunden', 'info');
+                
+                // Für jeden Link, versuche das entsprechende Item zu finden
+                foreach ($resources[1] as $url) {
+                    // Suche nach dem Item mit dieser URL
+                    $item_start_pattern = '/<item[^>]*rdf:about="' . preg_quote($url, '/') . '"[^>]*>/';
+                    if (preg_match($item_start_pattern, $content, $item_start_match, PREG_OFFSET_CAPTURE)) {
+                        $start_pos = $item_start_match[0][1];
+                        
+                        // Suche das Ende des Item-Elements
+                        $item_end_pos = strpos($content, '</item>', $start_pos);
+                        if ($item_end_pos !== false) {
+                            // Extrahiere den gesamten Item-Block
+                            $item_block = substr($content, $start_pos, $item_end_pos - $start_pos + 7); // +7 für '</item>'
+                            
+                            // Extrahiere Titel
+                            $title = '';
+                            if (preg_match('/<title[^>]*>(.*?)<\/title>/s', $item_block, $title_match)) {
+                                $title = trim(strip_tags($title_match[1]));
+                            }
+                            
+                            // Extrahiere Beschreibung
+                            $description = '';
+                            if (preg_match('/<description[^>]*>(.*?)<\/description>/s', $item_block, $desc_match)) {
+                                $description = trim(strip_tags($desc_match[1]));
+                            }
+                            
+                            // Extrahiere Datum
+                            $date = '';
+                            if (preg_match('/<dc:date[^>]*>(.*?)<\/dc:date>/s', $item_block, $date_match)) {
+                                $date = trim($date_match[1]);
+                            }
+                            
+                            // Erstelle das Item-Array
+                            $items[] = [
+                                'title' => $title,
+                                'link' => $url,
+                                'date' => $date,
+                                'author' => 'tagesschau.de',
+                                'content' => $description,
+                                'description' => $description,
+                                'permalink' => $url,
+                                'id' => $url,
+                                'thumbnail' => null,
+                                'categories' => ['Nachrichten']
+                            ];
+                        }
+                    }
+                }
+                
+                $this->consoleLog('Fallback hat ' . count($items) . ' Items extrahiert', 'info');
+            }
+            
+            // Absolute Notfalllösung: Ein Dummy-Item erstellen
+            if (empty($items)) {
+                $this->consoleLog('LETZTER AUSWEG: Erstelle Dummy-Item für tagesschau.de', 'warn');
+                $items[] = [
+                    'title' => 'Tagesschau.de Nachrichten',
+                    'link' => 'https://www.tagesschau.de/',
+                    'date' => date('Y-m-d H:i:s'),
+                    'author' => 'tagesschau.de',
+                    'content' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Tagesschau-Website.',
+                    'description' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Tagesschau-Website.',
+                    'permalink' => 'https://www.tagesschau.de/',
+                    'id' => 'tagesschau-fallback-' . time(),
+                    'thumbnail' => null,
+                    'categories' => ['Nachrichten']
+                ];
+            }
+        }
+        
+        return $items;
+    }
+
+    /**
+     * Parst einen tagesschau.de Feed mit DOM
+     * 
+     * @param \DOMDocument $dom Der DOM des Feeds
+     * @return array Die geparsten Feed-Items
+     */
+    private function parseTagesschauWithDom(\DOMDocument $dom): array {
+        $items = [];
+        $xpath = new \DOMXPath($dom);
+        
+        // Registriere häufig verwendete Namespaces
+        $xpath->registerNamespace('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+        $xpath->registerNamespace('dc', 'http://purl.org/dc/elements/1.1/');
+        $xpath->registerNamespace('rss', 'http://purl.org/rss/1.0/');
+        
+        // 1. Versuche, die Items über die Sequenz zu finden
+        $seq_items = $xpath->query('//rdf:Seq/rdf:li');
+        
+        if ($seq_items && $seq_items->length > 0) {
+            $this->consoleLog("Gefunden {$seq_items->length} Items in Sequenz", 'info');
+            
+            $processed_urls = [];
+            
+            foreach ($seq_items as $seq_item) {
+                $url = $seq_item->getAttributeNS('http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'resource');
+                if (!$url) continue;
+                
+                // Verhindere Duplikate
+                if (in_array($url, $processed_urls)) continue;
+                $processed_urls[] = $url;
+                
+                // Finde das entsprechende Item mit der URL
+                $item_node = null;
+                
+                // Mehrere Strategien versuchen
+                $test_queries = [
+                    "//item[@rdf:about='{$url}']",
+                    "//*[local-name()='item'][@*[local-name()='about']='{$url}']"
+                ];
+                
+                foreach ($test_queries as $query) {
+                    $nodes = $xpath->query($query);
+                    if ($nodes && $nodes->length > 0) {
+                        $item_node = $nodes->item(0);
+                        break;
+                    }
+                }
+                
+                if (!$item_node) {
+                    $this->consoleLog("Kein Item mit URL '{$url}' gefunden", 'warn');
+                    continue;
+                }
+                
+                $item = [
+                    'title' => '',
+                    'link' => $url,
+                    'date' => '',
+                    'author' => 'tagesschau.de',
+                    'content' => '',
+                    'description' => '',
+                    'permalink' => $url,
+                    'id' => $url,
+                    'thumbnail' => null,
+                    'categories' => ['Nachrichten']
+                ];
+                
+                // Extrahiere den Titel
+                $title_nodes = $xpath->query('./title', $item_node);
+                if ($title_nodes && $title_nodes->length > 0) {
+                    $item['title'] = $title_nodes->item(0)->textContent;
+                }
+                
+                // Extrahiere die Beschreibung
+                $desc_nodes = $xpath->query('./description', $item_node);
+                if ($desc_nodes && $desc_nodes->length > 0) {
+                    $item['description'] = $desc_nodes->item(0)->textContent;
+                    $item['content'] = $item['description'];
+                }
+                
+                // Extrahiere das Datum
+                $date_nodes = $xpath->query('./dc:date', $item_node);
+                if ($date_nodes && $date_nodes->length > 0) {
+                    $item['date'] = $date_nodes->item(0)->textContent;
+                }
+                
+                if (!empty($item['title']) || !empty($item['description'])) {
+                    $items[] = $item;
+                }
+            }
+        } else {
+            // 2. Fallback: Direkte Suche nach Items
+            $this->consoleLog("Keine Items in Sequenz gefunden, suche direkt nach Items", 'warn');
+            
+            $direct_items = $xpath->query('//item');
+            if ($direct_items && $direct_items->length > 0) {
+                $this->consoleLog("Gefunden {$direct_items->length} direkte Items", 'info');
+                
+                foreach ($direct_items as $item_node) {
+                    $about = $item_node->getAttributeNS('http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'about');
+                    
+                    $item = [
+                        'title' => '',
+                        'link' => $about ?: '',
+                        'date' => '',
+                        'author' => 'tagesschau.de',
+                        'content' => '',
+                        'description' => '',
+                        'permalink' => $about ?: '',
+                        'id' => $about ?: '',
+                        'thumbnail' => null,
+                        'categories' => ['Nachrichten']
+                    ];
+                    
+                    // Extrahiere den Titel
+                    $title_nodes = $xpath->query('./title', $item_node);
+                    if ($title_nodes && $title_nodes->length > 0) {
+                        $item['title'] = $title_nodes->item(0)->textContent;
+                    }
+                    
+                    // Extrahiere die Beschreibung
+                    $desc_nodes = $xpath->query('./description', $item_node);
+                    if ($desc_nodes && $desc_nodes->length > 0) {
+                        $item['description'] = $desc_nodes->item(0)->textContent;
+                        $item['content'] = $item['description'];
+                    }
+                    
+                    // Extrahiere das Datum
+                    $date_nodes = $xpath->query('./dc:date', $item_node);
+                    if ($date_nodes && $date_nodes->length > 0) {
+                        $item['date'] = $date_nodes->item(0)->textContent;
+                    }
+                    
+                    // Falls die Link-URL leer ist, versuche sie zu extrahieren
+                    if (empty($item['link'])) {
+                        $link_nodes = $xpath->query('./link', $item_node);
+                        if ($link_nodes && $link_nodes->length > 0) {
+                            $link = $link_nodes->item(0)->textContent;
+                            $item['link'] = $link;
+                            $item['permalink'] = $link;
+                            $item['id'] = $link;
+                        }
+                    }
+                    
+                    // Generiere eine ID wenn nötig
+                    if (empty($item['id'])) {
+                        $item['id'] = md5($item['title'] . ($item['date'] ?? ''));
+                    }
+                    
+                    if (!empty($item['title']) || !empty($item['description'])) {
+                        $items[] = $item;
+                    }
+                }
+            }
+        }
+        
+        // Debugging
+        if (!empty($items)) {
+            $this->consoleLog("Erfolgreich {" . count($items) . "} Items mit DOM extrahiert", 'info');
+            if (isset($items[0])) {
+                $this->consoleLog("Erstes Item: {$items[0]['title']} - {$items[0]['link']}", 'info');
+            }
+        } else {
+            $this->consoleLog("Keine Items mit DOM gefunden", 'error');
+        }
+        
+        return $items;
     }
 } 
