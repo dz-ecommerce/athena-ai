@@ -221,29 +221,6 @@ class FeedHttpClient {
      * @return string|null The fetched content or null on failure
      */
     private function fetchWithAntiBlockStrategy(string $url, ?array $options = null): ?string {
-        // Für socialmediaexaminer.com und ähnlich stark geschützte Seiten verwenden wir speziellere Methoden
-        if (stripos($url, 'socialmediaexaminer.com') !== false || $this->isHighlyProtectedDomain($url)) {
-            $this->consoleLog("Stark geschützte Domain erkannt: verwende Premium-Strategien", 'info');
-            
-            // Versuch 1: RSS2JSON Proxy Service
-            $rss2json_result = $this->fetchViaRss2Json($url);
-            if ($this->isValidFeedContent($rss2json_result)) {
-                return $rss2json_result;
-            }
-            
-            // Versuch 2: RSS-Bridge
-            $rssbridge_result = $this->fetchViaRssBridge($url);
-            if ($this->isValidFeedContent($rssbridge_result)) {
-                return $rssbridge_result;
-            }
-            
-            // Versuch 3: Api-Ninjas RSS-to-JSON
-            $apininjas_result = $this->fetchViaApiNinjas($url);
-            if ($this->isValidFeedContent($apininjas_result)) {
-                return $apininjas_result;
-            }
-        }
-        
         // Standard Strategien zum Umgehen von Bot-Blockern
         $strategies = [
             'modern_chrome' => function() use ($url) {
@@ -269,7 +246,15 @@ class FeedHttpClient {
                 ];
                 
                 $this->consoleLog("Strategie 1: Versuche Abruf mit Chrome-Browser-Emulation", 'info');
-                return $this->curlFetch($url, $chrome_options);
+                $response = $this->curlFetch($url, $chrome_options);
+                
+                // Wenn wir einen 403-Fehler erhalten, geben wir null zurück und überlassen es dem Hauptalgorithmus, 
+                // auf Proxy-Strategien zu wechseln
+                if ($this->lastResponseCode === 403) {
+                    return null;
+                }
+                
+                return $response;
             },
             
             'safari_browser' => function() use ($url) {
@@ -405,6 +390,9 @@ class FeedHttpClient {
             }
         ];
         
+        // Speicherung des letzten Statuscodes für Fehlerbehandlung
+        $this->lastResponseCode = 0;
+        
         // Versuche jede Strategie nacheinander
         foreach ($strategies as $name => $strategy) {
             $this->consoleLog("Versuche Abruf-Strategie: $name", 'group');
@@ -422,14 +410,27 @@ class FeedHttpClient {
                 return $result;
             }
             
-            $this->consoleLog("Strategie $name war nicht erfolgreich.", 'warn');
+            $this->consoleLog("Strategie $name war nicht erfolgreich. Status: " . $this->lastResponseCode, 'warn');
             $this->consoleLog("", 'groupEnd');
+            
+            // Wenn wir einen 403 oder einen anderen Blockierungscode erhalten haben, wechseln wir zu den Proxy-Methoden
+            if ($this->lastResponseCode === 403 || $this->lastResponseCode === 429 || $this->lastResponseCode === 451) {
+                $this->consoleLog("Blockierungsstatus " . $this->lastResponseCode . " erkannt, wechsle zu Proxy-Methoden", 'info');
+                break;
+            }
         }
         
-        // Wenn keine Strategie funktioniert hat, versuchen wir es mit einem letzten Fallback:
-        // Kombiniere URL-Cache-Busting mit zufälligem User-Agent
-        $this->consoleLog("Versuche letzte Fallback-Strategie", 'info');
+        // Wenn die Standard-Strategien fehlgeschlagen sind oder wir 403 erhalten haben, 
+        // versuchen wir es mit Proxy-basierten Ansätzen
+        $this->consoleLog("Verwende Proxy-basierte Strategien für die URL: " . $url, 'info');
         
+        // Proxy-Strategien anwenden
+        $proxy_result = $this->tryProxyStrategies($url);
+        if ($proxy_result !== null) {
+            return $proxy_result;
+        }
+        
+        // Wenn alle fehlgeschlagen sind, versuchen wir es mit einem letzten Fallback
         $fallback_options = $this->default_options;
         // Array mit verschiedenen realistischen User-Agents
         $user_agents = [
@@ -452,74 +453,89 @@ class FeedHttpClient {
     }
     
     /**
-     * Prüft, ob eine Domain bekannt dafür ist, besonders starke Schutzmechanismen einzusetzen
-     * 
-     * @param string $url Die zu prüfende URL
-     * @return bool True, wenn es sich um eine stark geschützte Domain handelt
+     * Letzter erhaltener HTTP-Status-Code
+     *
+     * @var int
      */
-    private function isHighlyProtectedDomain(string $url): bool {
-        $highly_protected_domains = [
-            'socialmediaexaminer.com',
-            'wsj.com', 
-            'nytimes.com',
-            'ft.com',
-            'bloomberg.com'
-        ];
+    private int $lastResponseCode = 0;
+    
+    /**
+     * Versucht verschiedene Proxy-Strategien, um Feeds abzurufen
+     * 
+     * @param string $url Die Feed-URL
+     * @return string|null XML-Feed oder null bei Fehlern
+     */
+    private function tryProxyStrategies(string $url): ?string {
+        $this->consoleLog("Beginne mit Proxy-Strategien für URL: " . $url, 'group');
         
-        $host = parse_url($url, PHP_URL_HOST);
-        if (!$host) {
-            return false;
+        // Versuch 1: RSS2JSON Proxy Service
+        $this->consoleLog("Versuch 1: RSS2JSON API", 'info');
+        $rss2json_result = $this->fetchViaRss2Json($url);
+        if ($this->isValidFeedContent($rss2json_result)) {
+            $this->consoleLog("RSS2JSON war erfolgreich!", 'info');
+            $this->consoleLog("", 'groupEnd');
+            return $rss2json_result;
         }
         
-        // Host ohne www-Präfix prüfen
-        $host = preg_replace('/^www\./i', '', $host);
-        
-        foreach ($highly_protected_domains as $domain) {
-            if ($host === $domain || preg_match('/\.' . preg_quote($domain, '/') . '$/', $host)) {
-                return true;
-            }
+        // Versuch 2: CORS Proxy
+        $this->consoleLog("Versuch 2: CORS Proxy", 'info');
+        $cors_result = $this->fetchViaCorsProxy($url);
+        if ($this->isValidFeedContent($cors_result)) {
+            $this->consoleLog("CORS Proxy war erfolgreich!", 'info');
+            $this->consoleLog("", 'groupEnd');
+            return $cors_result;
         }
         
-        return false;
+        // Versuch 3: FetchRSS
+        $this->consoleLog("Versuch 3: FetchRSS", 'info');
+        $fetchrss_result = $this->fetchViaRssBridge($url);
+        if ($this->isValidFeedContent($fetchrss_result)) {
+            $this->consoleLog("FetchRSS war erfolgreich!", 'info');
+            $this->consoleLog("", 'groupEnd');
+            return $fetchrss_result;
+        }
+        
+        $this->consoleLog("Alle Proxy-Strategien sind fehlgeschlagen", 'error');
+        $this->consoleLog("", 'groupEnd');
+        return null;
     }
     
     /**
-     * Direkte Abrufmethode für problematische Domains
+     * Nutzt den CORS Proxy, um Feeds abzurufen
      * 
-     * @param string $url Die URL des Feeds
-     * @return string|null Der Inhalt oder null bei Fehlern
+     * @param string $url Die Feed-URL
+     * @return string|null XML-Feed oder null bei Fehlern
      */
-    private function fetchDirectly(string $url): ?string {
-        // Sonderfall für Social Media Examiner und ähnliche Seiten
-        if (stripos($url, 'socialmediaexaminer.com') !== false) {
-            // Hardgecodeter Feed-Inhalt für Social Media Examiner als absolute Notlösung
-            $this->consoleLog("Verwende direkte Feed-Daten für Social Media Examiner", 'info');
+    private function fetchViaCorsProxy(string $url): ?string {
+        $this->consoleLog("Versuche Abruf über CORS Proxy", 'info');
+        
+        // Verschiedene CORS Proxies ausprobieren
+        $cors_proxies = [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+            'https://thingproxy.freeboard.io/fetch/'
+        ];
+        
+        foreach ($cors_proxies as $proxy) {
+            $proxy_url = $proxy . urlencode($url);
             
-            // Diese URL sollte immer funktionieren, da sie direkt vom Server ohne Cloudflare kommt
-            $direct_url = 'https://www.socialmediaexaminer.com/feed/';
-            $special_options = [
-                'timeout' => 60,
-                'redirection' => 10,
-                'sslverify' => false,
+            $options = [
+                'timeout' => 30,
+                'redirection' => 5,
                 'headers' => [
+                    'Accept' => 'application/xml, application/rss+xml, text/xml, */*',
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                    'Accept' => 'application/rss+xml, application/atom+xml, */*',
-                    'Accept-Language' => 'en-US,en;q=0.9',
-                    'Cache-Control' => 'no-cache',
-                    'Pragma' => 'no-cache',
-                    'Upgrade-Insecure-Requests' => '1',
                     'X-Requested-With' => 'XMLHttpRequest'
                 ]
             ];
             
-            // Verwende Cloudflare-Ray-ID-Emulation
-            $special_options['headers']['CF-RAY'] = sprintf('%x%x%x', mt_rand(0, 0xffffff), mt_rand(0, 0xffffff), mt_rand(0, 0xffffff));
+            $response = $this->curlFetch($proxy_url, $options);
+            if ($this->isValidFeedContent($response)) {
+                return $response;
+            }
             
-            // Verwende Proxy-URL über unseren eigenen Proxy-Dienst (erfordert Konfiguration eines eigenen Proxy-Servers)
-            $proxy_url = 'https://corsproxy.io/?' . urlencode($direct_url);
-            
-            // Versuche direkten Abruf
-            return $this->curlFetch($proxy_url, $special_options);
+            // Kurze Pause zwischen den Proxy-Versuchen
+            sleep(1);
         }
         
         return null;
@@ -565,18 +581,15 @@ class FeedHttpClient {
     }
     
     /**
-     * Nutzt RSS-Bridge als Proxy für schwer zugängliche Feeds
+     * Nutzt RSS-Bridge/FetchRSS als Proxy für schwer zugängliche Feeds
      * 
      * @param string $url Die Feed-URL
      * @return string|null XML-Feed oder null bei Fehlern
      */
     private function fetchViaRssBridge(string $url): ?string {
-        $this->consoleLog("Versuche Abruf über RSS-Bridge", 'info');
+        $this->consoleLog("Versuche Abruf über FetchRSS", 'info');
         
-        // Öffentliche RSS-Bridge-Instanz
-        $rssbridge_url = 'https://sebsauvage.net/rss-bridge/?action=display&bridge=Facebook&format=Atom';
-        
-        // Fallback-Plan: Verwende fetchrss.com
+        // Öffentlicher FetchRSS-Dienst (vereinfachter Zugriff)
         $fetchrss_url = 'https://fetchrss.com/rss/' . urlencode(base64_encode($url));
         
         $options = [
@@ -584,42 +597,11 @@ class FeedHttpClient {
             'redirection' => 5,
             'headers' => [
                 'Accept' => 'application/xml, application/rss+xml, text/xml',
-                'User-Agent' => 'Mozilla/5.0 (compatible; RSSBridge/1.0; +https://github.com/RSS-Bridge/rss-bridge)'
+                'User-Agent' => 'Mozilla/5.0 (compatible; FeedFetcher/1.0)'
             ]
         ];
         
-        // Versuche erst rssbridge
-        $response = $this->curlFetch($fetchrss_url, $options);
-        if ($this->isValidFeedContent($response)) {
-            return $response;
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Nutzt die API-Ninjas RSS-to-JSON API
-     * 
-     * @param string $url Die Feed-URL
-     * @return string|null XML-Feed oder null bei Fehlern
-     */
-    private function fetchViaApiNinjas(string $url): ?string {
-        $this->consoleLog("Versuche Abruf über Api-Ninjas RSS-API", 'info');
-        
-        // Korsproxy als Alternative
-        $proxy_url = 'https://corsproxy.io/?' . urlencode($url);
-        
-        $options = [
-            'timeout' => 30,
-            'redirection' => 5,
-            'headers' => [
-                'Accept' => 'application/xml, application/rss+xml, text/xml',
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'X-Requested-With' => 'XMLHttpRequest'
-            ]
-        ];
-        
-        return $this->curlFetch($proxy_url, $options);
+        return $this->curlFetch($fetchrss_url, $options);
     }
     
     /**
@@ -831,11 +813,11 @@ class FeedHttpClient {
         // Execute cURL request
         $response = curl_exec($ch);
         $error = curl_error($ch);
-        $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $this->lastResponseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE); // Speichere den HTTP-Code
         $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         
         // Log response info for debugging
-        $this->consoleLog("cURL response code: {$status_code}, content-type: {$content_type}", 'info');
+        $this->consoleLog("cURL response code: {$this->lastResponseCode}, content-type: {$content_type}", 'info');
         
         curl_close($ch);
         
@@ -846,50 +828,19 @@ class FeedHttpClient {
             return null;
         }
         
-        if ($status_code !== 200) {
-            $error_msg = "Invalid response code from cURL: {$status_code}";
+        if ($this->lastResponseCode === 403) {
+            $error_msg = "403 Forbidden: Zugriff verweigert";
+            $this->set_last_error($error_msg);
+            $this->consoleLog($error_msg, 'error');
+            return null; // Null zurückgeben bei 403, damit wir zu Proxy-Methoden wechseln können
+        }
+        
+        if ($this->lastResponseCode !== 200) {
+            $error_msg = "Invalid response code from cURL: {$this->lastResponseCode}";
             $this->set_last_error($error_msg);
             $this->consoleLog($error_msg, 'error');
             
-            // Für alle Fehler-Statuscodes einen erneuten Versuch unternehmen
-            if (!isset($options['retry']) || $options['retry'] < 3) {
-                $retry_count = isset($options['retry']) ? $options['retry'] + 1 : 1;
-                $this->consoleLog("Received error status code {$status_code}, trying with alternative approach (attempt {$retry_count})", 'warn');
-                
-                // Verschiedene Strategien je nach Wiederholungsversuch
-                if ($retry_count === 1) {
-                    // First retry: Use Safari User-Agent
-                    $options['headers']['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15';
-                    $options['headers']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
-                    $options['headers']['Accept-Language'] = 'en-US,en;q=0.9';
-                    // Remove Google referer which might be blocked
-                    if (isset($options['headers']['Referer'])) {
-                        unset($options['headers']['Referer']);
-                    }
-                } else if ($retry_count === 2) {
-                    // Second retry: Try with minimal headers
-                    $options['headers'] = [
-                        'User-Agent' => 'Mozilla/5.0 (compatible; Feedfetcher; +http://localhost)',
-                        'Accept' => '*/*'
-                    ];
-                } else {
-                    // Third retry: Try pretending to be Feedly
-                    $options['headers'] = [
-                        'User-Agent' => 'Feedly/1.0 (+http://feedly.com/fetcher.html; like FeedFetcher-Google)',
-                        'Accept' => 'application/xml,application/rss+xml,application/atom+xml,application/rdf+xml,text/xml;q=0.9,text/html;q=0.8,*/*;q=0.7',
-                        'Accept-Language' => 'en-US,en;q=0.9',
-                        'Accept-Encoding' => 'gzip, deflate'
-                    ];
-                }
-                
-                $options['retry'] = $retry_count; // Update retry counter
-                
-                // Pause before retry to avoid rate limiting
-                sleep(2); 
-                
-                return $this->curlFetch($url, $options);
-            }
-            
+            // Wir geben bei Nicht-200-Statuscodes null zurück, damit der aufrufende Code entscheiden kann
             return null;
         }
         
