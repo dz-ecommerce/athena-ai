@@ -16,7 +16,7 @@ composer.lock
 
 # Node
 /node_modules/
-package-lock.json
+# package-lock.json (removed to allow GitHub Actions to use it)
 yarn.lock
 
 # Build Files
