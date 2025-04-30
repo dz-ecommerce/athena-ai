@@ -211,33 +211,6 @@ if (!empty($items)) {
             <input type="hidden" name="page" value="athena-feed-items" />
             
             <div class="w-full md:w-auto flex-grow">
-                <label class="block text-sm font-medium text-gray-700 mb-2"><?php esc_html_e('Filter by Feed', 'athena-ai'); ?></label>
-                
-                <!-- Flowbite Checkbox Group -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 border border-gray-200 rounded-lg shadow-sm bg-gray-50">
-                    <?php 
-                    $feed_filter_array = !empty($feed_filter) ? explode(',', $feed_filter) : [];
-                    foreach ($feeds as $feed): 
-                        $is_checked = in_array($feed->ID, $feed_filter_array);
-                    ?>
-                    <div class="flex items-center">
-                        <input id="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
-                               type="checkbox" 
-                               name="feed_ids[]" 
-                               value="<?php echo esc_attr($feed->ID); ?>" 
-                               <?php echo $is_checked ? 'checked' : ''; ?>
-                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
-                        <label for="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
-                               class="ml-2 text-sm font-medium text-gray-900 truncate max-w-xs">
-                            <?php echo esc_html($feed->post_title); ?>
-                        </label>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <!-- End Flowbite Checkbox Group -->
-            </div>
-            
-            <div class="w-full md:w-auto flex-grow">
                 <label for="date_filter" class="block text-sm font-medium text-gray-700 mb-1"><?php esc_html_e('Filter by Date', 'athena-ai'); ?></label>
                 <select name="date_filter" id="date_filter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
                     <option value=""><?php esc_html_e('All Time', 'athena-ai'); ?></option>
@@ -251,6 +224,61 @@ if (!empty($items)) {
             </div>
             
             <div class="flex items-end space-x-2">
+                <!-- Feed Dropdown Filter Button -->
+                <div class="flex items-center">
+                    <button id="feedFilterDropdownButton" data-dropdown-toggle="feedFilterDropdown" class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-200" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="w-4 h-4 mr-2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                        </svg>
+                        <?php esc_html_e('Filter by Feed', 'athena-ai'); ?>
+                        <?php if (!empty($feed_filter_array)): ?>
+                        <span class="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-blue-600 rounded-full"><?php echo count($feed_filter_array); ?></span>
+                        <?php endif; ?>
+                        <svg class="-mr-1 ml-1.5 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path clip-rule="evenodd" fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                    </button>
+                    
+                    <!-- Dropdown menu -->
+                    <div id="feedFilterDropdown" class="z-10 hidden w-64 p-3 bg-white rounded-lg shadow">
+                        <div class="flex items-center justify-between mb-3">
+                            <h6 class="text-sm font-medium text-gray-900">
+                                <?php esc_html_e('Feed Sources', 'athena-ai'); ?> (<?php echo count($feeds); ?>)
+                            </h6>
+                            <div class="flex space-x-2 text-xs">
+                                <button type="button" id="select-all-feeds" class="text-blue-600 hover:text-blue-800"><?php esc_html_e('Select All', 'athena-ai'); ?></button>
+                                <span class="text-gray-300">|</span>
+                                <button type="button" id="clear-all-feeds" class="text-blue-600 hover:text-blue-800"><?php esc_html_e('Clear All', 'athena-ai'); ?></button>
+                            </div>
+                        </div>
+                        
+                        <?php if (!empty($feeds)): ?>
+                        <div class="max-h-48 overflow-y-auto">
+                            <ul class="space-y-2 text-sm" aria-labelledby="feedFilterDropdownButton">
+                                <?php foreach ($feeds as $feed): 
+                                    $is_checked = in_array($feed->ID, $feed_filter_array);
+                                ?>
+                                <li class="flex items-center">
+                                    <input id="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
+                                        type="checkbox" 
+                                        name="feed_ids[]" 
+                                        value="<?php echo esc_attr($feed->ID); ?>" 
+                                        <?php echo $is_checked ? 'checked' : ''; ?>
+                                        class="w-4 h-4 bg-gray-100 border-gray-300 rounded text-blue-600 focus:ring-blue-500 focus:ring-2">
+                                    <label for="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
+                                        class="ml-2 text-sm font-medium text-gray-900 truncate max-w-xs">
+                                        <?php echo esc_html($feed->post_title); ?>
+                                    </label>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <?php else: ?>
+                        <div class="text-sm text-gray-500 py-2"><?php esc_html_e('No feeds available', 'athena-ai'); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
                 <button type="submit" class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg transition-all hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                     <i class="fa-solid fa-filter mr-2"></i>
                     <?php esc_html_e('Apply Filters', 'athena-ai'); ?>
@@ -261,15 +289,6 @@ if (!empty($items)) {
                     <i class="fa-solid fa-times mr-2"></i>
                     <?php esc_html_e('Clear Filters', 'athena-ai'); ?>
                 </a>
-                <?php endif; ?>
-                
-                <!-- Flowbite Counter Badge -->
-                <?php if (!empty($feed_filter_array)): ?>
-                <div class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
-                    <span class="text-sm font-medium">
-                        <?php echo sprintf(_n('%d Feed selected', '%d Feeds selected', count($feed_filter_array), 'athena-ai'), count($feed_filter_array)); ?>
-                    </span>
-                </div>
                 <?php endif; ?>
             </div>
         </form>

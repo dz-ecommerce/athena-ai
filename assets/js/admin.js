@@ -10,41 +10,49 @@
       window.initFlowbite();
     }
 
-    // Feed Checkbox Handling
+    // Feed Dropdown Handling
     const feedCheckboxes = document.querySelectorAll(
       'input[name="feed_ids[]"]'
     );
+
     if (feedCheckboxes.length > 0) {
-      // "Select All" / "Clear All" Funktionalität
-      const feedFilterContainer = document.querySelector(
-        ".grid.grid-cols-1.sm\\:grid-cols-2"
+      // Select All / Clear All buttons
+      const selectAllButton = document.getElementById("select-all-feeds");
+      const clearAllButton = document.getElementById("clear-all-feeds");
+
+      if (selectAllButton && clearAllButton) {
+        selectAllButton.addEventListener("click", function (e) {
+          e.preventDefault();
+          feedCheckboxes.forEach((checkbox) => (checkbox.checked = true));
+        });
+
+        clearAllButton.addEventListener("click", function (e) {
+          e.preventDefault();
+          feedCheckboxes.forEach((checkbox) => (checkbox.checked = false));
+        });
+      }
+
+      // Dropdown toggle button functionality
+      const dropdownButton = document.getElementById(
+        "feedFilterDropdownButton"
       );
-      if (feedFilterContainer) {
-        const selectAllDiv = document.createElement("div");
-        selectAllDiv.className =
-          "flex items-center justify-between w-full col-span-full mb-2 pb-2 border-b border-gray-200";
-        selectAllDiv.innerHTML = `
-          <div class="text-sm font-medium text-gray-700">${feedCheckboxes.length} Feeds</div>
-          <div class="space-x-2">
-            <button type="button" id="select-all-feeds" class="text-sm text-blue-600 hover:text-blue-800">Select All</button>
-            <span class="text-gray-300">|</span>
-            <button type="button" id="clear-all-feeds" class="text-sm text-blue-600 hover:text-blue-800">Clear All</button>
-          </div>
-        `;
-        feedFilterContainer.prepend(selectAllDiv);
+      const dropdown = document.getElementById("feedFilterDropdown");
 
-        // Event Listeners
-        document
-          .getElementById("select-all-feeds")
-          .addEventListener("click", function () {
-            feedCheckboxes.forEach((checkbox) => (checkbox.checked = true));
-          });
+      if (dropdownButton && dropdown) {
+        // Flowbite handles the dropdown toggle, but we add manual toggle in case needed
+        dropdownButton.addEventListener("click", function () {
+          dropdown.classList.toggle("hidden");
+        });
 
-        document
-          .getElementById("clear-all-feeds")
-          .addEventListener("click", function () {
-            feedCheckboxes.forEach((checkbox) => (checkbox.checked = false));
-          });
+        // Close dropdown when clicking outside
+        document.addEventListener("click", function (event) {
+          if (
+            !dropdownButton.contains(event.target) &&
+            !dropdown.contains(event.target)
+          ) {
+            dropdown.classList.add("hidden");
+          }
+        });
       }
     }
   });
