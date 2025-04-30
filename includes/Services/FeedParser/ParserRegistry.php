@@ -101,13 +101,48 @@ class ParserRegistry {
      * @return FeedParserInterface|null The appropriate parser or null if none found.
      */
     public function find_parser(string $content): ?FeedParserInterface {
+        if ($this->verbose_console) {
+            echo '<script>console.group("Athena AI Feed: Parser-Auswahl beginnt");</script>';
+        }
+        
+        // Debug-Ausgabe für Content-Vorschau
+        if ($this->verbose_console) {
+            $content_preview = substr($content, 0, 100);
+            echo '<script>console.info("Content-Vorschau: ' . addslashes($content_preview) . '...");</script>';
+        }
+        
         foreach ($this->parsers as $parser) {
-            if ($parser->canParse($content)) {
-                if ($this->verbose_console && method_exists($parser, 'setVerboseMode')) {
-                    $parser->setVerboseMode(true);
+            $parser_class = get_class($parser);
+            $parser_name = basename(str_replace('\\', '/', $parser_class));
+            
+            if ($this->verbose_console) {
+                echo '<script>console.info("Prüfe Parser: ' . $parser_name . '");</script>';
+            }
+            
+            // Aktiviere Verbose-Modus für den Parser
+            if (method_exists($parser, 'setVerboseMode')) {
+                $parser->setVerboseMode($this->verbose_console);
+            }
+            
+            // Teste, ob der Parser den Content verarbeiten kann
+            $can_parse = $parser->canParse($content);
+            
+            if ($this->verbose_console) {
+                echo '<script>console.' . ($can_parse ? 'info' : 'debug') . '("Parser ' . $parser_name . ': ' . ($can_parse ? 'Kann' : 'Kann nicht') . ' den Feed verarbeiten");</script>';
+            }
+            
+            if ($can_parse) {
+                if ($this->verbose_console) {
+                    echo '<script>console.info("Verwende Parser: ' . $parser_name . '");</script>';
+                    echo '<script>console.groupEnd();</script>';
                 }
                 return $parser;
             }
+        }
+        
+        if ($this->verbose_console) {
+            echo '<script>console.error("Kein passender Parser gefunden");</script>';
+            echo '<script>console.groupEnd();</script>';
         }
         
         return null;

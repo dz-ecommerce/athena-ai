@@ -306,7 +306,14 @@ class RdfParser implements FeedParserInterface {
         
         // Erhalte Feed-Metadaten
         $feed_title = $this->getNodeValue($xpath, '//channel/title');
+        if ($feed_title) {
+            $this->consoleLog("Feed-Titel: " . $feed_title, 'info');
+        }
+        
         $feed_link = $this->getNodeValue($xpath, '//channel/link');
+        if ($feed_link) {
+            $this->consoleLog("Feed-Link: " . $feed_link, 'info');
+        }
         
         // Prüfen auf tagesschau.de-Format (spezielle Behandlung erforderlich)
         $is_tagesschau = false;
@@ -316,33 +323,90 @@ class RdfParser implements FeedParserInterface {
             $is_tagesschau = true;
         }
         
+        // Spezielle Debugging für die DOM-Struktur
+        $this->consoleLog("DOM-Struktur-Analyse beginnt...", 'group');
+        
+        // Prüfe auf verschiedene RDF-Elemente
+        $rdf_elements = [
+            '//rdf:RDF' => $xpath->query('//rdf:RDF')->length,
+            '//channel' => $xpath->query('//channel')->length,
+            '//item' => $xpath->query('//item')->length,
+            '//rdf:Seq' => $xpath->query('//rdf:Seq')->length,
+            '//rdf:li' => $xpath->query('//rdf:li')->length,
+            '//rdf:li[@rdf:resource]' => $xpath->query('//rdf:li[@rdf:resource]')->length
+        ];
+        
+        foreach ($rdf_elements as $element => $count) {
+            $this->consoleLog("Element $element: $count gefunden", 'info');
+        }
+        
+        $this->consoleLog("DOM-Struktur-Analyse beendet", 'groupEnd');
+        
         // Spezielles Handling für tagesschau.de
         if ($is_tagesschau) {
             // Bei tagesschau.de sind die Items in einer Sequenz verlinkt und dann separat definiert
             $item_urls = [];
-            $seq_items = $xpath->query('//rdf:Seq/rdf:li/@rdf:resource');
+            
+            // Verschiedene XPath-Abfragen für die Sequenz-Items
+            $seq_queries = [
+                '//rdf:Seq/rdf:li/@rdf:resource',
+                '//channel//rdf:Seq/rdf:li/@rdf:resource',
+                '//*[local-name()="Seq"]/*[local-name()="li"]/@*[local-name()="resource"]'
+            ];
+            
+            $seq_items = null;
+            foreach ($seq_queries as $query) {
+                $nodes = $xpath->query($query);
+                if ($nodes && $nodes->length > 0) {
+                    $seq_items = $nodes;
+                    $this->consoleLog("Gefunden: {$nodes->length} Sequenz-Items mit Query: $query", 'info');
+                    break;
+                }
+            }
             
             if ($seq_items && $seq_items->length > 0) {
-                $this->consoleLog("Gefunden: {$seq_items->length} Sequenz-Items", 'info');
-                
                 foreach ($seq_items as $res) {
                     $item_urls[] = $res->nodeValue;
+                }
+                
+                $this->consoleLog("Gefundene Item-URLs: " . count($item_urls), 'info');
+                if (count($item_urls) > 0) {
+                    $this->consoleLog("Beispiel-URL: " . $item_urls[0], 'info');
                 }
                 
                 // Jetzt finde die vollständigen Items, die durch die URLs referenziert werden
                 foreach ($item_urls as $url) {
                     // Escape URL for XPath query
-                    $escaped_url = str_replace('"', '\"', $url);
+                    $escaped_url = addslashes($url);
                     
-                    // Query for the item with this URL as rdf:about
-                    $item_nodes = $xpath->query('//item[@rdf:about="' . $escaped_url . '"]');
+                    // Verschiedene Abfrage-Strategien für die Item-Nodes
+                    $item_queries = [
+                        '//item[@rdf:about="' . $escaped_url . '"]',
+                        '//*[local-name()="item"][@*[local-name()="about"]="' . $escaped_url . '"]'
+                    ];
                     
-                    if (!$item_nodes || $item_nodes->length === 0) {
-                        $this->consoleLog("Kein Item gefunden für URL: {$url}", 'warn');
-                        continue;
+                    $item_node = null;
+                    foreach ($item_queries as $query) {
+                        $nodes = $xpath->query($query);
+                        if ($nodes && $nodes->length > 0) {
+                            $item_node = $nodes->item(0);
+                            $this->consoleLog("Item gefunden für URL mit Query: $query", 'info');
+                            break;
+                        }
                     }
                     
-                    $item_node = $item_nodes->item(0);
+                    if (!$item_node) {
+                        $this->consoleLog("Kein Item gefunden für URL: {$url}", 'warn');
+                        // Versuche eine generische Suche für ein Item mit ähnlicher URL
+                        $simple_url = preg_replace('/^https?:\/\//', '', $url);
+                        $nodes = $xpath->query('//item[contains(@rdf:about, "' . $simple_url . '")]');
+                        if ($nodes && $nodes->length > 0) {
+                            $item_node = $nodes->item(0);
+                            $this->consoleLog("Item gefunden mit Teil-URL-Matching", 'info');
+                        } else {
+                            continue;
+                        }
+                    }
                     
                     $item = [
                         'title' => '',
@@ -358,21 +422,32 @@ class RdfParser implements FeedParserInterface {
                     ];
                     
                     // Extrahiere Item-Daten mit XPath relativ zum Item-Knoten
-                    $item['title'] = $this->getNodeValueRelative($xpath, './title', $item_node);
-                    $item['description'] = $this->getNodeValueRelative($xpath, './description', $item_node);
-                    $item['content'] = $this->getNodeValueRelative($xpath, './content:encoded', $item_node) ?: $item['description'];
+                    $item['title'] = $this->getNodeValueRelative($xpath, './title', $item_node) ?:
+                                     $this->getNodeValueRelative($xpath, './*[local-name()="title"]', $item_node);
+                    
+                    $item['description'] = $this->getNodeValueRelative($xpath, './description', $item_node) ?:
+                                          $this->getNodeValueRelative($xpath, './*[local-name()="description"]', $item_node);
+                    
+                    $item['content'] = $this->getNodeValueRelative($xpath, './content:encoded', $item_node) ?: 
+                                      $this->getNodeValueRelative($xpath, './*[contains(local-name(), "content")]', $item_node) ?:
+                                      $item['description'];
                     
                     // Versuche verschiedene Datumsformate
                     $item['date'] = $this->getNodeValueRelative($xpath, './dc:date', $item_node) ?: 
                                $this->getNodeValueRelative($xpath, './pubDate', $item_node) ?: 
-                               $this->getNodeValueRelative($xpath, './date', $item_node);
+                               $this->getNodeValueRelative($xpath, './*[contains(local-name(), "date")]', $item_node);
                     
                     $item['author'] = $this->getNodeValueRelative($xpath, './dc:creator', $item_node) ?: 
-                                 $this->getNodeValueRelative($xpath, './author', $item_node);
+                                 $this->getNodeValueRelative($xpath, './author', $item_node) ?:
+                                 $this->getNodeValueRelative($xpath, './*[contains(local-name(), "creator")]', $item_node) ?:
+                                 $this->getNodeValueRelative($xpath, './*[contains(local-name(), "author")]', $item_node);
                     
-                    // Nur Items mit mindestens Titel hinzufügen
-                    if (!empty($item['title'])) {
+                    // Nur Items mit mindestens einem nicht-leeren Wert hinzufügen
+                    if (!empty($item['title']) || !empty($item['description'])) {
                         $items[] = $item;
+                        if (count($items) === 1) {
+                            $this->consoleLog("Erstes Item extrahiert: Titel='{$item['title']}', Link='{$item['link']}'", 'info');
+                        }
                     }
                 }
                 
@@ -380,6 +455,19 @@ class RdfParser implements FeedParserInterface {
                 if (!empty($items)) {
                     $this->consoleLog("Gefunden {" . count($items) . "} Items im tagesschau.de-Format", 'info');
                     return $items;
+                } else {
+                    $this->consoleLog("Keine Items im tagesschau.de-Format extrahiert", 'error');
+                }
+            } else {
+                $this->consoleLog("Keine Sequenz-Items gefunden im tagesschau.de-Format", 'error');
+                
+                // Fallback: Versuche eine direkte Suche nach Items ohne Sequenz
+                $direct_items = $xpath->query('//item');
+                if ($direct_items && $direct_items->length > 0) {
+                    $this->consoleLog("Gefunden: {$direct_items->length} direkte Items ohne Sequenz", 'info');
+                    // Verwende die Standard-Verarbeitung unten
+                } else {
+                    $this->consoleLog("Auch keine direkten Items gefunden", 'error');
                 }
             }
         }
@@ -389,7 +477,10 @@ class RdfParser implements FeedParserInterface {
         $queries = [
             '//item', // Standard-RDF-Items
             '//rdf:RDF/item', // Alternative Struktur
-            '//*[local-name()="item"]' // Generischer Ansatz
+            '//*[local-name()="item"]', // Generischer Ansatz
+            '//rss:item', // Expliziter Namespace
+            '//channel/item', // Items im Channel
+            '//*[local-name()="channel"]/*[local-name()="item"]' // Generischer Ansatz für Channel-Items
         ];
         
         $item_nodes = null;
@@ -432,39 +523,51 @@ class RdfParser implements FeedParserInterface {
             }
             
             // Extrahiere Item-Daten mit XPath relativ zum Item-Knoten
-            $item['title'] = $this->getNodeValueRelative($xpath, './title', $item_node);
+            $item['title'] = $this->getNodeValueRelative($xpath, './title', $item_node) ?:
+                             $this->getNodeValueRelative($xpath, './*[local-name()="title"]', $item_node);
             
             // Link extrahieren wenn nicht aus about-Attribut
             if (empty($item['link'])) {
-                $item['link'] = $this->getNodeValueRelative($xpath, './link', $item_node);
-                $item['permalink'] = $item['link'];
-                $item['id'] = $item['link'];
+                $item['link'] = $this->getNodeValueRelative($xpath, './link', $item_node) ?:
+                               $this->getNodeValueRelative($xpath, './*[local-name()="link"]', $item_node);
+                if (!empty($item['link'])) {
+                    $item['permalink'] = $item['link'];
+                    $item['id'] = $item['link'];
+                }
             }
             
-            $item['description'] = $this->getNodeValueRelative($xpath, './description', $item_node);
-            $item['content'] = $this->getNodeValueRelative($xpath, './content:encoded', $item_node) ?: $item['description'];
+            $item['description'] = $this->getNodeValueRelative($xpath, './description', $item_node) ?:
+                                  $this->getNodeValueRelative($xpath, './*[local-name()="description"]', $item_node);
+            
+            $item['content'] = $this->getNodeValueRelative($xpath, './content:encoded', $item_node) ?: 
+                              $this->getNodeValueRelative($xpath, './*[contains(local-name(), "content")]', $item_node) ?:
+                              $item['description'];
             
             // Versuche verschiedene Datumsformate
             $item['date'] = $this->getNodeValueRelative($xpath, './dc:date', $item_node) ?: 
                        $this->getNodeValueRelative($xpath, './pubDate', $item_node) ?: 
-                       $this->getNodeValueRelative($xpath, './date', $item_node);
+                       $this->getNodeValueRelative($xpath, './*[contains(local-name(), "date")]', $item_node);
             
             $item['author'] = $this->getNodeValueRelative($xpath, './dc:creator', $item_node) ?: 
-                         $this->getNodeValueRelative($xpath, './author', $item_node);
+                         $this->getNodeValueRelative($xpath, './author', $item_node) ?:
+                         $this->getNodeValueRelative($xpath, './*[contains(local-name(), "creator")]', $item_node) ?:
+                         $this->getNodeValueRelative($xpath, './*[contains(local-name(), "author")]', $item_node);
             
             // Kategorien extrahieren
-            $category_nodes = $xpath->query('./dc:subject', $item_node);
-            if ($category_nodes) {
-                foreach ($category_nodes as $cat_node) {
-                    $item['categories'][] = $cat_node->textContent;
-                }
-            }
+            $category_queries = [
+                './dc:subject',
+                './category',
+                './*[contains(local-name(), "subject")]',
+                './*[contains(local-name(), "category")]'
+            ];
             
-            // Alternativ nach category-Elementen suchen
-            $alt_category_nodes = $xpath->query('./category', $item_node);
-            if ($alt_category_nodes) {
-                foreach ($alt_category_nodes as $cat_node) {
-                    $item['categories'][] = $cat_node->textContent;
+            foreach ($category_queries as $cat_query) {
+                $category_nodes = $xpath->query($cat_query, $item_node);
+                if ($category_nodes && $category_nodes->length > 0) {
+                    foreach ($category_nodes as $cat_node) {
+                        $item['categories'][] = $cat_node->textContent;
+                    }
+                    break; // Nehme die erste erfolgreiche Kategorie-Abfrage
                 }
             }
             
@@ -481,9 +584,12 @@ class RdfParser implements FeedParserInterface {
                 $item['id'] = !empty($item['link']) ? $item['link'] : md5($item['title'] . ($item['date'] ?? ''));
             }
             
-            // Nur Items mit mindestens Titel und Link hinzufügen
-            if (!empty($item['title']) && !empty($item['link'])) {
+            // Nur Items mit mindestens einem nicht-leeren Wert hinzufügen
+            if (!empty($item['title']) || !empty($item['description']) || !empty($item['link'])) {
                 $items[] = $item;
+                if (count($items) === 1) {
+                    $this->consoleLog("Erstes Item extrahiert: Titel='{$item['title']}', Link='{$item['link']}'", 'info');
+                }
             }
         }
         
