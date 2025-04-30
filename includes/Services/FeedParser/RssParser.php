@@ -193,6 +193,12 @@ class RssParser implements FeedParserInterface {
             $items[] = $this->convert_item_to_array($item);
         }
         
+        // Leere Items-Liste? Versuche den Feed manuell zu parsen
+        if (empty($items) && $feed_type === 'rdf') {
+            $this->consoleLog("Keine Items von SimplePie gefunden, versuche manuelle Verarbeitung", 'warn');
+            $items = $this->parseRdfManually($content);
+        }
+        
         $this->consoleLog("Parsed " . count($items) . " items from feed", 'info');
         $this->consoleLog('', 'groupEnd');
         

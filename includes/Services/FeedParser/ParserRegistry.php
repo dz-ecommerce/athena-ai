@@ -64,6 +64,10 @@ class ParserRegistry {
      * @return void
      */
     private function register_default_parsers(): void {
+        // Registriere den RDF-Parser zuerst, damit er Priorität hat für RDF-Feeds
+        $this->register_parser(new RdfParser());
+        
+        // Danach den Standard-RSS-Parser für alle anderen Feed-Formate
         $this->register_parser(new RssParser());
     }
     
