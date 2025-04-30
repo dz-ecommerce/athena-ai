@@ -1147,6 +1147,58 @@ class FeedService {
     }
     
     /**
+     * Verarbeitet einen JSON-Feed und extrahiert die Items.
+     *
+     * @param array $json JSON-Feed.
+     * @param Feed  $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
+     */
+    private function processJsonFeed(array $json, Feed $feed) {
+        return $this->extractItemsFromJson($json, $feed);
+    }
+    
+    /**
+     * Extrahiert Items aus einem JSON-Feed.
+     *
+     * @param array $json JSON-Feed.
+     * @param Feed  $feed Feed-Objekt für Fehlerbehandlung.
+     *
+     * @return array Array mit Feed-Items.
+     */
+    private function extractItemsFromJson(array $json, Feed $feed) {
+        $items = [];
+
+        // JSON-Feed verarbeiten
+        if (isset($json['items']) && is_array($json['items'])) {
+            $this->logger->info("JSON-Feed erkannt. Items: " . count($json['items']));
+            
+            foreach ($json['items'] as $item) {
+                $extracted = $this->extractJsonFeedItem($item, $feed);
+                if (!empty($extracted)) {
+                    $items[] = $extracted;
+                }
+            }
+        } else {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Unbekanntes JSON-Format.");
+            }
+            $this->logger->error("Unbekanntes JSON-Format. Weder JSON-Feed noch JSON-Array erkannt.");
+        }
+
+        if (empty($items)) {
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error("Keine Items im JSON-Feed gefunden.");
+            }
+            $this->logger->warn("Keine Items im JSON-Feed gefunden.");
+        } else {
+            $this->logger->info(count($items) . " Items aus dem JSON-Feed extrahiert.");
+        }
+
+        return $items;
+    }
+    
+    /**
      * Extrahiert ein JSON-Item aus einem JSON-Feed.
      *
      * @param array $item JSON-Item.
@@ -1664,5 +1716,213 @@ class FeedService {
         }
         
         return $feed_urls;
+    }
+
+    /**
+     * Speichert die Feed-Items in der Datenbank.
+     *
+     * @param Feed  $feed  Feed-Objekt.
+     * @param array $items Array mit Feed-Items.
+     *
+     * @return bool Erfolgsstatus.
+     */
+    private function saveItems(Feed $feed, array $items): bool {
+        global $wpdb;
+
+        if (empty($items)) {
+            $this->logger->error("Keine Items zum Speichern vorhanden.");
+            return false;
+        }
+
+        $table_name = $wpdb->prefix . 'feed_raw_items';
+        $feed_id    = $feed->get_post_id();
+        $success    = true;
+        $new_items  = 0;
+        $errors     = 0;
+
+        // Prüfe, ob die Tabelle existiert
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
+        
+        if (!$table_exists) {
+            $error = "Tabelle {$table_name} existiert nicht. Feed-Items können nicht gespeichert werden.";
+            if (method_exists($feed, 'update_feed_error')) {
+                $feed->update_feed_error($error);
+            }
+            $this->logger->error($error);
+            return false;
+        }
+
+        $this->logger->info("Speichere " . count($items) . " Feed-Items in die Datenbank...");
+        $this->logger->info("Feed ID: " . $feed_id);
+        
+        // Debug: Zeige ein Beispiel-Item
+        if (!empty($items) && $this->verbose_mode) {
+            $sample_item = reset($items);
+            $this->logger->info("Beispiel-Item: " . print_r($sample_item, true));
+        }
+
+        foreach ($items as $index => $item) {
+            // Stelle sicher, dass alle erforderlichen Felder vorhanden sind
+            $item = $this->ensureRequiredFields($item, $index);
+            
+            if (empty($item['guid'])) {
+                $this->logger->warn("Item ohne GUID trotz Normalisierung übersprungen (Index: {$index}).");
+                continue;
+            }
+            
+            // Generiere einen Hash für das Item als Primärschlüssel
+            $item_hash = md5($item['guid']);
+            
+            // Prüfe, ob das Item bereits existiert
+            $exists = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table_name} WHERE item_hash = %s AND feed_id = %d",
+                    $item_hash,
+                    $feed_id
+                )
+            );
+
+            if ($exists) {
+                $this->logger->debug("Item mit GUID {$item['guid']} existiert bereits.");
+                continue;
+            }
+            
+            // Bereite das Veröffentlichungsdatum vor
+            $pub_date = isset($item['date']) ? $item['date'] : (isset($item['published']) ? $item['published'] : $this->getCurrentTime());
+            
+            // Versuche, das Datum zu formatieren
+            try {
+                $date = new \DateTime($pub_date);
+                $pub_date = $date->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                $this->logger->warn("Konnte Datum nicht parsen: " . $pub_date . " | Fehler: " . $e->getMessage());
+                $pub_date = $this->getCurrentTime();
+            }
+            
+            // Bereite den JSON-Inhalt vor
+            $json_content = $this->jsonEncode($item);
+                
+            if ($json_content === false) {
+                $this->logger->error("Fehler beim Kodieren des Items als JSON: " . print_r($item, true));
+                continue;
+            }
+
+            // Füge das Item hinzu
+            $result = $wpdb->insert(
+                $table_name,
+                [
+                    'item_hash'  => $item_hash,
+                    'feed_id'    => $feed_id,
+                    'guid'       => $item['guid'],
+                    'pub_date'   => $pub_date,
+                    'raw_content'=> $json_content,
+                    'created_at' => $this->getCurrentTime()
+                ],
+                [
+                    '%s', // item_hash
+                    '%d', // feed_id
+                    '%s', // guid
+                    '%s', // pub_date
+                    '%s', // raw_content
+                    '%s'  // created_at
+                ]
+            );
+
+            if ($result === false) {
+                $errors++;
+                $db_error = $wpdb->last_error;
+                $this->logger->error("Fehler beim Speichern des Items: {$db_error} | Item: " . substr(print_r($item, true), 0, 200) . "...");
+                $success = false;
+            } else {
+                $new_items++;
+                $this->logger->debug("Item mit GUID {$item['guid']} erfolgreich gespeichert.");
+            }
+        }
+
+        // Aktualisiere den Feed-Status
+        if (method_exists($feed, 'update_last_checked')) {
+            $feed->update_last_checked();
+            $this->logger->info("Feed-Status aktualisiert.");
+        }
+        
+        // Aktualisiere die Feed-Metadaten in der Datenbank
+        if (isset($this->repository) && method_exists($this->repository, 'update_feed_metadata')) {
+            $this->repository->update_feed_metadata($feed, $new_items);
+            $this->logger->info("Feed-Metadaten aktualisiert.");
+        }
+        
+        $this->logger->info("Feed-Items-Speicherung abgeschlossen. Neue Items: {$new_items}, Fehler: {$errors}");
+
+        return $success;
+    }
+    
+    /**
+     * Stellt sicher, dass alle erforderlichen Felder im Item-Array vorhanden sind.
+     *
+     * @param array $item  Das Item-Array.
+     * @param int   $index Der Index des Items (für Logging).
+     * @return array Das normalisierte Item-Array.
+     */
+    private function ensureRequiredFields(array $item, int $index): array {
+        // Erforderliche Felder und ihre Standardwerte
+        $required_fields = [
+            'title' => "Ohne Titel (" . ($index + 1) . ")",
+            'link' => '',
+            'description' => '',
+            'author' => 'Unbekannt',
+            'published' => $this->getCurrentTime(),
+            'date' => $this->getCurrentTime(),
+            'guid' => '',
+            'content' => '',
+            'permalink' => '',
+            'id' => '',
+            'categories' => ['Allgemein']
+        ];
+        
+        // Fehlende Felder mit Standardwerten auffüllen
+        foreach ($required_fields as $field => $default) {
+            if (!isset($item[$field]) || (is_string($item[$field]) && trim($item[$field]) === '')) {
+                $item[$field] = $default;
+                if ($field !== 'categories') { // Kategorien können leer sein
+                    $this->logger->debug("Feld '{$field}' fehlt in Item {$index}, verwende Standardwert.");
+                }
+            }
+        }
+        
+        // GUID ist ein Sonderfall - wenn es fehlt, versuchen wir es zu generieren
+        if (empty($item['guid'])) {
+            if (!empty($item['link'])) {
+                $item['guid'] = $item['link'];
+                $this->logger->info("Generierte GUID aus Link für Item {$index}: {$item['link']}");
+            } elseif (!empty($item['title'])) {
+                $item['guid'] = md5($item['title'] . time() . $index);
+                $this->logger->info("Generierte GUID aus Titel für Item {$index}: {$item['title']}");
+            } else {
+                // Absoluter Fallback
+                $item['guid'] = 'item-' . time() . '-' . $index;
+                $this->logger->warn("Generierte Fallback-GUID für Item {$index}");
+            }
+        }
+        
+        // ID sollte mit GUID übereinstimmen
+        if (empty($item['id'])) {
+            $item['id'] = $item['guid'];
+        }
+        
+        // Permalink sollte mit Link übereinstimmen
+        if (empty($item['permalink']) && !empty($item['link'])) {
+            $item['permalink'] = $item['link'];
+        }
+        
+        // Content sollte mindestens die Beschreibung oder den Titel enthalten
+        if (empty($item['content'])) {
+            if (!empty($item['description'])) {
+                $item['content'] = $item['description'];
+            } else {
+                $item['content'] = $item['title'];
+            }
+        }
+        
+        return $item;
     }
 }
