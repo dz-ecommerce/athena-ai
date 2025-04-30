@@ -136,6 +136,56 @@ class FeedService {
     }
     
     /**
+     * Erzeugt einen lesbaren Dateinamen für eine Feed-URL
+     * 
+     * @param string $url Die Feed-URL
+     * @return string Der lesbare Dateiname
+     */
+    private function generateReadableFilename(string $url): string {
+        // Domain extrahieren
+        $domain = parse_url($url, PHP_URL_HOST);
+        if (empty($domain)) {
+            $domain = 'unknown';
+        }
+        
+        // Eventuelle "www." Präfixe entfernen
+        $domain = preg_replace('/^www\./', '', $domain);
+        
+        // Dateiname generieren: Domainname + Timestamp + Hash
+        $filename = $this->sanitizeFileName($domain) . '_' . date('Ymd_His') . '_' . substr(md5($url), 0, 8);
+        
+        return $filename;
+    }
+    
+    /**
+     * Säubert einen Dateinamen von unerlaubten Zeichen.
+     * Fallback für die WordPress-Funktion sanitize_file_name().
+     * 
+     * @param string $filename Der zu säubernde Dateiname
+     * @return string Der gesäuberte Dateiname
+     */
+    private function sanitizeFileName(string $filename): string {
+        // Wenn in WordPress-Umgebung, nutze die eingebaute Funktion
+        if (function_exists('sanitize_file_name')) {
+            return sanitize_file_name($filename);
+        }
+        
+        // Eigene Implementierung der Dateisäuberung
+        // Entferne alles außer Buchstaben, Zahlen, Punkte, Bindestriche und Unterstriche
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+        
+        // Ersetze mehrere aufeinanderfolgende Unterstriche durch einen einzelnen
+        $filename = preg_replace('/_+/', '_', $filename);
+        
+        // Kürze den Dateinamen auf maximal 100 Zeichen
+        if (strlen($filename) > 100) {
+            $filename = substr($filename, 0, 100);
+        }
+        
+        return $filename;
+    }
+    
+    /**
      * Registriert eine URL-zu-Cache-Key-Zuordnung im Registry.
      * 
      * @param string $url Die Feed-URL
@@ -236,11 +286,97 @@ class FeedService {
         
         // Wenn in WordPress-Umgebung, nutze Transients API
         if (function_exists('set_transient')) {
-            return set_transient($cache_key, $content, $this->cache_expiration);
+            $result = set_transient($cache_key, $content, $this->cache_expiration);
+            
+            // Zusätzlich als Datei speichern für einfachere Diagnose
+            $this->storeAsFeedFile($url, $content);
+            
+            return $result;
         }
         
-        // Fallback: Dateibasiertes Caching
-        return $this->fileCache('set', $cache_key, $content);
+        // Fallback: Dateibasiertes Caching mit lesbarem Dateinamen
+        return $this->storeAsFeedFile($url, $content);
+    }
+    
+    /**
+     * Speichert einen Feed-Inhalt als separate Datei mit lesbarem Namen.
+     * 
+     * @param string $url Die Feed-URL
+     * @param string $content Der Feed-Inhalt
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function storeAsFeedFile(string $url, string $content): bool {
+        // Cache-Verzeichnis erstellen/bestimmen
+        $cache_dir = $this->getFeedCacheDir();
+        if (!file_exists($cache_dir)) {
+            mkdir($cache_dir, 0755, true);
+        }
+        
+        // Lesbaren Dateinamen generieren
+        $readable_filename = $this->generateReadableFilename($url);
+        $file_path = $cache_dir . '/' . $readable_filename . '.xml';
+        
+        // Speichere Feed-Inhalt in einer Datei
+        $cache_data = [
+            'url' => $url,
+            'expires' => time() + $this->cache_expiration,
+            'content' => $content
+        ];
+        
+        // Speichere den Header mit Informationen und den eigentlichen Inhalt
+        $header = "<!-- \n" .
+                  "URL: " . $this->escapeUrl($url) . "\n" .
+                  "Cached: " . date('Y-m-d H:i:s') . "\n" .
+                  "Expires: " . date('Y-m-d H:i:s', time() + $this->cache_expiration) . "\n" .
+                  "-->\n";
+        
+        return file_put_contents($file_path, $header . $content) !== false;
+    }
+    
+    /**
+     * Escaped eine URL sicher.
+     * Fallback für die WordPress-Funktion esc_url().
+     * 
+     * @param string $url Die zu escapende URL
+     * @return string Die escapte URL
+     */
+    private function escapeUrl(string $url): string {
+        // Wenn in WordPress-Umgebung, nutze die eingebaute Funktion
+        if (function_exists('esc_url')) {
+            return esc_url($url);
+        }
+        
+        // Eigene Implementierung des URL-Escapings
+        // Entferne alle nicht erlaubten Zeichen
+        $url = preg_replace('/[^a-zA-Z0-9_\-.~:\/\?#\[\]@!$&\'()*+,;=%]/', '', $url);
+        
+        // Stelle sicher, dass es sich um ein gültiges Schema handelt
+        $allowed_schemes = ['http', 'https', 'ftp', 'ftps', 'feed'];
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        
+        if (!empty($scheme) && !in_array(strtolower($scheme), $allowed_schemes)) {
+            return '';
+        }
+        
+        return $url;
+    }
+    
+    /**
+     * Gibt das Feed-Cache-Verzeichnis zurück.
+     * 
+     * @return string Der Pfad zum Feed-Cache-Verzeichnis
+     */
+    public function getFeedCacheDir(): string {
+        // Wenn in WordPress-Umgebung, verwende Upload-Verzeichnis
+        if (function_exists('wp_upload_dir')) {
+            $upload_dir = wp_upload_dir();
+            $cache_dir = $upload_dir['basedir'] . '/athena_feed_cache';
+        } else {
+            // Fallback: Temporäres Verzeichnis des Systems
+            $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
+        }
+        
+        return $cache_dir;
     }
     
     /**
@@ -252,13 +388,65 @@ class FeedService {
     private function getCachedContent(string $url) {
         $cache_key = $this->generateCacheKey($url);
         
-        // Wenn in WordPress-Umgebung, nutze Transients API
+        // Wenn in WordPress-Umgebung, nutze Transients API als Hauptquelle
         if (function_exists('get_transient')) {
-            return get_transient($cache_key);
+            $content = get_transient($cache_key);
+            if ($content !== false) {
+                return $content;
+            }
         }
         
-        // Fallback: Dateibasiertes Caching
-        return $this->fileCache('get', $cache_key);
+        // Versuche, den Cache aus der Datei zu holen
+        return $this->getCachedFileContent($url);
+    }
+    
+    /**
+     * Holt den Feed-Inhalt aus einer Cache-Datei.
+     * 
+     * @param string $url Die Feed-URL
+     * @return string|false Der Feed-Inhalt oder false, wenn nicht vorhanden/abgelaufen
+     */
+    private function getCachedFileContent(string $url) {
+        $cache_dir = $this->getFeedCacheDir();
+        if (!file_exists($cache_dir)) {
+            return false;
+        }
+        
+        // Finde die passende Datei anhand der URL im Header
+        $files = glob($cache_dir . '/*.xml');
+        foreach ($files as $file) {
+            // Lese die ersten Zeilen der Datei, um die URL zu prüfen
+            $handle = fopen($file, 'r');
+            if ($handle) {
+                $header = '';
+                for ($i = 0; $i < 10; $i++) {
+                    $line = fgets($handle);
+                    if ($line === false) break;
+                    $header .= $line;
+                }
+                fclose($handle);
+                
+                // Prüfe, ob die URL in der Datei enthalten ist
+                if (strpos($header, 'URL: ' . $url) !== false) {
+                    // Prüfe das Ablaufdatum
+                    if (preg_match('/Expires: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/', $header, $matches)) {
+                        $expires = strtotime($matches[1]);
+                        if ($expires < time()) {
+                            // Cache ist abgelaufen, lösche die Datei
+                            unlink($file);
+                            return false;
+                        }
+                    }
+                    
+                    // Lese den Inhalt, ohne den Header
+                    $content = file_get_contents($file);
+                    $content = preg_replace('/<!--[\s\S]*?-->/', '', $content, 1);
+                    return $content;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -269,66 +457,41 @@ class FeedService {
      */
     private function clearCache(string $url): bool {
         $cache_key = $this->generateCacheKey($url);
+        $success = true;
         
         // Wenn in WordPress-Umgebung, nutze Transients API
         if (function_exists('delete_transient')) {
-            return delete_transient($cache_key);
+            $success = delete_transient($cache_key);
         }
         
-        // Fallback: Dateibasiertes Caching
-        return $this->fileCache('delete', $cache_key);
-    }
-    
-    /**
-     * Dateibasiertes Caching als Fallback, wenn WordPress Transients nicht verfügbar sind.
-     * 
-     * @param string $action Die Aktion ('set', 'get', 'delete')
-     * @param string $key Der Cache-Schlüssel
-     * @param string|null $data Die zu speichernden Daten (nur für 'set')
-     * @return mixed Die Daten oder Erfolgsstatus
-     */
-    private function fileCache(string $action, string $key, ?string $data = null) {
-        // Cache-Verzeichnis erstellen/bestimmen
-        $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
-        if (!file_exists($cache_dir)) {
-            mkdir($cache_dir, 0755, true);
+        // Finde und lösche auch die Cache-Datei
+        $cache_dir = $this->getFeedCacheDir();
+        if (file_exists($cache_dir)) {
+            $files = glob($cache_dir . '/*.xml');
+            foreach ($files as $file) {
+                // Lese die ersten Zeilen der Datei, um die URL zu prüfen
+                $handle = fopen($file, 'r');
+                if ($handle) {
+                    $header = '';
+                    for ($i = 0; $i < 10; $i++) {
+                        $line = fgets($handle);
+                        if ($line === false) break;
+                        $header .= $line;
+                    }
+                    fclose($handle);
+                    
+                    // Wenn die URL in der Datei gefunden wurde, lösche die Datei
+                    if (strpos($header, 'URL: ' . $url) !== false) {
+                        if (unlink($file)) {
+                            $success = true;
+                        }
+                        break;
+                    }
+                }
+            }
         }
         
-        $file_path = $cache_dir . '/' . $key;
-        
-        switch ($action) {
-            case 'set':
-                // Speichere Daten mit Ablaufzeit
-                $cache_data = [
-                    'expires' => time() + $this->cache_expiration,
-                    'content' => $data
-                ];
-                return file_put_contents($file_path, serialize($cache_data)) !== false;
-                
-            case 'get':
-                if (!file_exists($file_path)) {
-                    return false;
-                }
-                
-                $cache_data = unserialize(file_get_contents($file_path));
-                
-                // Prüfe, ob der Cache abgelaufen ist
-                if ($cache_data['expires'] < time()) {
-                    unlink($file_path);
-                    return false;
-                }
-                
-                return $cache_data['content'];
-                
-            case 'delete':
-                if (file_exists($file_path)) {
-                    return unlink($file_path);
-                }
-                return true;
-                
-            default:
-                return false;
-        }
+        return $success;
     }
     
     /**
@@ -1054,6 +1217,8 @@ class FeedService {
      * @return bool Erfolg oder Misserfolg
      */
     public function clearAllCaches(): bool {
+        $success = true;
+        
         // Wenn in WordPress-Umgebung, nutze WP-Funktionen
         if (function_exists('delete_transient') && function_exists('get_option')) {
             global $wpdb;
@@ -1069,20 +1234,16 @@ class FeedService {
                 $transient_name = str_replace('_transient_', '', $transient);
                 delete_transient($transient_name);
             }
-            
-            return true;
         }
         
-        // Fallback: Lösche alle Cache-Dateien im Cache-Verzeichnis
-        $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
-        if (!file_exists($cache_dir)) {
-            return true; // Verzeichnis existiert nicht, nichts zu löschen
-        }
-        
-        $success = true;
-        foreach (glob($cache_dir . '/*') as $file) {
-            if (!unlink($file)) {
-                $success = false;
+        // Lösche alle Dateien im Cache-Verzeichnis
+        $cache_dir = $this->getFeedCacheDir();
+        if (file_exists($cache_dir)) {
+            $files = glob($cache_dir . '/*.xml');
+            foreach ($files as $file) {
+                if (!unlink($file)) {
+                    $success = false;
+                }
             }
         }
         
@@ -1336,51 +1497,42 @@ class FeedService {
      *
      * @return array Array mit Feed-URLs
      */
-    private function getAllCachedFeeds(): array {
+    public function getAllCachedFeeds(): array {
         $feed_urls = [];
         
-        // Wenn in WordPress-Umgebung, nutze WP-Funktionen
-        if (function_exists('get_option')) {
-            global $wpdb;
-            
-            // Hole URL-Registry
-            $registry = get_option('athena_feed_url_registry', []);
-            
-            // Finde alle Transients mit unserem Präfix
-            $transients = $wpdb->get_col(
-                "SELECT option_name FROM {$wpdb->options} 
-                WHERE option_name LIKE '_transient_athena_feed_cache_%'"
-            );
-            
-            foreach ($transients as $transient) {
-                // Extrahiere Cache-Schlüssel
-                $transient_name = str_replace('_transient_', '', $transient);
-                
-                // Verwende Registry, um URL zu finden
-                if (isset($registry[$transient_name])) {
-                    $feed_urls[] = $registry[$transient_name];
-                }
-            }
-        } else {
-            // Fallback: Dateibasiertes Registry und Cache
-            $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
-            $registry_file = $cache_dir . '/url_registry.php';
-            
-            if (file_exists($registry_file)) {
-                // Lade das Registry
-                $registry_content = file_get_contents($registry_file);
-                if ($registry_content) {
-                    // Entferne PHP-Header, falls vorhanden
-                    $registry_content = preg_replace('/^<\?php.+?\?>/s', '', $registry_content);
-                    $registry = unserialize($registry_content) ?: [];
+        // Priorität haben die Cache-Dateien, da sie die lesbaren Feeds enthalten
+        $cache_dir = $this->getFeedCacheDir();
+        if (file_exists($cache_dir)) {
+            $files = glob($cache_dir . '/*.xml');
+            foreach ($files as $file) {
+                // Lese die ersten Zeilen der Datei, um die URL zu extrahieren
+                $handle = fopen($file, 'r');
+                if ($handle) {
+                    $header = '';
+                    for ($i = 0; $i < 10; $i++) {
+                        $line = fgets($handle);
+                        if ($line === false) break;
+                        $header .= $line;
+                    }
+                    fclose($handle);
                     
-                    // Prüfe welche Cache-Dateien existieren
-                    foreach ($registry as $cache_key => $url) {
-                        $cache_file = $cache_dir . '/' . $cache_key;
-                        if (file_exists($cache_file)) {
-                            $feed_urls[] = $url;
+                    // Extrahiere die URL aus dem Header
+                    if (preg_match('/URL: (.*?)[\r\n]/', $header, $matches)) {
+                        $feed_url = trim($matches[1]);
+                        if (!empty($feed_url) && !in_array($feed_url, $feed_urls)) {
+                            $feed_urls[] = $feed_url;
                         }
                     }
+                }
+            }
+        }
+        
+        // Ergänze mit URLs aus dem WordPress-Transient-Cache, falls verfügbar
+        if (function_exists('get_option')) {
+            $registry = get_option('athena_feed_url_registry', []);
+            foreach ($registry as $key => $url) {
+                if (!in_array($url, $feed_urls)) {
+                    $feed_urls[] = $url;
                 }
             }
         }

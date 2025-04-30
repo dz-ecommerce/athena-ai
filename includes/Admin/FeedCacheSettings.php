@@ -62,6 +62,8 @@ class FeedCacheSettings {
         add_action('wp_ajax_athena_clear_feed_cache', [$this, 'ajax_clear_cache']);
         add_action('wp_ajax_athena_prefetch_feeds', [$this, 'ajax_prefetch_feeds']);
         add_action('wp_ajax_athena_process_cached_feeds', [$this, 'ajax_process_cached_feeds']);
+        add_action('wp_ajax_athena_read_feed_file', [$this, 'ajax_read_feed_file']);
+        add_action('wp_ajax_athena_process_single_feed', [$this, 'ajax_process_single_feed']);
     }
     
     /**
@@ -426,8 +428,301 @@ class FeedCacheSettings {
                 submit_button();
                 ?>
             </form>
+            
+            <?php if ($cache_count > 0): ?>
+                <h2><?php echo esc_html__('Cached Feed Files', 'athena-ai'); ?></h2>
+                <p><?php echo esc_html__('Below is a list of all feeds currently in the cache. You can inspect these files to diagnose issues with feed parsing.', 'athena-ai'); ?></p>
+                
+                <?php $this->render_feed_files_table(); ?>
+            <?php endif; ?>
         </div>
         <?php
+    }
+    
+    /**
+     * Rendert eine Tabelle mit allen Feed-Dateien.
+     */
+    private function render_feed_files_table() {
+        $cache_dir = $this->get_cache_dir();
+        if (!file_exists($cache_dir)) {
+            echo '<p>' . esc_html__('Cache directory does not exist yet.', 'athena-ai') . '</p>';
+            return;
+        }
+        
+        $files = glob($cache_dir . '/*.xml');
+        if (empty($files)) {
+            echo '<p>' . esc_html__('No cached feed files found.', 'athena-ai') . '</p>';
+            return;
+        }
+        
+        // Sortiere Dateien nach Änderungsdatum (neueste zuerst)
+        usort($files, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+        
+        ?>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php echo esc_html__('Filename', 'athena-ai'); ?></th>
+                    <th><?php echo esc_html__('Source URL', 'athena-ai'); ?></th>
+                    <th><?php echo esc_html__('Cached', 'athena-ai'); ?></th>
+                    <th><?php echo esc_html__('Expires', 'athena-ai'); ?></th>
+                    <th><?php echo esc_html__('Size', 'athena-ai'); ?></th>
+                    <th><?php echo esc_html__('Actions', 'athena-ai'); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($files as $file): ?>
+                    <?php
+                    $filename = basename($file);
+                    $filesize = filesize($file);
+                    $modified = filemtime($file);
+                    
+                    // Extrahiere Metadaten aus dem Header
+                    $url = '';
+                    $cached_date = '';
+                    $expires_date = '';
+                    
+                    $handle = fopen($file, 'r');
+                    if ($handle) {
+                        $header = '';
+                        for ($i = 0; $i < 10; $i++) {
+                            $line = fgets($handle);
+                            if ($line === false) break;
+                            $header .= $line;
+                        }
+                        fclose($handle);
+                        
+                        // Extrahiere die URL aus dem Header
+                        if (preg_match('/URL: (.*?)[\r\n]/', $header, $matches)) {
+                            $url = trim($matches[1]);
+                        }
+                        
+                        // Extrahiere das Cache-Datum
+                        if (preg_match('/Cached: (.*?)[\r\n]/', $header, $matches)) {
+                            $cached_date = trim($matches[1]);
+                        }
+                        
+                        // Extrahiere das Ablaufdatum
+                        if (preg_match('/Expires: (.*?)[\r\n]/', $header, $matches)) {
+                            $expires_date = trim($matches[1]);
+                        }
+                    }
+                    
+                    // Formatiere die Dateigröße lesbar
+                    if ($filesize < 1024) {
+                        $filesize_formatted = $filesize . ' B';
+                    } elseif ($filesize < 1024 * 1024) {
+                        $filesize_formatted = round($filesize / 1024, 2) . ' KB';
+                    } else {
+                        $filesize_formatted = round($filesize / (1024 * 1024), 2) . ' MB';
+                    }
+                    ?>
+                    <tr>
+                        <td>
+                            <?php echo esc_html($filename); ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($url)): ?>
+                                <a href="<?php echo esc_url($url); ?>" target="_blank"><?php echo esc_html($url); ?></a>
+                            <?php else: ?>
+                                <em><?php echo esc_html__('Unknown', 'athena-ai'); ?></em>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php echo esc_html($cached_date); ?>
+                        </td>
+                        <td>
+                            <?php 
+                            if (!empty($expires_date)) {
+                                $expires_timestamp = strtotime($expires_date);
+                                $now = time();
+                                
+                                if ($expires_timestamp < $now) {
+                                    echo '<span style="color: red;">' . esc_html($expires_date) . ' (' . esc_html__('Expired', 'athena-ai') . ')</span>';
+                                } else {
+                                    $diff = $expires_timestamp - $now;
+                                    $minutes = round($diff / 60);
+                                    
+                                    if ($minutes < 60) {
+                                        echo esc_html($expires_date) . ' (' . sprintf(esc_html__('Expires in %d minutes', 'athena-ai'), $minutes) . ')';
+                                    } else {
+                                        $hours = round($minutes / 60, 1);
+                                        echo esc_html($expires_date) . ' (' . sprintf(esc_html__('Expires in %s hours', 'athena-ai'), $hours) . ')';
+                                    }
+                                }
+                            }
+                            ?>
+                        </td>
+                        <td>
+                            <?php echo esc_html($filesize_formatted); ?>
+                        </td>
+                        <td>
+                            <button type="button" class="button view-feed-content" data-file="<?php echo esc_attr($file); ?>"><?php echo esc_html__('View', 'athena-ai'); ?></button>
+                            <button type="button" class="button button-secondary process-feed" data-url="<?php echo esc_attr($url); ?>"><?php echo esc_html__('Process', 'athena-ai'); ?></button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        
+        <!-- Modal für Feed-Inhaltsanzeige -->
+        <div id="feed-content-modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+            <div style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 1200px;">
+                <span id="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+                <h2 id="feed-modal-title"></h2>
+                <div style="display: flex; margin-bottom: 10px;">
+                    <div style="margin-right: 10px;">
+                        <button id="toggle-raw-view" class="button"><?php echo esc_html__('Toggle Raw/Formatted View', 'athena-ai'); ?></button>
+                    </div>
+                    <div>
+                        <button id="download-feed" class="button"><?php echo esc_html__('Download Feed File', 'athena-ai'); ?></button>
+                    </div>
+                </div>
+                <div id="feed-content-container" style="max-height: 70vh; overflow: auto; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;">
+                    <pre id="feed-content-raw" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+                    <div id="feed-content-formatted" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            jQuery(document).ready(function($) {
+                // Feed-Inhaltsanzeige
+                $('.view-feed-content').click(function() {
+                    var filePath = $(this).data('file');
+                    var fileName = filePath.split('/').pop();
+                    
+                    $('#feed-modal-title').text('<?php echo esc_js(__('Feed Content', 'athena-ai')); ?>: ' + fileName);
+                    
+                    // AJAX-Anfrage zum Lesen der Datei
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'athena_read_feed_file',
+                            nonce: '<?php echo wp_create_nonce('athena-feed-cache-action'); ?>',
+                            file_path: filePath
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Raw-Inhalt anzeigen
+                                $('#feed-content-raw').text(response.data.content);
+                                
+                                // Formatierter Inhalt (als HTML)
+                                var formattedContent = response.data.content
+                                    .replace(/&/g, '&amp;')
+                                    .replace(/</g, '&lt;')
+                                    .replace(/>/g, '&gt;')
+                                    .replace(/(".*?")/g, '<span style="color: blue;">$1</span>')
+                                    .replace(/(<\/?[a-zA-Z0-9:]+(?:\s+[a-zA-Z0-9:]+=".*?")*>)/g, '<span style="color: #800000;">$1</span>')
+                                    .replace(/<!--[\s\S]*?-->/g, '<span style="color: green;">$&</span>');
+                                    
+                                $('#feed-content-formatted').html(formattedContent);
+                                
+                                // Link für Download
+                                $('#download-feed').off('click').on('click', function() {
+                                    var blob = new Blob([response.data.content], {type: 'text/xml'});
+                                    var link = document.createElement('a');
+                                    link.href = window.URL.createObjectURL(blob);
+                                    link.download = fileName;
+                                    link.click();
+                                });
+                                
+                                // Modal anzeigen
+                                $('#feed-content-modal').show();
+                            } else {
+                                alert('<?php echo esc_js(__('Error loading feed content', 'athena-ai')); ?>: ' + response.data.message);
+                            }
+                        },
+                        error: function() {
+                            alert('<?php echo esc_js(__('Error loading feed content', 'athena-ai')); ?>');
+                        }
+                    });
+                });
+                
+                // Modal schließen
+                $('#close-modal').click(function() {
+                    $('#feed-content-modal').hide();
+                });
+                
+                // Klick außerhalb des Modals schließt es
+                $(window).click(function(event) {
+                    if (event.target == document.getElementById('feed-content-modal')) {
+                        $('#feed-content-modal').hide();
+                    }
+                });
+                
+                // Umschalten zwischen Raw und formatierter Ansicht
+                $('#toggle-raw-view').click(function() {
+                    if ($('#feed-content-raw').is(':visible')) {
+                        $('#feed-content-raw').hide();
+                        $('#feed-content-formatted').show();
+                        $(this).text('<?php echo esc_js(__('Show Raw XML', 'athena-ai')); ?>');
+                    } else {
+                        $('#feed-content-raw').show();
+                        $('#feed-content-formatted').hide();
+                        $(this).text('<?php echo esc_js(__('Show Formatted XML', 'athena-ai')); ?>');
+                    }
+                });
+                
+                // Process feed
+                $('.process-feed').click(function() {
+                    var url = $(this).data('url');
+                    if (!url) {
+                        alert('<?php echo esc_js(__('No URL found for this feed', 'athena-ai')); ?>');
+                        return;
+                    }
+                    
+                    // AJAX-Anfrage zum Verarbeiten des Feeds
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'athena_process_single_feed',
+                            nonce: '<?php echo wp_create_nonce('athena-feed-cache-action'); ?>',
+                            feed_url: url
+                        },
+                        beforeSend: function() {
+                            $(this).prop('disabled', true).text('<?php echo esc_js(__('Processing...', 'athena-ai')); ?>');
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                alert('<?php echo esc_js(__('Feed processed successfully', 'athena-ai')); ?>: ' + response.data.message);
+                            } else {
+                                alert('<?php echo esc_js(__('Error processing feed', 'athena-ai')); ?>: ' + response.data.message);
+                            }
+                            $(this).prop('disabled', false).text('<?php echo esc_js(__('Process', 'athena-ai')); ?>');
+                        },
+                        error: function() {
+                            alert('<?php echo esc_js(__('Error processing feed', 'athena-ai')); ?>');
+                            $(this).prop('disabled', false).text('<?php echo esc_js(__('Process', 'athena-ai')); ?>');
+                        }
+                    });
+                });
+            });
+        </script>
+        <?php
+    }
+    
+    /**
+     * Gibt das Cache-Verzeichnis zurück.
+     * 
+     * @return string Das Cache-Verzeichnis
+     */
+    private function get_cache_dir() {
+        if (method_exists($this->feed_service, 'getFeedCacheDir')) {
+            return $this->feed_service->getFeedCacheDir();
+        }
+        
+        // Fallback falls die Methode nicht existiert
+        if (function_exists('wp_upload_dir')) {
+            $upload_dir = wp_upload_dir();
+            return $upload_dir['basedir'] . '/athena_feed_cache';
+        }
+        
+        return sys_get_temp_dir() . '/athena_feed_cache';
     }
     
     /**
@@ -544,5 +839,145 @@ class FeedCacheSettings {
                 )
             ]);
         }
+    }
+
+    /**
+     * AJAX-Handler zum Lesen einer Feed-Datei.
+     */
+    public function ajax_read_feed_file() {
+        // Nonce prüfen
+        if (!check_ajax_referer('athena-feed-cache-action', 'nonce', false)) {
+            wp_send_json_error([
+                'message' => __('Security check failed.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Datei-Pfad holen
+        $file_path = isset($_POST['file_path']) ? sanitize_text_field($_POST['file_path']) : '';
+        
+        if (empty($file_path)) {
+            wp_send_json_error([
+                'message' => __('No file path provided.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Prüfen, ob die Datei existiert und lesbar ist
+        if (!file_exists($file_path) || !is_readable($file_path)) {
+            wp_send_json_error([
+                'message' => __('File does not exist or is not readable.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Sicherstellen, dass die Datei im Cache-Verzeichnis liegt
+        $cache_dir = $this->get_cache_dir();
+        if (strpos($file_path, $cache_dir) !== 0) {
+            wp_send_json_error([
+                'message' => __('File is not in the cache directory.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Dateigröße prüfen (maximal 10 MB)
+        $max_size = 10 * 1024 * 1024; // 10 MB
+        if (filesize($file_path) > $max_size) {
+            wp_send_json_error([
+                'message' => __('File is too large to be displayed. Max size: 10 MB.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Datei lesen
+        $content = file_get_contents($file_path);
+        
+        if ($content === false) {
+            wp_send_json_error([
+                'message' => __('Error reading file.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        wp_send_json_success([
+            'content' => $content
+        ]);
+    }
+
+    /**
+     * AJAX-Handler zum Verarbeiten eines einzelnen Feeds.
+     */
+    public function ajax_process_single_feed() {
+        // Nonce prüfen
+        if (!check_ajax_referer('athena-feed-cache-action', 'nonce', false)) {
+            wp_send_json_error([
+                'message' => __('Security check failed.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Feed-URL holen
+        $feed_url = isset($_POST['feed_url']) ? esc_url_raw($_POST['feed_url']) : '';
+        
+        if (empty($feed_url)) {
+            wp_send_json_error([
+                'message' => __('No feed URL provided.', 'athena-ai')
+            ]);
+            return;
+        }
+        
+        // Temporäres Feed-Objekt erstellen
+        $feed = $this->create_temporary_feed($feed_url);
+        
+        // Feed verarbeiten
+        $success = $this->feed_service->fetch_and_process_feed($feed, true, false);
+        
+        if ($success) {
+            wp_send_json_success([
+                'message' => __('Feed processed successfully.', 'athena-ai')
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => $feed->get_last_error() ?: __('Failed to process feed.', 'athena-ai')
+            ]);
+        }
+    }
+
+    /**
+     * Erstellt ein temporäres Feed-Objekt für die Verarbeitung.
+     * 
+     * @param string $url Die Feed-URL
+     * @return object Ein temporäres Feed-Objekt
+     */
+    private function create_temporary_feed($url) {
+        return new class($url) {
+            private $url;
+            private $last_error = '';
+            
+            public function __construct($url) {
+                $this->url = $url;
+            }
+            
+            public function get_url() {
+                return $this->url;
+            }
+            
+            public function get_post_id() {
+                return 0;
+            }
+            
+            public function update_feed_error($error) {
+                $this->last_error = $error;
+                return true;
+            }
+            
+            public function update_last_checked() {
+                return true;
+            }
+            
+            public function get_last_error() {
+                return $this->last_error;
+            }
+        };
     }
 } 
