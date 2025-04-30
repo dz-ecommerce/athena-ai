@@ -664,14 +664,16 @@ class FeedHttpClient {
             return false;
         }
         
-        // Prüfe nach XML-Struktur (RSS, Atom, etc.)
+        // Prüfe nach XML-Struktur (RSS, Atom, RDF, etc.)
         $has_xml_structure = (
             strpos($content, '<?xml') !== false || 
             strpos($content, '<rss') !== false || 
             strpos($content, '<feed') !== false ||
             strpos($content, '<channel') !== false ||
             strpos($content, '<item>') !== false ||
-            strpos($content, '<entry>') !== false
+            strpos($content, '<entry>') !== false ||
+            strpos($content, '<rdf:RDF') !== false || // RDF Format hinzugefügt
+            strpos($content, 'xmlns:rdf=') !== false   // RDF Namespace hinzugefügt
         );
         
         if ($has_xml_structure) {
@@ -688,7 +690,9 @@ class FeedHttpClient {
             
             // Selbst wenn XML-Parsing fehlschlägt, könnte es ein Feed sein mit kleinen Fehlern
             if (preg_match('/<item>.*?<title>.*?<\/title>.*?<\/item>/s', $content) || 
-                preg_match('/<entry>.*?<title>.*?<\/title>.*?<\/entry>/s', $content)) {
+                preg_match('/<entry>.*?<title>.*?<\/title>.*?<\/entry>/s', $content) ||
+                preg_match('/<rdf:RDF.*?>.*?<title>.*?<\/title>/s', $content) || // RDF-spezifisches Pattern
+                preg_match('/<item.*?rdf:about/s', $content)) { // Weiteres RDF-Pattern
                 return true;
             }
         }

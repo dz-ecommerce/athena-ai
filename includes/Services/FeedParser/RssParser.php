@@ -107,6 +107,41 @@ class RssParser implements FeedParserInterface {
             return [];
         }
 
+        // Erkennung des Feed-Typs (RSS, Atom, RDF)
+        $feed_type = $this->detectFeedType($content);
+        $this->consoleLog("Erkannter Feed-Typ: $feed_type", 'info');
+        
+        // Vorverarbeitung für RDF-Feeds, da SimplePie manchmal Probleme mit ihnen hat
+        if ($feed_type === 'rdf' && stripos($content, '<rdf:RDF') !== false) {
+            $this->consoleLog("RDF-Feed erkannt, wende spezielle Optimierungen an", 'info');
+            
+            // Manchmal fehlen notwendige Namespace-Deklarationen 
+            if (stripos($content, 'xmlns:dc=') === false) {
+                $content = str_replace('<rdf:RDF', '<rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/"', $content);
+            }
+            
+            // Stelle sicher, dass es ein wohlgeformtes XML ist
+            libxml_use_internal_errors(true);
+            $xml = @simplexml_load_string($content);
+            
+            if ($xml === false) {
+                $this->consoleLog("RDF-XML-Parsing fehlgeschlagen, versuche Error-Correction", 'warn');
+                // Versuche, die XML-Fehler zu beheben
+                $error_info = libxml_get_errors();
+                libxml_clear_errors();
+                
+                // Behebe typische RDF-XML-Probleme
+                if (!empty($error_info)) {
+                    foreach ($error_info as $error) {
+                        $this->consoleLog("XML-Fehler: " . $error->message, 'warn');
+                    }
+                    
+                    // Normalisiere XML-Struktur
+                    $content = $this->normalizeXmlContent($content);
+                }
+            }
+        }
+
         // Make sure SimplePie is loaded
         if (!class_exists('SimplePie')) {
             // Verwenden Sie einen relativen Pfad, wenn möglich
@@ -125,11 +160,29 @@ class RssParser implements FeedParserInterface {
         $feed->enable_cache(false);
         $feed->set_stupidly_fast(true);
         
+        // Force all known formats
+        $feed->force_feed(true);
+        
+        // Deaktiviere die Zeichensatzkonvertierung, um XML-Fehler zu vermeiden
+        $feed->set_output_encoding('UTF-8');
+        
         // Force the feed to be parsed
         $success = $feed->init();
         
         if (!$success) {
             $this->consoleLog('Failed to initialize SimplePie: ' . $feed->error(), 'error');
+            
+            // Bei RDF-Feeds: Versuche manuelle XML-Verarbeitung als Fallback
+            if ($feed_type === 'rdf') {
+                $this->consoleLog('Versuche manuelle RDF-Verarbeitung als Fallback', 'info');
+                $items = $this->parseRdfManually($content);
+                if (!empty($items)) {
+                    $this->consoleLog('Manuelle RDF-Verarbeitung erfolgreich: ' . count($items) . ' Items gefunden', 'info');
+                    $this->consoleLog('', 'groupEnd');
+                    return $items;
+                }
+            }
+            
             $this->consoleLog('', 'groupEnd');
             return [];
         }
@@ -142,6 +195,203 @@ class RssParser implements FeedParserInterface {
         
         $this->consoleLog("Parsed " . count($items) . " items from feed", 'info');
         $this->consoleLog('', 'groupEnd');
+        
+        return $items;
+    }
+    
+    /**
+     * Detectiert den Feed-Typ basierend auf dem Inhalt
+     *
+     * @param string $content Der Feed-Inhalt
+     * @return string Der erkannte Feed-Typ ('rss', 'atom', 'rdf', 'unknown')
+     */
+    private function detectFeedType(string $content): string {
+        // RDF-Feed (RDF Site Summary, RSS 1.0)
+        if (stripos($content, '<rdf:RDF') !== false || 
+            stripos($content, 'xmlns:rdf=') !== false) {
+            return 'rdf';
+        }
+        
+        // RSS-Feed (RSS 2.0, RSS 0.9x)
+        if (stripos($content, '<rss') !== false) {
+            return 'rss';
+        }
+        
+        // Atom-Feed
+        if (stripos($content, '<feed') !== false &&
+            (stripos($content, 'xmlns="http://www.w3.org/2005/Atom"') !== false ||
+             stripos($content, 'xmlns="http://purl.org/atom/') !== false)) {
+            return 'atom';
+        }
+        
+        // Standard-XML mit Feed-ähnlichen Elementen
+        if (stripos($content, '<channel') !== false && 
+            stripos($content, '<item') !== false) {
+            return 'rss';
+        }
+        
+        return 'unknown';
+    }
+    
+    /**
+     * Normalisiert XML-Inhalte, um häufige Probleme zu beheben
+     *
+     * @param string $content Der XML-Inhalt
+     * @return string Der normalisierte XML-Inhalt
+     */
+    private function normalizeXmlContent(string $content): string {
+        // Entferne invalide XML-Zeichen
+        $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $content);
+        
+        // Stelle sicher, dass es eine XML-Deklaration gibt
+        if (stripos($content, '<?xml') === false) {
+            $content = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $content;
+        }
+        
+        // Stelle sicher, dass es kein Byte-Order-Mark (BOM) gibt
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        
+        // Korrigiere fehlende Namespaces in RDF-Feeds
+        if (stripos($content, '<rdf:RDF') !== false) {
+            $rdf_ns_added = false;
+            
+            // Prüfe, ob rdf-Namespace fehlt
+            if (stripos($content, 'xmlns:rdf=') === false) {
+                $content = str_replace('<rdf:RDF', '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"', $content);
+                $rdf_ns_added = true;
+            }
+            
+            // Weitere häufig fehlende Namespaces
+            $common_ns = [
+                'dc' => 'http://purl.org/dc/elements/1.1/',
+                'content' => 'http://purl.org/rss/1.0/modules/content/',
+                'sy' => 'http://purl.org/rss/1.0/modules/syndication/',
+            ];
+            
+            foreach ($common_ns as $prefix => $uri) {
+                if (stripos($content, "xmlns:$prefix=") === false && 
+                    stripos($content, "<$prefix:") !== false) {
+                    
+                    // Füge fehlenden Namespace hinzu
+                    if ($rdf_ns_added) {
+                        $content = str_replace(
+                            'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"',
+                            'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:' . $prefix . '="' . $uri . '"',
+                            $content
+                        );
+                    } else {
+                        $content = str_replace(
+                            '<rdf:RDF',
+                            '<rdf:RDF xmlns:' . $prefix . '="' . $uri . '"',
+                            $content
+                        );
+                        $rdf_ns_added = true;
+                    }
+                }
+            }
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Parst einen RDF-Feed manuell, wenn SimplePie fehlschlägt
+     *
+     * @param string $content Der RDF-Feed-Inhalt
+     * @return array Die geparsten Feed-Items
+     */
+    private function parseRdfManually(string $content): array {
+        $items = [];
+        
+        // Versuche DOM-basiertes Parsing
+        $doc = new \DOMDocument();
+        $success = @$doc->loadXML($content);
+        
+        if (!$success) {
+            $this->consoleLog("Konnte RDF nicht als DOM laden", 'error');
+            return [];
+        }
+        
+        // Feed-Titel ermitteln
+        $feed_title = '';
+        $title_nodes = $doc->getElementsByTagName('title');
+        if ($title_nodes->length > 0) {
+            $feed_title = $title_nodes->item(0)->nodeValue;
+        }
+        
+        // RDF-Items finden
+        $item_nodes = $doc->getElementsByTagName('item');
+        foreach ($item_nodes as $item_node) {
+            $item = [
+                'title' => '',
+                'link' => '',
+                'date' => '',
+                'author' => '',
+                'content' => '',
+                'description' => '',
+                'permalink' => '',
+                'id' => '',
+                'thumbnail' => null,
+                'categories' => []
+            ];
+            
+            // Item-Informationen extrahieren
+            $child_nodes = $item_node->childNodes;
+            foreach ($child_nodes as $child) {
+                if ($child->nodeType !== XML_ELEMENT_NODE) {
+                    continue;
+                }
+                
+                $tag_name = strtolower($child->localName);
+                $namespace = $child->namespaceURI;
+                
+                switch ($tag_name) {
+                    case 'title':
+                        $item['title'] = $child->nodeValue;
+                        break;
+                    case 'link':
+                        $item['link'] = $child->nodeValue;
+                        $item['permalink'] = $child->nodeValue;
+                        break;
+                    case 'description':
+                        $item['description'] = $child->nodeValue;
+                        $item['content'] = $child->nodeValue;
+                        break;
+                    case 'date':
+                    case 'pubdate':
+                    case 'issued':
+                        $item['date'] = $child->nodeValue;
+                        break;
+                    case 'creator':
+                        if ($namespace === 'http://purl.org/dc/elements/1.1/') {
+                            $item['author'] = $child->nodeValue;
+                        }
+                        break;
+                    case 'subject':
+                        if ($namespace === 'http://purl.org/dc/elements/1.1/') {
+                            $item['categories'][] = $child->nodeValue;
+                        }
+                        break;
+                }
+            }
+            
+            // Generiere ID falls nicht vorhanden
+            if (empty($item['id']) && !empty($item['link'])) {
+                $item['id'] = $item['link'];
+            } elseif (empty($item['id'])) {
+                $item['id'] = md5($item['title'] . (isset($item['date']) ? $item['date'] : ''));
+            }
+            
+            // Versuche, ein Thumbnail zu finden
+            if (empty($item['thumbnail']) && !empty($item['content'])) {
+                preg_match('/<img[^>]+src=[\'"]([^\'"]+)[\'"][^>]*>/i', $item['content'], $matches);
+                if (!empty($matches[1])) {
+                    $item['thumbnail'] = $matches[1];
+                }
+            }
+            
+            $items[] = $item;
+        }
         
         return $items;
     }
