@@ -54,6 +54,9 @@ if (!empty($items)) {
         </div>
     </div>
     
+    <!-- Flowbite CDN für Dropdowns -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
+    
     <?php if (isset($_GET['cron_debugged'])): ?>
     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm">
         <div class="flex">
@@ -225,8 +228,8 @@ if (!empty($items)) {
             
             <div class="flex items-end space-x-2">
                 <!-- Feed Dropdown Filter Button -->
-                <div class="flex items-center">
-                    <button id="feedFilterDropdownButton" data-dropdown-toggle="feedFilterDropdown" class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-200" type="button">
+                <div class="flex items-center relative">
+                    <button id="feedFilterDropdownButton" type="button" class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg focus:outline-none hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-200">
                         <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="w-4 h-4 mr-2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
                         </svg>
@@ -240,7 +243,7 @@ if (!empty($items)) {
                     </button>
                     
                     <!-- Dropdown menu -->
-                    <div id="feedFilterDropdown" class="z-10 hidden w-64 p-3 bg-white rounded-lg shadow">
+                    <div id="feedFilterDropdown" class="z-10 hidden absolute left-0 top-full mt-1 w-64 p-3 bg-white rounded-lg shadow-lg border border-gray-200">
                         <div class="flex items-center justify-between mb-3">
                             <h6 class="text-sm font-medium text-gray-900">
                                 <?php esc_html_e('Feed Sources', 'athena-ai'); ?> (<?php echo count($feeds); ?>)
@@ -591,6 +594,54 @@ jQuery(document).ready(function($) {
             $('#item-content-modal .transform').addClass('scale-100').removeClass('scale-95');
         }, 10);
     }
+
+    // Feed Filter Dropdown Handling (ohne Flowbite-Abhängigkeit)
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdownButton = document.getElementById('feedFilterDropdownButton');
+        const dropdown = document.getElementById('feedFilterDropdown');
+        
+        if (dropdownButton && dropdown) {
+            console.log('Feed filter dropdown elements found');
+            
+            // Toggle dropdown beim Klicken auf den Button
+            dropdownButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Dropdown button clicked');
+                dropdown.classList.toggle('hidden');
+            });
+            
+            // Dropdown schließen beim Klicken außerhalb
+            document.addEventListener('click', function(e) {
+                if (!dropdownButton.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+            
+            // Select All Button
+            const selectAllButton = document.getElementById('select-all-feeds');
+            if (selectAllButton) {
+                selectAllButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('input[name="feed_ids[]"]').forEach(function(checkbox) {
+                        checkbox.checked = true;
+                    });
+                });
+            }
+            
+            // Clear All Button
+            const clearAllButton = document.getElementById('clear-all-feeds');
+            if (clearAllButton) {
+                clearAllButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('input[name="feed_ids[]"]').forEach(function(checkbox) {
+                        checkbox.checked = false;
+                    });
+                });
+            }
+        } else {
+            console.error('Feed filter dropdown elements not found');
+        }
+    });
 });
 
 // Show feed item content in modal

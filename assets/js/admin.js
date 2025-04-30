@@ -5,11 +5,6 @@
     // Initialize any admin-specific JavaScript here
     console.log("Athena AI admin initialized");
 
-    // Initialize Flowbite
-    if (typeof window.initFlowbite === "function") {
-      window.initFlowbite();
-    }
-
     // Feed Dropdown Handling
     const feedCheckboxes = document.querySelectorAll(
       'input[name="feed_ids[]"]'
@@ -32,19 +27,20 @@
         });
       }
 
-      // Dropdown toggle button functionality
+      // Manuelle Initialisierung des Dropdowns, falls Flowbite nicht richtig funktioniert
       const dropdownButton = document.getElementById(
         "feedFilterDropdownButton"
       );
       const dropdown = document.getElementById("feedFilterDropdown");
 
       if (dropdownButton && dropdown) {
-        // Flowbite handles the dropdown toggle, but we add manual toggle in case needed
-        dropdownButton.addEventListener("click", function () {
+        dropdownButton.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
           dropdown.classList.toggle("hidden");
         });
 
-        // Close dropdown when clicking outside
+        // Schließen des Dropdowns beim Klicken außerhalb
         document.addEventListener("click", function (event) {
           if (
             !dropdownButton.contains(event.target) &&
@@ -58,12 +54,28 @@
   });
 })(jQuery);
 
-// Import Flowbite if ESM is supported
-document.addEventListener("DOMContentLoaded", () => {
+// Laden von Flowbite
+document.addEventListener("DOMContentLoaded", function () {
+  // Flowbite als ESM importieren
   const script = document.createElement("script");
   script.src = "node_modules/flowbite/dist/flowbite.min.js";
   script.onload = function () {
     console.log("Flowbite loaded");
+
+    // Initialisiere Dropdowns manuell nach dem Laden von Flowbite
+    if (typeof initFlowbite === "function") {
+      initFlowbite();
+    } else if (window.Flowbite) {
+      console.log("Initializing dropdowns manually");
+      const dropdownButton = document.getElementById(
+        "feedFilterDropdownButton"
+      );
+      const dropdown = document.getElementById("feedFilterDropdown");
+
+      if (dropdownButton && dropdown) {
+        new window.Flowbite.Dropdown(dropdownButton, dropdown);
+      }
+    }
   };
   document.head.appendChild(script);
 });
