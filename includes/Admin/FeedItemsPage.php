@@ -68,6 +68,15 @@ class FeedItemsPage {
         $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
         $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) ? sanitize_text_field($_GET['date_filter']) : '';
         
+        // Unterstützung für Checkbox-Mehrfachauswahl
+        $feed_filter_ids = isset($_GET['feed_ids']) && is_array($_GET['feed_ids']) ? array_map('intval', $_GET['feed_ids']) : [];
+        if (!empty($feed_filter_ids)) {
+            $feed_filter = implode(',', $feed_filter_ids);
+            $feed_filter_array = $feed_filter_ids; // Variable für das Template
+        } else {
+            $feed_filter_array = $feed_filter ? [$feed_filter] : [];
+        }
+        
         $items_per_page = 20;
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $offset = ($current_page - 1) * $items_per_page;
@@ -78,8 +87,17 @@ class FeedItemsPage {
         
         // Add feed filter if specified
         if ($feed_filter) {
-            $where_conditions[] = "ri.feed_id = %d";
-            $query_params[] = $feed_filter;
+            if (strpos($feed_filter, ',') !== false) {
+                // Mehrere Feed-IDs - verwende IN-Klausel
+                $feed_ids = explode(',', $feed_filter);
+                $placeholders = array_fill(0, count($feed_ids), '%d');
+                $where_conditions[] = "ri.feed_id IN (" . implode(',', $placeholders) . ")";
+                $query_params = array_merge($query_params, $feed_ids);
+            } else {
+                // Einzelne Feed-ID
+                $where_conditions[] = "ri.feed_id = %d";
+                $query_params[] = $feed_filter;
+            }
         }
         
         // Add date filter if specified

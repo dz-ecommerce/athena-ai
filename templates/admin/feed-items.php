@@ -162,14 +162,34 @@ if (!empty($items)) {
                 <?php 
                 $filter_text = [];
                 if ($feed_filter) {
-                    $feed_name = '';
-                    foreach ($feeds as $feed) {
-                        if ($feed->ID == $feed_filter) {
-                            $feed_name = $feed->post_title;
-                            break;
+                    if (strpos($feed_filter, ',') !== false) {
+                        // Mehrere Feeds anzeigen
+                        $feed_ids = explode(',', $feed_filter);
+                        $feed_names = [];
+                        foreach ($feeds as $feed) {
+                            if (in_array($feed->ID, $feed_ids)) {
+                                $feed_names[] = $feed->post_title;
+                            }
                         }
+                        $feed_count = count($feed_names);
+                        if ($feed_count > 3) {
+                            // Bei mehr als 3 ausgewählten Feeds nur die Anzahl anzeigen
+                            $filter_text[] = sprintf(__('Feeds: %d selected', 'athena-ai'), $feed_count);
+                        } else {
+                            // Bei 1-3 Feeds alle Namen anzeigen
+                            $filter_text[] = sprintf(__('Feeds: %s', 'athena-ai'), esc_html(implode(', ', $feed_names)));
+                        }
+                    } else {
+                        // Einzelner Feed
+                        $feed_name = '';
+                        foreach ($feeds as $feed) {
+                            if ($feed->ID == $feed_filter) {
+                                $feed_name = $feed->post_title;
+                                break;
+                            }
+                        }
+                        $filter_text[] = sprintf(__('Feed: %s', 'athena-ai'), esc_html($feed_name));
                     }
-                    $filter_text[] = sprintf(__('Feed: %s', 'athena-ai'), esc_html($feed_name));
                 }
                 if ($date_filter) {
                     $date_labels = [
@@ -191,15 +211,30 @@ if (!empty($items)) {
             <input type="hidden" name="page" value="athena-feed-items" />
             
             <div class="w-full md:w-auto flex-grow">
-                <label for="feed_id" class="block text-sm font-medium text-gray-700 mb-1"><?php esc_html_e('Filter by Feed', 'athena-ai'); ?></label>
-                <select name="feed_id" id="feed_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
-                    <option value=""><?php esc_html_e('All Feeds', 'athena-ai'); ?></option>
-                    <?php foreach ($feeds as $feed): ?>
-                        <option value="<?php echo esc_attr($feed->ID); ?>" <?php selected($feed_filter, $feed->ID); ?>>
+                <label class="block text-sm font-medium text-gray-700 mb-2"><?php esc_html_e('Filter by Feed', 'athena-ai'); ?></label>
+                
+                <!-- Flowbite Checkbox Group -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 border border-gray-200 rounded-lg shadow-sm bg-gray-50">
+                    <?php 
+                    $feed_filter_array = !empty($feed_filter) ? explode(',', $feed_filter) : [];
+                    foreach ($feeds as $feed): 
+                        $is_checked = in_array($feed->ID, $feed_filter_array);
+                    ?>
+                    <div class="flex items-center">
+                        <input id="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
+                               type="checkbox" 
+                               name="feed_ids[]" 
+                               value="<?php echo esc_attr($feed->ID); ?>" 
+                               <?php echo $is_checked ? 'checked' : ''; ?>
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
+                        <label for="feed-checkbox-<?php echo esc_attr($feed->ID); ?>" 
+                               class="ml-2 text-sm font-medium text-gray-900 truncate max-w-xs">
                             <?php echo esc_html($feed->post_title); ?>
-                        </option>
+                        </label>
+                    </div>
                     <?php endforeach; ?>
-                </select>
+                </div>
+                <!-- End Flowbite Checkbox Group -->
             </div>
             
             <div class="w-full md:w-auto flex-grow">
@@ -226,6 +261,15 @@ if (!empty($items)) {
                     <i class="fa-solid fa-times mr-2"></i>
                     <?php esc_html_e('Clear Filters', 'athena-ai'); ?>
                 </a>
+                <?php endif; ?>
+                
+                <!-- Flowbite Counter Badge -->
+                <?php if (!empty($feed_filter_array)): ?>
+                <div class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
+                    <span class="text-sm font-medium">
+                        <?php echo sprintf(_n('%d Feed selected', '%d Feeds selected', count($feed_filter_array), 'athena-ai'), count($feed_filter_array)); ?>
+                    </span>
+                </div>
                 <?php endif; ?>
             </div>
         </form>
@@ -364,7 +408,16 @@ if (!empty($items)) {
             $total_pages = ceil($total_items / $items_per_page);
             $base_url = admin_url('admin.php?page=athena-feed-items');
             if ($feed_filter) {
-                $base_url .= '&feed_id=' . $feed_filter;
+                if (strpos($feed_filter, ',') !== false) {
+                    // Mehrere Feed-IDs
+                    $feed_ids = explode(',', $feed_filter);
+                    foreach ($feed_ids as $id) {
+                        $base_url .= '&feed_ids[]=' . $id;
+                    }
+                } else {
+                    // Einzelne Feed-ID
+                    $base_url .= '&feed_id=' . $feed_filter;
+                }
             }
             if ($date_filter) {
                 $base_url .= '&date_filter=' . $date_filter;
