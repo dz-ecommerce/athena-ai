@@ -37,6 +37,11 @@ class Bootstrap {
         
         // Plugin-Komponenten initialisieren
         \add_action('plugins_loaded', [self::class, 'load_components']);
+        
+        // CLI-Kommandos initialisieren, wenn WP-CLI verfügbar ist
+        if (defined('WP_CLI') && WP_CLI) {
+            self::init_cli_commands();
+        }
     }
     
     /**
@@ -143,5 +148,24 @@ class Bootstrap {
             null             // Kein Token für öffentliche Repositories nötig
         );
         $updater->init();
+        
+        // Feed Cron Manager initialisieren
+        if (class_exists('\\AthenaAI\\Cron\\FeedCronManager')) {
+            $feed_cron_manager = \AthenaAI\Cron\FeedCronManager::create();
+            $feed_cron_manager->init();
+        }
+    }
+    
+    /**
+     * Initialisiert WP-CLI Kommandos.
+     * 
+     * @return void
+     */
+    private static function init_cli_commands(): void {
+        // Feed CLI-Kommando registrieren
+        if (class_exists('\\AthenaAI\\Cli\\FeedCommand')) {
+            new \AthenaAI\Cli\FeedCommand();
+            \WP_CLI::add_command('athena feed', '\\AthenaAI\\Cli\\FeedCommand');
+        }
     }
 }

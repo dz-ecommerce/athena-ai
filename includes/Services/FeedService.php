@@ -66,6 +66,13 @@ class FeedService {
     private bool $verbose_mode = false;
 
     /**
+     * Cache-Dauer in Sekunden
+     * 
+     * @var int
+     */
+    private int $cache_expiration = 1800; // 30 Minuten Standard-Cache-Zeit
+
+    /**
      * Constructor.
      *
      * @param FeedHttpClient      $http_client       HTTP client.
@@ -100,6 +107,228 @@ class FeedService {
         $this->logger->setVerboseMode($verbose_mode);
         $this->http_client->setVerboseMode($verbose_mode);
         return $this;
+    }
+    
+    /**
+     * Setzt die Cache-Dauer in Sekunden.
+     * 
+     * @param int $seconds Cache-Dauer in Sekunden
+     * @return FeedService
+     */
+    public function setCacheExpiration(int $seconds): FeedService {
+        $this->cache_expiration = $seconds;
+        return $this;
+    }
+    
+    /**
+     * Generiert einen eindeutigen Cache-Schlüssel für eine Feed-URL.
+     * 
+     * @param string $url Die Feed-URL
+     * @return string Der Cache-Schlüssel
+     */
+    private function generateCacheKey(string $url): string {
+        $key = 'athena_feed_cache_' . md5($url);
+        
+        // Registriere die URL im URL-Registry
+        $this->registerUrlMapping($url, $key);
+        
+        return $key;
+    }
+    
+    /**
+     * Registriert eine URL-zu-Cache-Key-Zuordnung im Registry.
+     * 
+     * @param string $url Die Feed-URL
+     * @param string $cache_key Der Cache-Schlüssel
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function registerUrlMapping(string $url, string $cache_key): bool {
+        // Wenn in WordPress-Umgebung, nutze Options API
+        if (function_exists('update_option') && function_exists('get_option')) {
+            $registry_key = 'athena_feed_url_registry';
+            
+            // Hole das bestehende Registry
+            $registry = get_option($registry_key, []);
+            
+            // Aktualisiere oder füge die Zuordnung hinzu
+            $registry[$cache_key] = $url;
+            
+            // Speichere das aktualisierte Registry
+            return update_option($registry_key, $registry);
+        }
+        
+        // Fallback: Dateibasiertes Registry
+        $registry_file = sys_get_temp_dir() . '/athena_feed_cache/url_registry.php';
+        
+        // Sicherstellen, dass das Verzeichnis existiert
+        $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
+        if (!file_exists($cache_dir)) {
+            mkdir($cache_dir, 0755, true);
+        }
+        
+        // Lade das bestehende Registry
+        $registry = [];
+        if (file_exists($registry_file)) {
+            $registry_content = file_get_contents($registry_file);
+            if ($registry_content) {
+                // Entferne PHP-Header, falls vorhanden
+                $registry_content = preg_replace('/^<\?php.+?\?>/s', '', $registry_content);
+                $registry = unserialize($registry_content) ?: [];
+            }
+        }
+        
+        // Aktualisiere oder füge die Zuordnung hinzu
+        $registry[$cache_key] = $url;
+        
+        // Speichere das aktualisierte Registry mit PHP-Header für Sicherheit
+        $registry_content = '<?php exit; ?>' . serialize($registry);
+        return file_put_contents($registry_file, $registry_content) !== false;
+    }
+    
+    /**
+     * Holt eine URL aus dem Registry basierend auf dem Cache-Schlüssel.
+     * 
+     * @param string $cache_key Der Cache-Schlüssel
+     * @return string|false Die URL oder false, wenn nicht gefunden
+     */
+    private function getUrlFromRegistry(string $cache_key): string|false {
+        // Wenn in WordPress-Umgebung, nutze Options API
+        if (function_exists('get_option')) {
+            $registry_key = 'athena_feed_url_registry';
+            
+            // Hole das Registry
+            $registry = get_option($registry_key, []);
+            
+            // Prüfe, ob der Schlüssel existiert
+            return $registry[$cache_key] ?? false;
+        }
+        
+        // Fallback: Dateibasiertes Registry
+        $registry_file = sys_get_temp_dir() . '/athena_feed_cache/url_registry.php';
+        
+        if (!file_exists($registry_file)) {
+            return false;
+        }
+        
+        // Lade das Registry
+        $registry_content = file_get_contents($registry_file);
+        if (!$registry_content) {
+            return false;
+        }
+        
+        // Entferne PHP-Header, falls vorhanden
+        $registry_content = preg_replace('/^<\?php.+?\?>/s', '', $registry_content);
+        $registry = unserialize($registry_content) ?: [];
+        
+        // Prüfe, ob der Schlüssel existiert
+        return $registry[$cache_key] ?? false;
+    }
+    
+    /**
+     * Speichert einen Feed-Inhalt im Cache.
+     * 
+     * @param string $url Die Feed-URL
+     * @param string $content Der Feed-Inhalt
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function cacheContent(string $url, string $content): bool {
+        $cache_key = $this->generateCacheKey($url);
+        
+        // Wenn in WordPress-Umgebung, nutze Transients API
+        if (function_exists('set_transient')) {
+            return set_transient($cache_key, $content, $this->cache_expiration);
+        }
+        
+        // Fallback: Dateibasiertes Caching
+        return $this->fileCache('set', $cache_key, $content);
+    }
+    
+    /**
+     * Holt einen Feed-Inhalt aus dem Cache.
+     * 
+     * @param string $url Die Feed-URL
+     * @return string|false Der Feed-Inhalt oder false, wenn nicht im Cache
+     */
+    private function getCachedContent(string $url) {
+        $cache_key = $this->generateCacheKey($url);
+        
+        // Wenn in WordPress-Umgebung, nutze Transients API
+        if (function_exists('get_transient')) {
+            return get_transient($cache_key);
+        }
+        
+        // Fallback: Dateibasiertes Caching
+        return $this->fileCache('get', $cache_key);
+    }
+    
+    /**
+     * Löscht einen Feed-Inhalt aus dem Cache.
+     * 
+     * @param string $url Die Feed-URL
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function clearCache(string $url): bool {
+        $cache_key = $this->generateCacheKey($url);
+        
+        // Wenn in WordPress-Umgebung, nutze Transients API
+        if (function_exists('delete_transient')) {
+            return delete_transient($cache_key);
+        }
+        
+        // Fallback: Dateibasiertes Caching
+        return $this->fileCache('delete', $cache_key);
+    }
+    
+    /**
+     * Dateibasiertes Caching als Fallback, wenn WordPress Transients nicht verfügbar sind.
+     * 
+     * @param string $action Die Aktion ('set', 'get', 'delete')
+     * @param string $key Der Cache-Schlüssel
+     * @param string|null $data Die zu speichernden Daten (nur für 'set')
+     * @return mixed Die Daten oder Erfolgsstatus
+     */
+    private function fileCache(string $action, string $key, ?string $data = null) {
+        // Cache-Verzeichnis erstellen/bestimmen
+        $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
+        if (!file_exists($cache_dir)) {
+            mkdir($cache_dir, 0755, true);
+        }
+        
+        $file_path = $cache_dir . '/' . $key;
+        
+        switch ($action) {
+            case 'set':
+                // Speichere Daten mit Ablaufzeit
+                $cache_data = [
+                    'expires' => time() + $this->cache_expiration,
+                    'content' => $data
+                ];
+                return file_put_contents($file_path, serialize($cache_data)) !== false;
+                
+            case 'get':
+                if (!file_exists($file_path)) {
+                    return false;
+                }
+                
+                $cache_data = unserialize(file_get_contents($file_path));
+                
+                // Prüfe, ob der Cache abgelaufen ist
+                if ($cache_data['expires'] < time()) {
+                    unlink($file_path);
+                    return false;
+                }
+                
+                return $cache_data['content'];
+                
+            case 'delete':
+                if (file_exists($file_path)) {
+                    return unlink($file_path);
+                }
+                return true;
+                
+            default:
+                return false;
+        }
     }
     
     /**
@@ -197,69 +426,100 @@ class FeedService {
     private function processTagesschauFeed(string $content, Feed $feed) {
         // Erstelle einen Array für die Feed-Items
         $items = [];
+        $this->logger->info("Verarbeite tagesschau.de Feed mit spezieller Methode");
         
-        // Versuche, die URLs aus der Sequenz zu extrahieren
+        // 1. RDF-Format: Besorge die item IDs aus der Sequenz
+        $resource_ids = [];
         $seq_pattern = '/<rdf:Seq>(.*?)<\/rdf:Seq>/s';
         $resource_pattern = '/<rdf:li rdf:resource="([^"]+)"/';
         
         if (preg_match($seq_pattern, $content, $seq_match) && 
             preg_match_all($resource_pattern, $seq_match[1], $resources)) {
             
-            $this->logger->info("Gefunden: " . count($resources[1]) . " Links in Sequenz");
+            $resource_ids = $resources[1];
+            $this->logger->info("Gefunden: " . count($resource_ids) . " Links in RDF-Sequenz");
+        }
+        
+        // 2. Extrahiere die tatsächlichen Items basierend auf den IDs
+        foreach ($resource_ids as $id) {
+            // Pattern, um das entsprechende Item zu finden
+            $item_pattern = '/<item[^>]*rdf:about="' . preg_quote($id, '/') . '"[^>]*>(.*?)<\/item>/s';
             
-            // Für jeden Link, versuche das Item zu extrahieren
-            foreach ($resources[1] as $index => $url) {
-                // Suche nach dem Item mit diesem Link
-                $item_pattern = '/<item[^>]*rdf:about="' . preg_quote($url, '/') . '"[^>]*>(.*?)<\/item>/s';
-                if (preg_match($item_pattern, $content, $item_match)) {
-                    $item_content = $item_match[1];
-                    
-                    // Extrahiere Titel
-                    $title = '';
-                    if (preg_match('/<title[^>]*>(.*?)<\/title>/s', $item_content, $title_match)) {
-                        $title = trim(html_entity_decode(strip_tags($title_match[1])));
-                    }
-                    
-                    // Extrahiere Beschreibung
-                    $description = '';
-                    if (preg_match('/<description[^>]*>(.*?)<\/description>/s', $item_content, $desc_match)) {
-                        $description = trim(html_entity_decode(strip_tags($desc_match[1])));
-                    }
-                    
-                    // Extrahiere Datum
-                    $date = '';
-                    if (preg_match('/<dc:date[^>]*>(.*?)<\/dc:date>/s', $item_content, $date_match)) {
-                        $date = trim($date_match[1]);
-                        // Konvertiere ISO-Datum in MySQL-Format wenn nötig
-                        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $date)) {
-                            $date_obj = new \DateTime($date);
-                            $date = $date_obj->format('Y-m-d H:i:s');
-                        }
-                    }
-                    
-                    // Wenn kein Datum gefunden wurde, verwende aktuelles Datum
-                    if (empty($date)) {
+            if (preg_match($item_pattern, $content, $item_match)) {
+                $item_content = $item_match[1];
+                
+                // Extrahiere Titel
+                $title = '';
+                if (preg_match('/<title[^>]*>(.*?)<\/title>/s', $item_content, $title_match)) {
+                    $title = trim(html_entity_decode(strip_tags($title_match[1])));
+                }
+                
+                // Extrahiere Link
+                $link = '';
+                if (preg_match('/<link[^>]*>(.*?)<\/link>/s', $item_content, $link_match)) {
+                    $link = trim($link_match[1]);
+                }
+                
+                // Extrahiere Beschreibung
+                $description = '';
+                if (preg_match('/<description[^>]*>(.*?)<\/description>/s', $item_content, $desc_match)) {
+                    $description = trim(html_entity_decode(strip_tags($desc_match[1])));
+                }
+                
+                // Extrahiere Content (falls vorhanden)
+                $content_encoded = '';
+                if (preg_match('/<content:encoded[^>]*>(.*?)<\/content:encoded>/s', $item_content, $content_match)) {
+                    $content_encoded = trim(html_entity_decode(strip_tags($content_match[1])));
+                }
+                
+                // Extrahiere GUID
+                $guid = '';
+                if (preg_match('/<guid[^>]*>(.*?)<\/guid>/s', $item_content, $guid_match)) {
+                    $guid = trim($guid_match[1]);
+                } else {
+                    // Fallback: Wenn keine GUID, verwende ID
+                    $guid = $id;
+                }
+                
+                // Extrahiere Datum (bevorzuge dc:date über pubDate)
+                $date = '';
+                if (preg_match('/<dc:date[^>]*>(.*?)<\/dc:date>/s', $item_content, $date_match)) {
+                    $date = trim($date_match[1]);
+                } elseif (preg_match('/<pubDate[^>]*>(.*?)<\/pubDate>/s', $item_content, $date_match)) {
+                    $date = trim($date_match[1]);
+                }
+                
+                // Konvertiere ISO-Datum in MySQL-Format wenn nötig
+                if (!empty($date)) {
+                    try {
+                        $date_obj = new \DateTime($date);
+                        $date = $date_obj->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        $this->logger->warn("Fehler beim Parsen des Datums: " . $e->getMessage());
                         $date = $this->getCurrentTime();
                     }
-                    
-                    // Erstelle das Item-Array
-                    $item = [
-                        'title' => $title,
-                        'link' => $url,
-                        'date' => $date,
-                        'author' => 'tagesschau.de',
-                        'content' => $description,
-                        'description' => $description,
-                        'permalink' => $url,
-                        'id' => $url,
-                        'thumbnail' => null,
-                        'categories' => ['Nachrichten']
-                    ];
-                    
-                    // Wenn Titel oder Beschreibung vorhanden sind, füge das Item hinzu
-                    if (!empty($title) || !empty($description)) {
-                        $items[] = $item;
-                    }
+                } else {
+                    $date = $this->getCurrentTime();
+                }
+                
+                // Erstelle das Item-Array
+                $item = [
+                    'title' => $title,
+                    'link' => $link,
+                    'date' => $date,
+                    'author' => 'tagesschau.de',
+                    'content' => !empty($content_encoded) ? $content_encoded : $description,
+                    'description' => $description,
+                    'permalink' => $link,
+                    'guid' => $guid,
+                    'id' => $guid,
+                    'thumbnail' => null,
+                    'categories' => ['Nachrichten']
+                ];
+                
+                // Wenn Titel oder Beschreibung vorhanden sind, füge das Item hinzu
+                if (!empty($title) || !empty($description)) {
+                    $items[] = $item;
                 }
             }
         }
@@ -276,12 +536,14 @@ class FeedService {
                 'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
                 'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
                 'permalink' => 'https://www.tagesschau.de/',
+                'guid' => 'tagesschau-dummy-' . time(),
                 'id' => 'tagesschau-dummy-' . time(),
                 'thumbnail' => null,
                 'categories' => ['Nachrichten']
             ];
         }
         
+        $this->logger->info("Tagesschau.de Feed erfolgreich verarbeitet: " . count($items) . " Items extrahiert");
         return $items;
     }
     
@@ -635,9 +897,10 @@ class FeedService {
      *
      * @param Feed $feed The feed to process
      * @param bool $verbose_console Whether to output verbose console logs (default: false)
+     * @param bool $force_refresh Whether to force refresh the cache (default: false)
      * @return bool True if successful, false otherwise
      */
-    public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false): bool {
+    public function fetch_and_process_feed(Feed $feed, bool $verbose_console = false, bool $force_refresh = false): bool {
         // Aktualisiere verbose mode entsprechend dem Parameter
         $this->setVerboseMode($verbose_console);
         
@@ -647,8 +910,26 @@ class FeedService {
             return false;
         }
 
-        // Fetch feed content
-        $content = $this->http_client->fetch($url);
+        // Prüfe, ob der Feed im Cache ist und kein Refresh erzwungen wird
+        $content = null;
+        if (!$force_refresh) {
+            $content = $this->getCachedContent($url);
+            if ($content !== false) {
+                $this->logger->info("Feed aus Cache geladen: " . $url);
+            }
+        }
+
+        // Wenn nicht im Cache oder Refresh erzwungen, hole den Feed
+        if ($content === false || $content === null) {
+            $this->logger->info("Feed wird von Quelle geladen: " . $url);
+            $content = $this->http_client->fetch($url);
+            
+            // Wenn erfolgreich geholt, im Cache speichern
+            if ($content !== null && !empty($content)) {
+                $this->cacheContent($url, $content);
+                $this->logger->info("Feed in Cache gespeichert: " . $url);
+            }
+        }
 
         // Handle null or empty content
         if ($content === null || empty($content)) {
@@ -767,6 +1048,48 @@ class FeedService {
     }
     
     /**
+     * Löscht alle Cache-Einträge.
+     * Nützlich für Wartungsaufgaben oder Problemlösungen.
+     * 
+     * @return bool Erfolg oder Misserfolg
+     */
+    public function clearAllCaches(): bool {
+        // Wenn in WordPress-Umgebung, nutze WP-Funktionen
+        if (function_exists('delete_transient') && function_exists('get_option')) {
+            global $wpdb;
+            
+            // Finde alle Transients mit unserem Präfix
+            $transients = $wpdb->get_col(
+                "SELECT option_name FROM {$wpdb->options} 
+                WHERE option_name LIKE '_transient_athena_feed_cache_%'"
+            );
+            
+            foreach ($transients as $transient) {
+                // Konvertiere _transient_key zu key
+                $transient_name = str_replace('_transient_', '', $transient);
+                delete_transient($transient_name);
+            }
+            
+            return true;
+        }
+        
+        // Fallback: Lösche alle Cache-Dateien im Cache-Verzeichnis
+        $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
+        if (!file_exists($cache_dir)) {
+            return true; // Verzeichnis existiert nicht, nichts zu löschen
+        }
+        
+        $success = true;
+        foreach (glob($cache_dir . '/*') as $file) {
+            if (!unlink($file)) {
+                $success = false;
+            }
+        }
+        
+        return $success;
+    }
+    
+    /**
      * Gibt das aktuelle Datum und die Uhrzeit im MySQL-Format zurück.
      * Fallback für die WordPress-Funktion current_time().
      *
@@ -839,5 +1162,229 @@ class FeedService {
         $text = str_replace("&", "\\x26", $text);
         
         return $text;
+    }
+
+    /**
+     * Manuelle Vorladung (Prefetching) eines Feeds ohne sofortige Verarbeitung.
+     * Lädt den Feed-Inhalt und speichert ihn im Cache für spätere Verarbeitung.
+     *
+     * @param string $url Die Feed-URL
+     * @param bool $force_refresh Ob der Cache ignoriert werden soll (default: false)
+     * @return bool True bei erfolgreichem Caching, sonst false
+     */
+    public function prefetchFeed(string $url, bool $force_refresh = false): bool {
+        if (empty($url)) {
+            $this->logger->error("Prefetch: Feed URL ist leer");
+            return false;
+        }
+        
+        // Prüfe, ob der Feed bereits im Cache ist und kein Refresh erzwungen wird
+        if (!$force_refresh && $this->getCachedContent($url) !== false) {
+            $this->logger->info("Prefetch: Feed bereits im Cache: " . $url);
+            return true;
+        }
+        
+        // Hole Feed-Inhalt
+        $this->logger->info("Prefetch: Lade Feed: " . $url);
+        $content = $this->http_client->fetch($url);
+        
+        // Wenn erfolgreich geholt, im Cache speichern
+        if ($content !== null && !empty($content)) {
+            $result = $this->cacheContent($url, $content);
+            $this->logger->info("Prefetch: Feed in Cache gespeichert: " . $url);
+            return $result;
+        }
+        
+        $this->logger->error("Prefetch: Konnte Feed nicht laden: " . $url);
+        $this->logger->error("Prefetch: Fehler: " . $this->http_client->get_last_error());
+        return false;
+    }
+
+    /**
+     * Batchverarbeitung für Feeds.
+     * Verarbeitet mehrere Feeds nacheinander.
+     *
+     * @param array $feeds Array mit Feed-Objekten oder Feed-URLs
+     * @param bool $use_cache Ob der Cache verwendet werden soll (default: true)
+     * @param bool $verbose_console Ob Konsolen-Ausgaben erfolgen sollen (default: false)
+     * @return array Ergebnisse der Verarbeitung ['success' => int, 'failed' => int, 'errors' => array]
+     */
+    public function batchProcessFeeds(array $feeds, bool $use_cache = true, bool $verbose_console = false): array {
+        $this->setVerboseMode($verbose_console);
+        $this->logger->info("Batch-Verarbeitung für " . count($feeds) . " Feeds gestartet");
+        
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+        ];
+        
+        foreach ($feeds as $feed) {
+            // Bestimme Feed-Objekt und URL
+            $feed_obj = null;
+            $feed_url = '';
+            
+            if (is_string($feed)) {
+                // Wenn es eine URL ist, versuche einen temporären Feed zu erstellen
+                $feed_url = $feed;
+                $feed_obj = $this->createTemporaryFeed($feed_url);
+            } elseif (is_object($feed) && method_exists($feed, 'get_url')) {
+                // Wenn es ein Feed-Objekt ist
+                $feed_obj = $feed;
+                $feed_url = $feed->get_url();
+            } else {
+                $this->logger->error("Batch: Ungültiger Feed-Typ übersprungen");
+                $results['failed']++;
+                $results['errors'][] = "Ungültiger Feed-Typ";
+                continue;
+            }
+            
+            if (empty($feed_url)) {
+                $this->logger->error("Batch: Feed ohne URL übersprungen");
+                $results['failed']++;
+                $results['errors'][] = "Feed ohne URL";
+                continue;
+            }
+            
+            // Verarbeite den Feed
+            $this->logger->info("Batch: Verarbeite Feed: " . $feed_url);
+            $success = $this->fetch_and_process_feed($feed_obj, $verbose_console, !$use_cache);
+            
+            if ($success) {
+                $results['success']++;
+                $this->logger->info("Batch: Feed erfolgreich verarbeitet: " . $feed_url);
+            } else {
+                $results['failed']++;
+                $error = method_exists($feed_obj, 'get_last_error') ? $feed_obj->get_last_error() : "Unbekannter Fehler";
+                $results['errors'][] = $feed_url . ": " . $error;
+                $this->logger->error("Batch: Fehler bei Feed: " . $feed_url . " - " . $error);
+            }
+        }
+        
+        $this->logger->info("Batch-Verarbeitung abgeschlossen. Erfolge: " . $results['success'] . ", Fehler: " . $results['failed']);
+        return $results;
+    }
+
+    /**
+     * Erstellt ein temporäres Feed-Objekt für die Verarbeitung.
+     * 
+     * @param string $url Die Feed-URL
+     * @return object Ein einfaches Feed-Objekt-Äquivalent
+     */
+    private function createTemporaryFeed(string $url) {
+        // Erstelle ein einfaches Objekt mit den notwendigen Methoden
+        return new class($url) {
+            private $url;
+            private $post_id;
+            private $last_error = '';
+            
+            public function __construct($url, $post_id = 0) {
+                $this->url = $url;
+                $this->post_id = $post_id ?: rand(10000, 99999);
+            }
+            
+            public function get_url() {
+                return $this->url;
+            }
+            
+            public function get_post_id() {
+                return $this->post_id;
+            }
+            
+            public function update_feed_error($error) {
+                $this->last_error = $error;
+                return true;
+            }
+            
+            public function update_last_checked() {
+                return true;
+            }
+            
+            public function get_last_error() {
+                return $this->last_error;
+            }
+        };
+    }
+
+    /**
+     * Alle im Cache befindlichen Feeds verarbeiten.
+     * Nützlich für geplante Aufgaben oder Massenupdates.
+     *
+     * @param bool $verbose_console Ob Konsolen-Ausgaben erfolgen sollen (default: false)
+     * @return array Ergebnisse der Verarbeitung wie bei batchProcessFeeds
+     */
+    public function processCachedFeeds(bool $verbose_console = false): array {
+        $this->setVerboseMode($verbose_console);
+        $this->logger->info("Verarbeitung aller zwischengespeicherten Feeds gestartet");
+        
+        $feed_urls = $this->getAllCachedFeeds();
+        if (empty($feed_urls)) {
+            $this->logger->info("Keine zwischengespeicherten Feeds gefunden");
+            return [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => [],
+            ];
+        }
+        
+        $this->logger->info(count($feed_urls) . " zwischengespeicherte Feeds gefunden");
+        return $this->batchProcessFeeds($feed_urls, true, $verbose_console);
+    }
+
+    /**
+     * Holt alle im Cache befindlichen Feed-URLs.
+     *
+     * @return array Array mit Feed-URLs
+     */
+    private function getAllCachedFeeds(): array {
+        $feed_urls = [];
+        
+        // Wenn in WordPress-Umgebung, nutze WP-Funktionen
+        if (function_exists('get_option')) {
+            global $wpdb;
+            
+            // Hole URL-Registry
+            $registry = get_option('athena_feed_url_registry', []);
+            
+            // Finde alle Transients mit unserem Präfix
+            $transients = $wpdb->get_col(
+                "SELECT option_name FROM {$wpdb->options} 
+                WHERE option_name LIKE '_transient_athena_feed_cache_%'"
+            );
+            
+            foreach ($transients as $transient) {
+                // Extrahiere Cache-Schlüssel
+                $transient_name = str_replace('_transient_', '', $transient);
+                
+                // Verwende Registry, um URL zu finden
+                if (isset($registry[$transient_name])) {
+                    $feed_urls[] = $registry[$transient_name];
+                }
+            }
+        } else {
+            // Fallback: Dateibasiertes Registry und Cache
+            $cache_dir = sys_get_temp_dir() . '/athena_feed_cache';
+            $registry_file = $cache_dir . '/url_registry.php';
+            
+            if (file_exists($registry_file)) {
+                // Lade das Registry
+                $registry_content = file_get_contents($registry_file);
+                if ($registry_content) {
+                    // Entferne PHP-Header, falls vorhanden
+                    $registry_content = preg_replace('/^<\?php.+?\?>/s', '', $registry_content);
+                    $registry = unserialize($registry_content) ?: [];
+                    
+                    // Prüfe welche Cache-Dateien existieren
+                    foreach ($registry as $cache_key => $url) {
+                        $cache_file = $cache_dir . '/' . $cache_key;
+                        if (file_exists($cache_file)) {
+                            $feed_urls[] = $url;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $feed_urls;
     }
 }

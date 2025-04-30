@@ -83,6 +83,11 @@ class AdminBootstrap {
         new StylesManager();
         new FeedItemsManager();
         
+        // Feed-Cache-Einstellungen initialisieren
+        if (class_exists('\\AthenaAI\\Admin\\FeedCacheSettings')) {
+            FeedCacheSettings::create();
+        }
+        
         // Feed-Klassen initialisieren - diese sollten eventuell in Services verschoben werden
         FeedFetcher::init();
         Maintenance::init();
