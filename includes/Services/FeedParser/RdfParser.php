@@ -88,9 +88,17 @@ class RdfParser implements FeedParserInterface {
             stripos($content, 'xmlns:rdf=') !== false ||
             // Weitere RDF-spezifische Marker
             stripos($content, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#') !== false ||
+            // Tagesschau.de-spezifisches Format
+            stripos($content, '<rdf:li rdf:resource=') !== false ||
             // RDF-Items mit about-Attribut
-            preg_match('/<item\s+rdf:about=/', $content)
+            preg_match('/<item\s+rdf:about=/', $content) ||
+            // Prüfen auf andere typische RDF-Attribute
+            preg_match('/<rdf:Seq>/', $content) ||
+            // Spezifische Namespace-Prüfung für tagesschau.de
+            stripos($content, 'xmlns="http://purl.org/rss/1.0/"') !== false
         );
+        
+        $this->consoleLog("RDF detection result: " . ($is_rdf ? "true" : "false"), 'info');
         
         return $is_rdf;
     }
@@ -111,22 +119,38 @@ class RdfParser implements FeedParserInterface {
             return [];
         }
         
+        // Log feed content preview for debugging
+        $content_preview = substr($content, 0, 500) . '...';
+        $this->consoleLog('Feed content preview: ' . $content_preview, 'info');
+        
         // Normalisiere XML-Inhalt und Namespaces
         $content = $this->normalizeRdfContent($content);
         
         // Versuche zunächst mit SimplePie (wenn verfügbar)
+        $this->consoleLog('Trying SimplePie parser first...', 'info');
         $simplepie_items = $this->parseWithSimplePie($content);
         if (!empty($simplepie_items)) {
-            $this->consoleLog('SimplePie parsing successful', 'info');
+            $this->consoleLog('SimplePie parsing successful: ' . count($simplepie_items) . ' items found', 'info');
             $this->consoleLog('', 'groupEnd');
             return $simplepie_items;
         }
         
         // Fallback: Verwende DOM/XPath
-        $this->consoleLog('Falling back to DOM/XPath parsing', 'info');
+        $this->consoleLog('SimplePie parsing failed or returned no items, falling back to DOM/XPath parsing', 'info');
         $items = $this->parseWithDomXpath($content);
         
-        $this->consoleLog("Parsed " . count($items) . " items from RDF feed", 'info');
+        if (empty($items)) {
+            $this->consoleLog('DOM/XPath parsing failed to find any items', 'error');
+        } else {
+            $this->consoleLog("Parsed " . count($items) . " items from RDF feed", 'info');
+            
+            // Log the first item for debugging
+            if (isset($items[0])) {
+                $first_item = $items[0];
+                $this->consoleLog("First item: Title = '" . $first_item['title'] . "', Link = '" . $first_item['link'] . "'", 'info');
+            }
+        }
+        
         $this->consoleLog('', 'groupEnd');
         
         return $items;
@@ -271,7 +295,9 @@ class RdfParser implements FeedParserInterface {
             'content' => 'http://purl.org/rss/1.0/modules/content/',
             'sy' => 'http://purl.org/rss/1.0/modules/syndication/',
             'admin' => 'http://webns.net/mvcb/',
-            'cc' => 'http://web.resource.org/cc/'
+            'cc' => 'http://web.resource.org/cc/',
+            // RSS 1.0 Namespace (für tagesschau.de)
+            'rss' => 'http://purl.org/rss/1.0/'
         ];
         
         foreach ($namespaces as $prefix => $uri) {
@@ -282,6 +308,83 @@ class RdfParser implements FeedParserInterface {
         $feed_title = $this->getNodeValue($xpath, '//channel/title');
         $feed_link = $this->getNodeValue($xpath, '//channel/link');
         
+        // Prüfen auf tagesschau.de-Format (spezielle Behandlung erforderlich)
+        $is_tagesschau = false;
+        if (stripos($content, 'tagesschau.de') !== false || 
+            stripos($content, '<rdf:li rdf:resource=') !== false) {
+            $this->consoleLog("Tagesschau.de RDF-Format erkannt, verwende spezielle Verarbeitung", 'info');
+            $is_tagesschau = true;
+        }
+        
+        // Spezielles Handling für tagesschau.de
+        if ($is_tagesschau) {
+            // Bei tagesschau.de sind die Items in einer Sequenz verlinkt und dann separat definiert
+            $item_urls = [];
+            $seq_items = $xpath->query('//rdf:Seq/rdf:li/@rdf:resource');
+            
+            if ($seq_items && $seq_items->length > 0) {
+                $this->consoleLog("Gefunden: {$seq_items->length} Sequenz-Items", 'info');
+                
+                foreach ($seq_items as $res) {
+                    $item_urls[] = $res->nodeValue;
+                }
+                
+                // Jetzt finde die vollständigen Items, die durch die URLs referenziert werden
+                foreach ($item_urls as $url) {
+                    // Escape URL for XPath query
+                    $escaped_url = str_replace('"', '\"', $url);
+                    
+                    // Query for the item with this URL as rdf:about
+                    $item_nodes = $xpath->query('//item[@rdf:about="' . $escaped_url . '"]');
+                    
+                    if (!$item_nodes || $item_nodes->length === 0) {
+                        $this->consoleLog("Kein Item gefunden für URL: {$url}", 'warn');
+                        continue;
+                    }
+                    
+                    $item_node = $item_nodes->item(0);
+                    
+                    $item = [
+                        'title' => '',
+                        'link' => $url,
+                        'date' => '',
+                        'author' => '',
+                        'content' => '',
+                        'description' => '',
+                        'permalink' => $url,
+                        'id' => $url,
+                        'thumbnail' => null,
+                        'categories' => []
+                    ];
+                    
+                    // Extrahiere Item-Daten mit XPath relativ zum Item-Knoten
+                    $item['title'] = $this->getNodeValueRelative($xpath, './title', $item_node);
+                    $item['description'] = $this->getNodeValueRelative($xpath, './description', $item_node);
+                    $item['content'] = $this->getNodeValueRelative($xpath, './content:encoded', $item_node) ?: $item['description'];
+                    
+                    // Versuche verschiedene Datumsformate
+                    $item['date'] = $this->getNodeValueRelative($xpath, './dc:date', $item_node) ?: 
+                               $this->getNodeValueRelative($xpath, './pubDate', $item_node) ?: 
+                               $this->getNodeValueRelative($xpath, './date', $item_node);
+                    
+                    $item['author'] = $this->getNodeValueRelative($xpath, './dc:creator', $item_node) ?: 
+                                 $this->getNodeValueRelative($xpath, './author', $item_node);
+                    
+                    // Nur Items mit mindestens Titel hinzufügen
+                    if (!empty($item['title'])) {
+                        $items[] = $item;
+                    }
+                }
+                
+                // Wenn Items gefunden wurden, gib sie zurück
+                if (!empty($items)) {
+                    $this->consoleLog("Gefunden {" . count($items) . "} Items im tagesschau.de-Format", 'info');
+                    return $items;
+                }
+            }
+        }
+        
+        // Standard-Verarbeitung für andere RDF-Feeds
         // Versuche verschiedene XPath-Abfragen für Items
         $queries = [
             '//item', // Standard-RDF-Items

@@ -65,10 +65,22 @@ class ParserRegistry {
      */
     private function register_default_parsers(): void {
         // Registriere den RDF-Parser zuerst, damit er Priorität hat für RDF-Feeds
-        $this->register_parser(new RdfParser());
+        $rdf_parser = new RdfParser();
+        
+        // Wenn Verbose-Modus aktiviert ist, setze ihn für den RDF-Parser
+        if ($this->verbose_console && method_exists($rdf_parser, 'setVerboseMode')) {
+            $rdf_parser->setVerboseMode($this->verbose_console);
+        }
+        
+        // Registriere den RDF-Parser mit hoher Priorität
+        $this->register_parser($rdf_parser);
         
         // Danach den Standard-RSS-Parser für alle anderen Feed-Formate
         $this->register_parser(new RssParser());
+        
+        if ($this->verbose_console) {
+            echo '<script>console.info("Athena AI Feed: Parser-Registry initialisiert mit RDF-Parser (höhere Priorität) und RSS-Parser");</script>';
+        }
     }
     
     /**
