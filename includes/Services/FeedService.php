@@ -660,76 +660,237 @@ class FeedService {
         $items = [];
         $this->logger->info("Verarbeite tagesschau.de Feed mit spezieller Methode");
         
-        // 1. RDF-Format: Besorge die item IDs aus der Sequenz
-        $resource_ids = [];
-        $seq_pattern = '/<rdf:Seq>(.*?)<\/rdf:Seq>/s';
-        $resource_pattern = '/<rdf:li rdf:resource="([^"]+)"/';
+        // Debugging: Speichere den Feed-Inhalt als Datei für die Analyse
+        if ($this->verbose_mode) {
+            $debug_file = sys_get_temp_dir() . '/tagesschau_debug.xml';
+            file_put_contents($debug_file, $content);
+            $this->logger->info("Debug-Inhalt gespeichert unter: " . $debug_file);
+        }
         
-        if (preg_match($seq_pattern, $content, $seq_match) && 
-            preg_match_all($resource_pattern, $seq_match[1], $resources)) {
+        // Direkter SimpleXML-Ansatz mit RDF-Namespace-Unterstützung
+        libxml_use_internal_errors(true);
+        $xml = @simplexml_load_string($content);
+        
+        if ($xml !== false) {
+            // Versuche, die Namespace-Unterstützung zu nutzen
+            $namespaces = $xml->getNamespaces(true);
+            $this->logger->info("Gefundene Namespaces: " . implode(", ", array_keys($namespaces)));
             
-            $resource_ids = $resources[1];
-            $this->logger->info("Gefunden: " . count($resource_ids) . " Links in RDF-Sequenz");
-        } else {
-            $this->logger->warn("Keine RDF-Sequenz gefunden oder keine Links in der Sequenz");
-            
-            // Alternativer Ansatz: Direkt nach item-Tags suchen
-            $item_pattern = '/<item[^>]*>(.*?)<\/item>/s';
-            if (preg_match_all($item_pattern, $content, $item_matches)) {
-                $this->logger->info("Gefunden: " . count($item_matches[0]) . " Item-Tags ohne RDF-Sequenz");
+            // Direkt nach <item>-Tags suchen
+            if (isset($xml->item)) {
+                $this->logger->info("Gefunden: " . count($xml->item) . " Item-Tags im Root");
                 
-                foreach ($item_matches[0] as $item_content) {
-                    $extracted_item = $this->extractTagesschauItem($item_content);
-                    if (!empty($extracted_item)) {
+                foreach ($xml->item as $item) {
+                    $extracted_item = [];
+                    
+                    // Titel
+                    $extracted_item['title'] = (string)$item->title;
+                    
+                    // Link - mehrere Möglichkeiten ausprobieren
+                    $extracted_item['link'] = (string)$item->link;
+                    if (empty($extracted_item['link']) && isset($item->attributes('rdf', true)->about)) {
+                        $extracted_item['link'] = (string)$item->attributes('rdf', true)->about;
+                    }
+                    
+                    // Beschreibung
+                    $extracted_item['description'] = (string)$item->description;
+                    
+                    // GUID - wichtig für Datenbankspeicherung
+                    $extracted_item['guid'] = isset($item->guid) ? (string)$item->guid : '';
+                    if (empty($extracted_item['guid']) && !empty($extracted_item['link'])) {
+                        $extracted_item['guid'] = $extracted_item['link'];
+                    } else if (empty($extracted_item['guid'])) {
+                        $extracted_item['guid'] = 'tagesschau-item-' . md5($extracted_item['title'] . time());
+                    }
+                    
+                    // Datum aus DC-Namespace versuchen
+                    $extracted_item['date'] = $this->getCurrentTime();
+                    if (isset($namespaces['dc'])) {
+                        $dc = $item->children($namespaces['dc']);
+                        if (isset($dc->date)) {
+                            try {
+                                $date_obj = new \DateTime((string)$dc->date);
+                                $extracted_item['date'] = $date_obj->format('Y-m-d H:i:s');
+                            } catch (\Exception $e) {
+                                $this->logger->warn("Fehler beim Parsen des DC-Datums: " . $e->getMessage());
+                            }
+                        }
+                    }
+                    
+                    // Autor
+                    $extracted_item['author'] = 'tagesschau.de';
+                    if (isset($namespaces['dc'])) {
+                        $dc = $item->children($namespaces['dc']);
+                        if (isset($dc->creator)) {
+                            $extracted_item['author'] = (string)$dc->creator;
+                        }
+                    }
+                    
+                    // Weitere Felder für die Datenbank-Kompatibilität
+                    $extracted_item['published'] = $extracted_item['date'];
+                    $extracted_item['content'] = !empty($extracted_item['description']) ? $extracted_item['description'] : $extracted_item['title'];
+                    $extracted_item['permalink'] = $extracted_item['link'];
+                    $extracted_item['id'] = $extracted_item['guid'];
+                    $extracted_item['thumbnail'] = null;
+                    $extracted_item['categories'] = ['Nachrichten'];
+                    
+                    if (!empty($extracted_item['title']) || !empty($extracted_item['link'])) {
                         $items[] = $extracted_item;
                     }
                 }
                 
                 if (!empty($items)) {
-                    $this->logger->info(count($items) . " Items durch direktes Parsen extrahiert");
+                    $this->logger->info(count($items) . " Items aus Root-Items extrahiert");
                     return $items;
                 }
             }
+            
+            // Versuchen, die Items aus der RDF-Struktur zu extrahieren
+            if (isset($xml->channel)) {
+                $this->logger->info("RDF-Channel gefunden, versuche Items zu extrahieren");
+                
+                // 1. RDF-Format: Besorge die item IDs aus der Sequenz
+                $resource_ids = [];
+                
+                // Versuche RDF-Sequenz zu finden
+                $rdf_ns = isset($namespaces['rdf']) ? $namespaces['rdf'] : 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+                $seq = $xml->channel->children($rdf_ns)->Seq;
+                
+                if ($seq) {
+                    $this->logger->info("RDF-Sequenz gefunden");
+                    $li_elements = $seq->children($rdf_ns)->li;
+                    
+                    foreach ($li_elements as $li) {
+                        $resource = (string)$li->attributes($rdf_ns)->resource;
+                        if (!empty($resource)) {
+                            $resource_ids[] = $resource;
+                        }
+                    }
+                    
+                    $this->logger->info("Gefunden: " . count($resource_ids) . " Ressourcen in RDF-Sequenz");
+                }
+                
+                // 2. Extrahiere die tatsächlichen Items basierend auf den IDs
+                foreach ($resource_ids as $id) {
+                    foreach ($xml->item as $item) {
+                        $about = (string)$item->attributes($rdf_ns)->about;
+                        if ($about === $id) {
+                            $extracted_item = [];
+                            
+                            // Titel
+                            $extracted_item['title'] = (string)$item->title;
+                            
+                            // Link
+                            $extracted_item['link'] = $about; // Verwende about als Link
+                            
+                            // Beschreibung
+                            $extracted_item['description'] = (string)$item->description;
+                            
+                            // GUID
+                            $extracted_item['guid'] = $about;
+                            
+                            // Datum aus DC-Namespace
+                            $extracted_item['date'] = $this->getCurrentTime();
+                            if (isset($namespaces['dc'])) {
+                                $dc = $item->children($namespaces['dc']);
+                                if (isset($dc->date)) {
+                                    try {
+                                        $date_obj = new \DateTime((string)$dc->date);
+                                        $extracted_item['date'] = $date_obj->format('Y-m-d H:i:s');
+                                    } catch (\Exception $e) {
+                                        $this->logger->warn("Fehler beim Parsen des DC-Datums: " . $e->getMessage());
+                                    }
+                                }
+                            }
+                            
+                            // Autor
+                            $extracted_item['author'] = 'tagesschau.de';
+                            if (isset($namespaces['dc'])) {
+                                $dc = $item->children($namespaces['dc']);
+                                if (isset($dc->creator)) {
+                                    $extracted_item['author'] = (string)$dc->creator;
+                                }
+                            }
+                            
+                            // Weitere Felder für die Datenbank-Kompatibilität
+                            $extracted_item['published'] = $extracted_item['date'];
+                            $extracted_item['content'] = !empty($extracted_item['description']) ? $extracted_item['description'] : $extracted_item['title'];
+                            $extracted_item['permalink'] = $extracted_item['link'];
+                            $extracted_item['id'] = $extracted_item['guid'];
+                            $extracted_item['thumbnail'] = null;
+                            $extracted_item['categories'] = ['Nachrichten'];
+                            
+                            if (!empty($extracted_item['title']) || !empty($extracted_item['link'])) {
+                                $items[] = $extracted_item;
+                            }
+                            
+                            break; // Item gefunden, gehe zum nächsten
+                        }
+                    }
+                }
+                
+                if (!empty($items)) {
+                    $this->logger->info(count($items) . " Items aus RDF-Sequenz extrahiert");
+                    return $items;
+                }
+            }
+        } else {
+            // XML-Parsing-Fehler protokollieren
+            $errors = libxml_get_errors();
+            libxml_clear_errors();
+            
+            $error_msg = "XML-Parsing-Fehler in tagesschau.de Feed: ";
+            foreach ($errors as $error) {
+                $error_msg .= "Zeile {$error->line}, Spalte {$error->column}: {$error->message}; ";
+            }
+            $this->logger->error($error_msg);
         }
         
-        // 2. Extrahiere die tatsächlichen Items basierend auf den IDs
-        foreach ($resource_ids as $id) {
-            // Pattern, um das entsprechende Item zu finden
-            $item_pattern = '/<item[^>]*rdf:about="' . preg_quote($id, '/') . '"[^>]*>(.*?)<\/item>/s';
+        // 3. Fallback: Regex-Ansatz, wenn XML-Parsing fehlschlägt
+        $this->logger->info("Versuche Regex-Ansatz für tagesschau.de Feed");
+        
+        $item_pattern = '/<item[^>]*>(.*?)<\/item>/s';
+        if (preg_match_all($item_pattern, $content, $matches)) {
+            $this->logger->info("Regex-Suche fand " . count($matches[0]) . " Items");
             
-            if (preg_match($item_pattern, $content, $item_match)) {
-                $item_content = $item_match[0]; // Das gesamte item-Tag inklusive Attribute
+            foreach ($matches[0] as $index => $item_content) {
                 $extracted_item = $this->extractTagesschauItem($item_content);
-                
                 if (!empty($extracted_item)) {
                     $items[] = $extracted_item;
                 }
-            } else {
-                $this->logger->warn("Konnte kein Item mit ID $id finden");
+            }
+            
+            if (!empty($items)) {
+                $this->logger->info(count($items) . " Items durch Regex extrahiert");
+                return $items;
             }
         }
         
-        // Wenn keine Items gefunden wurden, erstelle mindestens ein Dummy-Item
-        if (empty($items)) {
-            $this->logger->warn("Keine Items im tagesschau.de Feed gefunden, erstelle Dummy-Item");
-            
-            $items[] = [
-                'title' => 'Aktuelle Nachrichten - tagesschau.de',
-                'link' => 'https://www.tagesschau.de/',
-                'date' => $this->getCurrentTime(),
-                'author' => 'tagesschau.de',
-                'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                'permalink' => 'https://www.tagesschau.de/',
-                'guid' => 'tagesschau-dummy-' . time(),
-                'id' => 'tagesschau-dummy-' . time(),
-                'thumbnail' => null,
-                'categories' => ['Nachrichten'],
-                'published' => $this->getCurrentTime() // Hinzugefügt für Datenbank-Kompatibilität
-            ];
+        // 4. Absoluter Fallback: Ein Dummy-Item für tagesschau.de
+        $this->logger->warn("Alle Parsing-Methoden fehlgeschlagen, erstelle Dummy-Items für tagesschau.de");
+        
+        // Extrahiere Titel aus dem Content, falls möglich
+        $title = 'Aktuelle Nachrichten - tagesschau.de';
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/s', $content, $title_match)) {
+            $title = html_entity_decode(strip_tags($title_match[1]));
         }
         
-        $this->logger->info("Tagesschau.de Feed erfolgreich verarbeitet: " . count($items) . " Items extrahiert");
+        $items[] = [
+            'title' => $title,
+            'link' => 'https://www.tagesschau.de/',
+            'date' => $this->getCurrentTime(),
+            'published' => $this->getCurrentTime(),
+            'author' => 'tagesschau.de',
+            'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
+            'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
+            'permalink' => 'https://www.tagesschau.de/',
+            'guid' => 'tagesschau-emergency-' . time(),
+            'id' => 'tagesschau-emergency-' . time(),
+            'thumbnail' => null,
+            'categories' => ['Nachrichten']
+        ];
+        
+        $this->logger->info("Tagesschau.de Feed-Fallback: 1 Dummy-Item erstellt");
         return $items;
     }
     
@@ -926,20 +1087,12 @@ class FeedService {
         }
 
         foreach ($items as $index => $item) {
+            // Stelle sicher, dass alle erforderlichen Felder vorhanden sind
+            $item = $this->ensureRequiredFields($item, $index);
+            
             if (empty($item['guid'])) {
-                $this->logger->warn("Item ohne GUID übersprungen (Index: {$index}).");
-                
-                // Wenn keine GUID vorhanden, versuche eine generische zu erstellen
-                if (!empty($item['link'])) {
-                    $item['guid'] = $item['link'];
-                    $this->logger->info("Generierte GUID aus Link für Item: {$item['link']}");
-                } elseif (!empty($item['title'])) {
-                    $item['guid'] = md5($item['title'] . time() . $index);
-                    $this->logger->info("Generierte GUID aus Titel für Item: {$item['title']}");
-                } else {
-                    $this->logger->error("Item ohne GUID, Link oder Titel übersprungen.");
-                    continue;
-                }
+                $this->logger->warn("Item ohne GUID trotz Normalisierung übersprungen (Index: {$index}).");
+                continue;
             }
             
             // Generiere einen Hash für das Item als Primärschlüssel
@@ -1029,6 +1182,76 @@ class FeedService {
     }
     
     /**
+     * Stellt sicher, dass alle erforderlichen Felder im Item-Array vorhanden sind.
+     *
+     * @param array $item  Das Item-Array.
+     * @param int   $index Der Index des Items (für Logging).
+     * @return array Das normalisierte Item-Array.
+     */
+    private function ensureRequiredFields(array $item, int $index): array {
+        // Erforderliche Felder und ihre Standardwerte
+        $required_fields = [
+            'title' => "Ohne Titel (" . ($index + 1) . ")",
+            'link' => '',
+            'description' => '',
+            'author' => 'Unbekannt',
+            'published' => $this->getCurrentTime(),
+            'date' => $this->getCurrentTime(),
+            'guid' => '',
+            'content' => '',
+            'permalink' => '',
+            'id' => '',
+            'categories' => ['Allgemein']
+        ];
+        
+        // Fehlende Felder mit Standardwerten auffüllen
+        foreach ($required_fields as $field => $default) {
+            if (!isset($item[$field]) || (is_string($item[$field]) && trim($item[$field]) === '')) {
+                $item[$field] = $default;
+                if ($field !== 'categories') { // Kategorien können leer sein
+                    $this->logger->debug("Feld '{$field}' fehlt in Item {$index}, verwende Standardwert.");
+                }
+            }
+        }
+        
+        // GUID ist ein Sonderfall - wenn es fehlt, versuchen wir es zu generieren
+        if (empty($item['guid'])) {
+            if (!empty($item['link'])) {
+                $item['guid'] = $item['link'];
+                $this->logger->info("Generierte GUID aus Link für Item {$index}: {$item['link']}");
+            } elseif (!empty($item['title'])) {
+                $item['guid'] = md5($item['title'] . time() . $index);
+                $this->logger->info("Generierte GUID aus Titel für Item {$index}: {$item['title']}");
+            } else {
+                // Absoluter Fallback
+                $item['guid'] = 'item-' . time() . '-' . $index;
+                $this->logger->warn("Generierte Fallback-GUID für Item {$index}");
+            }
+        }
+        
+        // ID sollte mit GUID übereinstimmen
+        if (empty($item['id'])) {
+            $item['id'] = $item['guid'];
+        }
+        
+        // Permalink sollte mit Link übereinstimmen
+        if (empty($item['permalink']) && !empty($item['link'])) {
+            $item['permalink'] = $item['link'];
+        }
+        
+        // Content sollte mindestens die Beschreibung oder den Titel enthalten
+        if (empty($item['content'])) {
+            if (!empty($item['description'])) {
+                $item['content'] = $item['description'];
+            } else {
+                $item['content'] = $item['title'];
+            }
+        }
+        
+        return $item;
+    }
+    
+    /**
      * Verarbeitet einen XML-Feed und extrahiert die Items.
      *
      * @param SimpleXMLElement $xml  XML-Feed.
@@ -1051,8 +1274,19 @@ class FeedService {
     private function extractItemsFromXml(SimpleXMLElement $xml, Feed $feed) {
         $items = [];
 
+        // RDF-Feed (tagesschau.de) verarbeiten
+        if (isset($xml->channel) && isset($xml->item)) {
+            $this->logger->info("RDF-Feed erkannt. Items: " . count($xml->item));
+            
+            foreach ($xml->item as $item) {
+                $extracted = $this->extractRssItem($item, $feed);
+                if (!empty($extracted)) {
+                    $items[] = $extracted;
+                }
+            }
+        }
         // RSS-Feed verarbeiten
-        if (isset($xml->channel) && isset($xml->channel->item)) {
+        elseif (isset($xml->channel) && isset($xml->channel->item)) {
             $this->logger->info("RSS-Feed erkannt. Titel: " . (string)$xml->channel->title . ", Items: " . count($xml->channel->item));
             
             foreach ($xml->channel->item as $item) {
@@ -1073,10 +1307,23 @@ class FeedService {
                 }
             }
         } else {
-            if (method_exists($feed, 'update_feed_error')) {
-                $feed->update_feed_error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
+            // Versuche RDF-Feed mit Namespaces (vor allem für tagesschau.de)
+            $namespaces = $xml->getNamespaces(true);
+            if (!empty($namespaces) && isset($xml->item)) {
+                $this->logger->info("RDF-Feed mit Namespaces erkannt. Items: " . count($xml->item));
+                
+                foreach ($xml->item as $item) {
+                    $extracted = $this->extractRssItem($item, $feed);
+                    if (!empty($extracted)) {
+                        $items[] = $extracted;
+                    }
+                }
+            } else {
+                if (method_exists($feed, 'update_feed_error')) {
+                    $feed->update_feed_error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
+                }
+                $this->logger->error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
             }
-            $this->logger->error("Unbekanntes XML-Format. Weder RSS noch Atom erkannt.");
         }
 
         if (empty($items)) {
@@ -1101,27 +1348,81 @@ class FeedService {
      */
     private function extractRssItem(\SimpleXMLElement $item, Feed $feed) {
         $data = [];
+        $namespaces = $item->getNamespaces(true);
 
         // Titel
         $data['title'] = (string)$item->title;
 
         // Link
         $data['link'] = (string)$item->link;
+        
+        // Fallback: Wenn der Link leer ist, versuchen, ihn aus dem about-Attribut zu extrahieren (RDF)
+        if (empty($data['link']) && isset($item->attributes('rdf', true)->about)) {
+            $data['link'] = (string)$item->attributes('rdf', true)->about;
+        }
 
         // Beschreibung
         $data['description'] = (string)$item->description;
 
-        // Autor
+        // Autor - versuche verschiedene Formate
         $data['author'] = (string)$item->author;
+        
+        // Fallback für Dublin Core (tagesschau.de verwendet dies)
+        if (empty($data['author']) && isset($namespaces['dc'])) {
+            $dc = $item->children($namespaces['dc']);
+            $data['author'] = (string)$dc->creator;
+        }
+        
+        if (empty($data['author'])) {
+            $data['author'] = 'Unbekannt';
+        }
 
-        // Veröffentlichungsdatum
+        // Veröffentlichungsdatum - versuche verschiedene Formate
         $data['published'] = (string)$item->pubDate;
-
-        // Aktualisierungsdatum
-        $data['updated'] = (string)$item->lastBuildDate;
+        
+        // Fallback für Dublin Core Datum
+        if (empty($data['published']) && isset($namespaces['dc'])) {
+            $dc = $item->children($namespaces['dc']);
+            $data['published'] = (string)$dc->date;
+        }
+        
+        // Konvertiere ISO-Datum in MySQL-Format wenn nötig
+        if (!empty($data['published'])) {
+            try {
+                $date_obj = new \DateTime($data['published']);
+                $data['published'] = $date_obj->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                $this->logger->warn("Fehler beim Parsen des Datums: " . $e->getMessage());
+                $data['published'] = $this->getCurrentTime();
+            }
+        } else {
+            $data['published'] = $this->getCurrentTime();
+        }
+        
+        // Datum für Datenbank-Kompatibilität
+        $data['date'] = $data['published'];
 
         // GUID
         $data['guid'] = (string)$item->guid;
+        
+        // Wenn kein GUID vorhanden, verwende Link als Fallback
+        if (empty($data['guid']) && !empty($data['link'])) {
+            $data['guid'] = $data['link'];
+        }
+        
+        // Wenn immer noch kein GUID vorhanden, generiere einen
+        if (empty($data['guid'])) {
+            $data['guid'] = 'feed-item-' . md5($data['title'] . time());
+        }
+        
+        // Content
+        $data['content'] = !empty($data['description']) ? $data['description'] : '';
+        
+        // Weitere Felder für die Datenbank-Kompatibilität
+        $data['permalink'] = $data['link'];
+        $data['id'] = $data['guid'];
+        $data['thumbnail'] = null;
+        $data['categories'] = ['Nachrichten'];
 
         return $data;
     }
