@@ -221,90 +221,211 @@ class FeedHttpClient {
      * @return string|null The fetched content or null on failure
      */
     private function fetchWithAntiBlockStrategy(string $url, ?array $options = null): ?string {
-        // Verschiedene Strategien nacheinander versuchen
-        
-        // Strategie 1: Als moderner Browser mit vollen Chrome-Headers
-        $chrome_options = $this->default_options;
-        $chrome_options['headers'] = [
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language' => 'en-US,en;q=0.9,de;q=0.8',
-            'Accept-Encoding' => 'gzip, deflate, br',
-            'Referer' => 'https://www.google.com/search?q=' . urlencode(parse_url($url, PHP_URL_HOST)),
-            'Cache-Control' => 'max-age=0',
-            'Connection' => 'keep-alive',
-            'Upgrade-Insecure-Requests' => '1',
-            'Sec-Fetch-Dest' => 'document',
-            'Sec-Fetch-Mode' => 'navigate',
-            'Sec-Fetch-Site' => 'cross-site',
-            'Sec-Fetch-User' => '?1',
-            'sec-ch-ua' => '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-            'sec-ch-ua-mobile' => '?0',
-            'sec-ch-ua-platform' => '"Windows"',
-            'DNT' => '1'
+        // Erweiterte Strategien zum Umgehen von Bot-Blockern
+        $strategies = [
+            'modern_chrome' => function() use ($url) {
+                // Strategie 1: Als moderner Chrome-Browser mit erweiterten Headern
+                $chrome_options = $this->default_options;
+                $chrome_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language' => 'en-US,en;q=0.9,de;q=0.8',
+                    'Accept-Encoding' => 'gzip, deflate, br',
+                    'Referer' => 'https://www.google.com/search?q=' . urlencode(parse_url($url, PHP_URL_HOST)),
+                    'Cache-Control' => 'max-age=0',
+                    'Connection' => 'keep-alive',
+                    'Upgrade-Insecure-Requests' => '1',
+                    'Sec-Fetch-Dest' => 'document',
+                    'Sec-Fetch-Mode' => 'navigate',
+                    'Sec-Fetch-Site' => 'cross-site',
+                    'Sec-Fetch-User' => '?1',
+                    'sec-ch-ua' => '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+                    'sec-ch-ua-mobile' => '?0',
+                    'sec-ch-ua-platform' => '"Windows"',
+                    'DNT' => '1'
+                ];
+                
+                $this->consoleLog("Strategie 1: Versuche Abruf mit Chrome-Browser-Emulation", 'info');
+                return $this->curlFetch($url, $chrome_options);
+            },
+            
+            'safari_browser' => function() use ($url) {
+                // Strategie 2: Als Safari-Browser
+                $safari_options = $this->default_options;
+                $safari_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                    'Accept-Encoding' => 'gzip, deflate, br',
+                    'Connection' => 'keep-alive',
+                    'Referer' => 'https://www.bing.com/search?q=' . urlencode(parse_url($url, PHP_URL_HOST)),
+                    'Upgrade-Insecure-Requests' => '1',
+                    'DNT' => '1'
+                ];
+                
+                $this->consoleLog("Strategie 2: Versuche Abruf mit Safari-Browser-Emulation", 'info');
+                return $this->curlFetch($url, $safari_options);
+            },
+            
+            'firefox_browser' => function() use ($url) {
+                // Strategie 3: Als Firefox-Browser (neu hinzugefügt)
+                $firefox_options = $this->default_options;
+                $firefox_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.5',
+                    'Accept-Encoding' => 'gzip, deflate, br',
+                    'Connection' => 'keep-alive',
+                    'Upgrade-Insecure-Requests' => '1',
+                    'Sec-Fetch-Dest' => 'document',
+                    'Sec-Fetch-Mode' => 'navigate',
+                    'Sec-Fetch-Site' => 'cross-site',
+                    'Pragma' => 'no-cache',
+                    'Cache-Control' => 'no-cache',
+                    'TE' => 'trailers'
+                ];
+                
+                $this->consoleLog("Strategie 3: Versuche Abruf mit Firefox-Browser-Emulation", 'info');
+                return $this->curlFetch($url, $firefox_options);
+            },
+            
+            'mobile_device' => function() use ($url) {
+                // Strategie 4: Als mobiles Gerät (neu hinzugefügt)
+                $mobile_options = $this->default_options;
+                $mobile_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                    'Accept-Encoding' => 'gzip, deflate, br',
+                    'Connection' => 'keep-alive',
+                    'Referer' => 'https://www.google.com/search?q=' . urlencode(parse_url($url, PHP_URL_HOST)),
+                    'Upgrade-Insecure-Requests' => '1'
+                ];
+                
+                $this->consoleLog("Strategie 4: Versuche Abruf als mobiles Gerät", 'info');
+                return $this->curlFetch($url, $mobile_options);
+            },
+            
+            'feed_reader' => function() use ($url) {
+                // Strategie 5: Als Feedly-Feed-Reader (viele Websites erlauben Feed-Reader)
+                $feedly_options = $this->default_options;
+                $feedly_options['headers'] = [
+                    'User-Agent' => 'Feedly/1.0 (+http://feedly.com/fetcher.html; like FeedFetcher-Google)',
+                    'Accept' => 'application/xml,application/rss+xml,application/atom+xml,application/rdf+xml,text/xml;q=0.9,text/html;q=0.8,*/*;q=0.7',
+                    'Accept-Language' => 'en-US,en;q=0.9',
+                    'Accept-Encoding' => 'gzip, deflate'
+                ];
+                
+                $this->consoleLog("Strategie 5: Versuche Abruf als Feedly-Feed-Reader", 'info');
+                return $this->curlFetch($url, $feedly_options);
+            },
+            
+            'inoreader' => function() use ($url) {
+                // Strategie 6: Als Inoreader (neu hinzugefügt)
+                $inoreader_options = $this->default_options;
+                $inoreader_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (compatible; Inoreader/1.0; +http://www.inoreader.com)',
+                    'Accept' => 'application/rss+xml,application/rdf+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8,*/*;q=0.7',
+                    'Accept-Language' => 'en-US,en;q=0.5',
+                    'Accept-Encoding' => 'gzip, deflate'
+                ];
+                
+                $this->consoleLog("Strategie 6: Versuche Abruf als Inoreader", 'info');
+                return $this->curlFetch($url, $inoreader_options);
+            },
+            
+            'google_feedfetcher' => function() use ($url) {
+                // Strategie 7: Google FeedFetcher emulieren (neu hinzugefügt)
+                $google_options = $this->default_options;
+                $google_options['headers'] = [
+                    'User-Agent' => 'FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)',
+                    'Accept' => '*/*',
+                    'Accept-Encoding' => 'gzip, deflate',
+                    'Connection' => 'close'
+                ];
+                
+                $this->consoleLog("Strategie 7: Versuche Abruf als Google FeedFetcher", 'info');
+                return $this->curlFetch($url, $google_options);
+            },
+            
+            'cache_bust' => function() use ($url) {
+                // Strategie 8: Cache-busting mit zufälligem Parameter
+                $chrome_options = $this->default_options;
+                $chrome_options['headers'] = [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Cache-Control' => 'no-cache',
+                    'Pragma' => 'no-cache'
+                ];
+                
+                $delimiter = (strpos($url, '?') !== false) ? '&' : '?';
+                $cache_bust_url = $url . $delimiter . '_t=' . time() . '_r=' . mt_rand(1000, 9999);
+                
+                $this->consoleLog("Strategie 8: Versuche Cache-Busting mit URL: " . $cache_bust_url, 'info');
+                return $this->curlFetch($cache_bust_url, $chrome_options);
+            },
+            
+            'curl_direct' => function() use ($url) {
+                // Strategie 9: Direkter cURL-Aufruf ohne viele Header
+                $minimal_options = [
+                    'timeout' => 30,
+                    'redirection' => 5,
+                    'sslverify' => false,
+                    'headers' => [
+                        'User-Agent' => 'Mozilla/5.0 (compatible; FeedFetcher/1.0)',
+                        'Accept' => '*/*'
+                    ]
+                ];
+                
+                $this->consoleLog("Strategie 9: Versuche minimalen cURL-Aufruf", 'info');
+                return $this->curlFetch($url, $minimal_options);
+            }
         ];
         
-        $this->consoleLog("Strategie 1: Versuche Abruf mit Chrome-Browser-Emulation", 'info');
-        $result = $this->curlFetch($url, $chrome_options);
-        if ($this->isValidFeedContent($result)) {
-            return $result;
+        // Versuche jede Strategie nacheinander
+        foreach ($strategies as $name => $strategy) {
+            $this->consoleLog("Versuche Abruf-Strategie: $name", 'group');
+            
+            // Kurze Pause zwischen den Versuchen, um Rate-Limiting zu vermeiden
+            if ($name !== 'modern_chrome') { // Keine Pause vor dem ersten Versuch
+                sleep(mt_rand(1, 3));
+            }
+            
+            $result = $strategy();
+            
+            if ($this->isValidFeedContent($result)) {
+                $this->consoleLog("Strategie $name war erfolgreich!", 'info');
+                $this->consoleLog("", 'groupEnd');
+                return $result;
+            }
+            
+            $this->consoleLog("Strategie $name war nicht erfolgreich.", 'warn');
+            $this->consoleLog("", 'groupEnd');
         }
         
-        // Pause einlegen um Schutzmaßnahmen zu vermeiden
-        sleep(1);
+        // Wenn keine Strategie funktioniert hat, versuchen wir es mit einem letzten Fallback:
+        // Kombiniere URL-Cache-Busting mit zufälligem User-Agent
+        $this->consoleLog("Versuche letzte Fallback-Strategie", 'info');
         
-        // Strategie 2: Als Safari-Browser
-        $safari_options = $this->default_options;
-        $safari_options['headers'] = [
-            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language' => 'en-US,en;q=0.9',
-            'Accept-Encoding' => 'gzip, deflate, br',
-            'Connection' => 'keep-alive',
-            'Referer' => 'https://www.bing.com/search?q=' . urlencode(parse_url($url, PHP_URL_HOST)),
-            'Upgrade-Insecure-Requests' => '1',
-            'DNT' => '1'
+        $fallback_options = $this->default_options;
+        // Array mit verschiedenen realistischen User-Agents
+        $user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0',
         ];
         
-        $this->consoleLog("Strategie 2: Versuche Abruf mit Safari-Browser-Emulation", 'info');
-        $result = $this->curlFetch($url, $safari_options);
-        if ($this->isValidFeedContent($result)) {
-            return $result;
-        }
+        // Zufälligen User-Agent auswählen
+        $fallback_options['headers']['User-Agent'] = $user_agents[array_rand($user_agents)];
+        $fallback_options['headers']['Accept'] = 'application/rss+xml, application/atom+xml, application/rdf+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7';
         
-        // Pause einlegen um Schutzmaßnahmen zu vermeiden
-        sleep(2);
-        
-        // Strategie 3: Als Feedly-Feed-Reader (viele Websites erlauben Feed-Reader)
-        $feedly_options = $this->default_options;
-        $feedly_options['headers'] = [
-            'User-Agent' => 'Feedly/1.0 (+http://feedly.com/fetcher.html; like FeedFetcher-Google)',
-            'Accept' => 'application/xml,application/rss+xml,application/atom+xml,application/rdf+xml,text/xml;q=0.9,text/html;q=0.8,*/*;q=0.7',
-            'Accept-Language' => 'en-US,en;q=0.9',
-            'Accept-Encoding' => 'gzip, deflate'
-        ];
-        
-        $this->consoleLog("Strategie 3: Versuche Abruf als Feedly-Feed-Reader", 'info');
-        $result = $this->curlFetch($url, $feedly_options);
-        if ($this->isValidFeedContent($result)) {
-            return $result;
-        }
-        
-        // Strategie 4: Cache-busting mit zufälligem Parameter
+        // Cache-Busting-Parameter hinzufügen
         $delimiter = (strpos($url, '?') !== false) ? '&' : '?';
-        $cache_bust_url = $url . $delimiter . '_t=' . time() . '_r=' . mt_rand(1000, 9999);
+        $fallback_url = $url . $delimiter . 'rand=' . md5(mt_rand() . time());
         
-        $this->consoleLog("Strategie 4: Versuche Cache-Busting mit URL: " . $cache_bust_url, 'info');
-        $result = $this->curlFetch($cache_bust_url, $chrome_options);
-        if ($this->isValidFeedContent($result)) {
-            return $result;
-        }
-        
-        // Wenn nichts funktioniert hat, melden wir den Fehler
-        $this->set_last_error("Alle Feed-Abruf-Strategien sind fehlgeschlagen für URL: " . $url);
-        $this->consoleLog("Alle Feed-Abruf-Strategien fehlgeschlagen", 'error');
-        
-        return null;
+        return $this->curlFetch($fallback_url, $fallback_options);
     }
     
     /**
@@ -323,11 +444,28 @@ class FeedHttpClient {
             strpos($content, '<?xml') !== false || 
             strpos($content, '<rss') !== false || 
             strpos($content, '<feed') !== false ||
-            strpos($content, '<channel') !== false
+            strpos($content, '<channel') !== false ||
+            strpos($content, '<item>') !== false ||
+            strpos($content, '<entry>') !== false
         );
         
         if ($has_xml_structure) {
-            return true;
+            // Zusätzliche Prüfung für gültiges XML
+            libxml_use_internal_errors(true);
+            $doc = simplexml_load_string($content);
+            $xml_errors = libxml_get_errors();
+            libxml_clear_errors();
+            
+            // Wenn es ein wohlgeformtes XML ohne schwerwiegende Fehler ist
+            if ($doc !== false && (count($xml_errors) === 0 || $this->hasOnlyMinorXmlErrors($xml_errors))) {
+                return true;
+            }
+            
+            // Selbst wenn XML-Parsing fehlschlägt, könnte es ein Feed sein mit kleinen Fehlern
+            if (preg_match('/<item>.*?<title>.*?<\/title>.*?<\/item>/s', $content) || 
+                preg_match('/<entry>.*?<title>.*?<\/title>.*?<\/entry>/s', $content)) {
+                return true;
+            }
         }
         
         // Prüfe nach JSON-Feed-Struktur
@@ -354,7 +492,15 @@ class FeedHttpClient {
                 'detected unusual traffic',
                 'human verification',
                 'please enable cookies',
-                'javascript is required'
+                'javascript is required',
+                'browser check',
+                'ddos protection',
+                'checking your browser',
+                'please wait',
+                'attention required',
+                'error code:',
+                'challenge page',
+                'Bot detected'
             ];
             
             foreach ($bot_block_indicators as $indicator) {
@@ -371,6 +517,33 @@ class FeedHttpClient {
         }
         
         // In anderen Fällen nehmen wir an, dass es ein gültiger Inhalt sein könnte
+        return true;
+    }
+    
+    /**
+     * Prüft, ob XML-Fehler nur kleinere Probleme darstellen, die einen Feed nicht ungültig machen
+     * 
+     * @param array $xml_errors Die XML-Fehler von libxml
+     * @return bool True, wenn nur kleinere Fehler vorhanden sind
+     */
+    private function hasOnlyMinorXmlErrors(array $xml_errors): bool {
+        foreach ($xml_errors as $error) {
+            // Schwerwiegende Fehler (Level 3) machen den Feed ungültig
+            if ($error->level === LIBXML_ERR_FATAL) {
+                return false;
+            }
+            
+            // Ignoriere Warnungen über undefinierte Entitäten, die in Feeds häufig vorkommen
+            if (strpos($error->message, 'Entity') !== false && strpos($error->message, 'not defined') !== false) {
+                continue;
+            }
+            
+            // Ignoriere Probleme mit Encoding-Deklarationen
+            if (strpos($error->message, 'Encoding') !== false) {
+                continue;
+            }
+        }
+        
         return true;
     }
     
