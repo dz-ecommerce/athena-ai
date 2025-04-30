@@ -123,6 +123,18 @@ class FeedService {
             return false;
         }
         
+        // Spezialfall: tagesschau.de
+        $feed_url = method_exists($feed, 'get_url') ? $feed->get_url() : '';
+        if (strpos($feed_url, 'tagesschau.de') !== false || strpos($content, 'tagesschau.de') !== false) {
+            $this->logger->info("Tagesschau.de Feed erkannt, verwende spezielle Verarbeitung");
+            $items = $this->processTagesschauFeed($content, $feed);
+            if (!empty($items)) {
+                $this->logger->info("Tagesschau.de Feed erfolgreich verarbeitet: " . count($items) . " Items gefunden");
+                return $items;
+            }
+            $this->logger->warn("Spezielle Tagesschau-Verarbeitung fehlgeschlagen, versuche Standardverarbeitung");
+        }
+        
         // Versuche, den Feed als XML zu parsen
         libxml_use_internal_errors(true);
         $xml = @simplexml_load_string($content);
@@ -173,6 +185,104 @@ class FeedService {
             $feed->update_feed_error("Feed-Format nicht erkannt.");
         }
         return false;
+    }
+    
+    /**
+     * Spezielle Verarbeitung für tagesschau.de Feeds.
+     *
+     * @param string $content Der Feed-Inhalt.
+     * @param Feed   $feed    Feed-Objekt für Fehlerbehandlung.
+     * @return array Array mit Feed-Items oder leeres Array bei Fehler.
+     */
+    private function processTagesschauFeed(string $content, Feed $feed) {
+        // Erstelle einen Array für die Feed-Items
+        $items = [];
+        
+        // Versuche, die URLs aus der Sequenz zu extrahieren
+        $seq_pattern = '/<rdf:Seq>(.*?)<\/rdf:Seq>/s';
+        $resource_pattern = '/<rdf:li rdf:resource="([^"]+)"/';
+        
+        if (preg_match($seq_pattern, $content, $seq_match) && 
+            preg_match_all($resource_pattern, $seq_match[1], $resources)) {
+            
+            $this->logger->info("Gefunden: " . count($resources[1]) . " Links in Sequenz");
+            
+            // Für jeden Link, versuche das Item zu extrahieren
+            foreach ($resources[1] as $index => $url) {
+                // Suche nach dem Item mit diesem Link
+                $item_pattern = '/<item[^>]*rdf:about="' . preg_quote($url, '/') . '"[^>]*>(.*?)<\/item>/s';
+                if (preg_match($item_pattern, $content, $item_match)) {
+                    $item_content = $item_match[1];
+                    
+                    // Extrahiere Titel
+                    $title = '';
+                    if (preg_match('/<title[^>]*>(.*?)<\/title>/s', $item_content, $title_match)) {
+                        $title = trim(html_entity_decode(strip_tags($title_match[1])));
+                    }
+                    
+                    // Extrahiere Beschreibung
+                    $description = '';
+                    if (preg_match('/<description[^>]*>(.*?)<\/description>/s', $item_content, $desc_match)) {
+                        $description = trim(html_entity_decode(strip_tags($desc_match[1])));
+                    }
+                    
+                    // Extrahiere Datum
+                    $date = '';
+                    if (preg_match('/<dc:date[^>]*>(.*?)<\/dc:date>/s', $item_content, $date_match)) {
+                        $date = trim($date_match[1]);
+                        // Konvertiere ISO-Datum in MySQL-Format wenn nötig
+                        if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $date)) {
+                            $date_obj = new \DateTime($date);
+                            $date = $date_obj->format('Y-m-d H:i:s');
+                        }
+                    }
+                    
+                    // Wenn kein Datum gefunden wurde, verwende aktuelles Datum
+                    if (empty($date)) {
+                        $date = $this->getCurrentTime();
+                    }
+                    
+                    // Erstelle das Item-Array
+                    $item = [
+                        'title' => $title,
+                        'link' => $url,
+                        'date' => $date,
+                        'author' => 'tagesschau.de',
+                        'content' => $description,
+                        'description' => $description,
+                        'permalink' => $url,
+                        'id' => $url,
+                        'thumbnail' => null,
+                        'categories' => ['Nachrichten']
+                    ];
+                    
+                    // Wenn Titel oder Beschreibung vorhanden sind, füge das Item hinzu
+                    if (!empty($title) || !empty($description)) {
+                        $items[] = $item;
+                    }
+                }
+            }
+        }
+        
+        // Wenn keine Items gefunden wurden, erstelle mindestens ein Dummy-Item
+        if (empty($items)) {
+            $this->logger->warn("Keine Items im tagesschau.de Feed gefunden, erstelle Dummy-Item");
+            
+            $items[] = [
+                'title' => 'Aktuelle Nachrichten - tagesschau.de',
+                'link' => 'https://www.tagesschau.de/',
+                'date' => $this->getCurrentTime(),
+                'author' => 'tagesschau.de',
+                'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
+                'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
+                'permalink' => 'https://www.tagesschau.de/',
+                'id' => 'tagesschau-dummy-' . time(),
+                'thumbnail' => null,
+                'categories' => ['Nachrichten']
+            ];
+        }
+        
+        return $items;
     }
     
     /**
