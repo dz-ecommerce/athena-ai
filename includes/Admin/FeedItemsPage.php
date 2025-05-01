@@ -67,6 +67,7 @@ class FeedItemsPage {
         // Get filter values from GET parameters
         $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
         $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) ? sanitize_text_field($_GET['date_filter']) : '';
+        $search_term = isset($_GET['search_term']) && !empty($_GET['search_term']) ? sanitize_text_field($_GET['search_term']) : '';
         
         // Unterstützung für Checkbox-Mehrfachauswahl
         $feed_filter_ids = isset($_GET['feed_ids']) && is_array($_GET['feed_ids']) ? array_map('intval', $_GET['feed_ids']) : [];
@@ -139,6 +140,18 @@ class FeedItemsPage {
                     $query_params[] = $last_month_end;
                     break;
             }
+        }
+        
+        // Add search term if specified
+        if (!empty($search_term)) {
+            // Suche in den JSON-Daten sowohl im Titel als auch in der Beschreibung
+            $where_conditions[] = "(
+                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) LIKE %s 
+                OR JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) LIKE %s
+            )";
+            $search_like = '%' . $wpdb->esc_like($search_term) . '%';
+            $query_params[] = $search_like;
+            $query_params[] = $search_like;
         }
         
         // Combine conditions

@@ -5,6 +5,8 @@ A powerful AI integration plugin for WordPress that provides advanced AI feature
 ## Features
 
 - Feed management system with categories
+- Advanced feed parsing technology for all feed formats (RSS, Atom, RDF)
+- Domain-based dynamic handling for problematic feeds
 - Overview dashboard with quick stats and recent activity
 - Feed page for displaying AI-generated content
 - Settings page for managing API keys and plugin options
@@ -30,10 +32,20 @@ A powerful AI integration plugin for WordPress that provides advanced AI feature
 ### Feed Management
 
 Access the feed management system through the 'Athena AI' menu in WordPress admin:
+
 - View all feeds
 - Add new feeds
 - Organize feeds into categories
 - Configure feed settings
+
+### Feed Parser Features
+
+The plugin includes a sophisticated feed parsing system that:
+
+- Supports multiple feed formats (RSS, Atom, RDF)
+- Automatically extracts content from problematic feeds
+- Uses domain-based dynamic handling for special cases
+- Provides fallback mechanisms for optimal content retrieval
 
 ### Settings Page
 
@@ -54,7 +66,10 @@ athena-ai/
 │   └── js/
 ├── includes/
 │   ├── Admin/
-│   └── Core/
+│   ├── Core/
+│   └── Services/
+│       ├── FeedParser/
+│       └── FeedProcessor/
 ├── languages/
 ├── templates/
 │   └── admin/
@@ -66,16 +81,19 @@ athena-ai/
 The plugin uses GitHub releases for updates. To create a new release:
 
 1. Update version numbers:
+
    - In `athena-ai.php`: Update both the version comment and `ATHENA_AI_VERSION` constant
    - Add new section in `CHANGELOG.md` with the changes
 
 2. Commit changes:
+
    ```bash
    git add athena-ai.php CHANGELOG.md
    git commit -m "Bump version to X.Y.Z"
    ```
 
 3. Create and push a new tag:
+
    ```bash
    git tag -a vX.Y.Z -m "Version X.Y.Z"
    git push origin main vX.Y.Z
@@ -94,6 +112,7 @@ The plugin's update checker will automatically detect the new release and notify
 ### Version Numbering
 
 We use [Semantic Versioning](https://semver.org/):
+
 - MAJOR version for incompatible API changes (X.0.0)
 - MINOR version for added functionality (X.Y.0)
 - PATCH version for bug fixes (X.Y.Z)
@@ -108,6 +127,7 @@ We use [Semantic Versioning](https://semver.org/):
 ## Updates
 
 The plugin supports automatic updates through GitHub releases. When a new version is released:
+
 1. You'll see the update notification in WordPress admin
 2. Review the changelog
 3. Click "Update Now" to install the latest version

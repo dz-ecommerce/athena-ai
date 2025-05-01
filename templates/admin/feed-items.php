@@ -155,7 +155,10 @@ if (!empty($items)) {
     <!-- Filter und Suche -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100">
         <h2 class="text-lg font-semibold text-gray-900 mb-4"><?php esc_html_e('Filter Feeds', 'athena-ai'); ?></h2>
-        <?php if ($feed_filter || $date_filter): ?>
+        <?php 
+        $has_filters = $feed_filter || $date_filter || (isset($_GET['search_term']) && !empty($_GET['search_term']));
+        if ($has_filters): 
+        ?>
         <div class="mb-4 p-2 bg-blue-50 text-blue-700 rounded-md border border-blue-200">
             <p>
                 <i class="fa-solid fa-filter mr-2"></i>
@@ -202,6 +205,10 @@ if (!empty($items)) {
                     ];
                     $filter_text[] = sprintf(__('Date: %s', 'athena-ai'), $date_labels[$date_filter] ?? $date_filter);
                 }
+                // Anzeigen des Suchbegriffs, wenn vorhanden
+                if (isset($_GET['search_term']) && !empty($_GET['search_term'])) {
+                    $filter_text[] = sprintf(__('Search: %s', 'athena-ai'), esc_html($_GET['search_term']));
+                }
                 echo esc_html__('Active Filters: ', 'athena-ai') . implode(', ', $filter_text);
                 ?>
             </p>
@@ -221,6 +228,19 @@ if (!empty($items)) {
                     <option value="this_month" <?php selected($date_filter, 'this_month'); ?>><?php esc_html_e('This Month', 'athena-ai'); ?></option>
                     <option value="last_month" <?php selected($date_filter, 'last_month'); ?>><?php esc_html_e('Last Month', 'athena-ai'); ?></option>
                 </select>
+            </div>
+            
+            <!-- Suchfunktion -->
+            <div class="w-full md:w-auto flex-grow">
+                <label for="search_term" class="block text-sm font-medium text-gray-700 mb-1"><?php esc_html_e('Search', 'athena-ai'); ?></label>
+                <div class="relative mt-1">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg aria-hidden="true" class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" id="search_term" name="search_term" value="<?php echo isset($_GET['search_term']) ? esc_attr($_GET['search_term']) : ''; ?>" class="block w-full p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500" placeholder="<?php esc_attr_e('Search items...', 'athena-ai'); ?>">
+                </div>
             </div>
             
             <div class="flex items-end space-x-2">
@@ -286,7 +306,9 @@ if (!empty($items)) {
                     <?php esc_html_e('Apply Filters', 'athena-ai'); ?>
                 </button>
                 
-                <?php if ($feed_filter || $date_filter): ?>
+                <?php 
+                if ($has_filters): 
+                ?>
                 <a href="<?php echo admin_url('admin.php?page=athena-feed-items'); ?>" class="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg transition-all hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50">
                     <i class="fa-solid fa-times mr-2"></i>
                     <?php esc_html_e('Clear Filters', 'athena-ai'); ?>
@@ -442,6 +464,11 @@ if (!empty($items)) {
             }
             if ($date_filter) {
                 $base_url .= '&date_filter=' . $date_filter;
+            }
+            
+            // Add search term to pagination URL if specified
+            if (isset($_GET['search_term']) && !empty($_GET['search_term'])) {
+                $base_url .= '&search_term=' . urlencode($_GET['search_term']);
             }
             
             // Previous button
