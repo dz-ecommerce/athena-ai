@@ -88,13 +88,13 @@ class RdfParser implements FeedParserInterface {
             stripos($content, 'xmlns:rdf=') !== false ||
             // Weitere RDF-spezifische Marker
             stripos($content, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#') !== false ||
-            // Tagesschau.de-spezifisches Format
+            // Spezielles Format mit Ressourcen-Verweisen
             stripos($content, '<rdf:li rdf:resource=') !== false ||
             // RDF-Items mit about-Attribut
             preg_match('/<item\s+rdf:about=/', $content) ||
             // Prüfen auf andere typische RDF-Attribute
             preg_match('/<rdf:Seq>/', $content) ||
-            // Spezifische Namespace-Prüfung für tagesschau.de
+            // Spezifische Namespace-Prüfung für RSS 1.0
             stripos($content, 'xmlns="http://purl.org/rss/1.0/"') !== false
         );
         
@@ -123,17 +123,9 @@ class RdfParser implements FeedParserInterface {
         $content_preview = substr($content, 0, 500) . '...';
         $this->consoleLog('Feed content preview: ' . $content_preview, 'info');
         
-        // Spezielle Behandlung für tagesschau.de Feeds
-        if (stripos($content, 'tagesschau.de') !== false) {
-            $this->consoleLog('Tagesschau.de Feed erkannt - verwende spezielle Verarbeitung', 'info');
-            $items = $this->parseTagesschauFeed($content);
-            if (!empty($items)) {
-                $this->consoleLog('Tagesschau.de Feed erfolgreich geparst: ' . count($items) . ' Items gefunden', 'info');
-                $this->consoleLog('', 'groupEnd');
-                return $items;
-            }
-            $this->consoleLog('Spezielle Tagesschau-Verarbeitung fehlgeschlagen, versuche Standard-Methoden', 'warn');
-        }
+        // Extrahiere Domain für spätere Verwendung
+        $domain = $this->extractDomainFromContent($content);
+        $this->consoleLog('Extrahierte Domain: ' . $domain, 'info');
         
         // Normalisiere XML-Inhalt und Namespaces
         $content = $this->normalizeRdfContent($content);
@@ -166,6 +158,35 @@ class RdfParser implements FeedParserInterface {
         $this->consoleLog('', 'groupEnd');
         
         return $items;
+    }
+    
+    /**
+     * Extrahiert die Domain aus dem Feed-Inhalt
+     *
+     * @param string $content Der Feed-Inhalt
+     * @return string Die extrahierte Domain oder 'unknown' wenn nicht gefunden
+     */
+    private function extractDomainFromContent(string $content): string {
+        // Versuche, die Domain aus dem Feed-Inhalt zu extrahieren
+        $domain = 'unknown';
+        
+        // Methode 1: Suche nach link-Element im Channel
+        if (preg_match('/<channel>.*?<link>(https?:\/\/)?([^\/]+).*?<\/link>/s', $content, $matches)) {
+            $domain = $matches[2];
+        }
+        // Methode 2: Suche nach rdf:about Attribut im Channel
+        elseif (preg_match('/<channel[^>]*rdf:about="(https?:\/\/)?([^\/]+)/s', $content, $matches)) {
+            $domain = $matches[2];
+        }
+        // Methode 3: Suche nach beliebigen URLs im Content
+        elseif (preg_match('/https?:\/\/([^\/\s"\']+)/', $content, $matches)) {
+            $domain = $matches[1];
+        }
+        
+        // Entferne www. Präfix
+        $domain = preg_replace('/^www\./', '', $domain);
+        
+        return $domain;
     }
     
     /**
@@ -300,6 +321,9 @@ class RdfParser implements FeedParserInterface {
         
         $xpath = new \DOMXPath($doc);
         
+        // Extrahiere Domain für Fallback-Werte
+        $domain = $this->extractDomainFromContent($content);
+        
         // Registriere die Namespaces
         $namespaces = [
             'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
@@ -308,7 +332,7 @@ class RdfParser implements FeedParserInterface {
             'sy' => 'http://purl.org/rss/1.0/modules/syndication/',
             'admin' => 'http://webns.net/mvcb/',
             'cc' => 'http://web.resource.org/cc/',
-            // RSS 1.0 Namespace (für tagesschau.de)
+            // RSS 1.0 Namespace
             'rss' => 'http://purl.org/rss/1.0/'
         ];
         
@@ -327,12 +351,11 @@ class RdfParser implements FeedParserInterface {
             $this->consoleLog("Feed-Link: " . $feed_link, 'info');
         }
         
-        // Prüfen auf tagesschau.de-Format (spezielle Behandlung erforderlich)
-        $is_tagesschau = false;
-        if (stripos($content, 'tagesschau.de') !== false || 
-            stripos($content, '<rdf:li rdf:resource=') !== false) {
-            $this->consoleLog("Tagesschau.de RDF-Format erkannt, verwende spezielle Verarbeitung", 'info');
-            $is_tagesschau = true;
+        // Prüfen auf spezielle RDF-Struktur (Sequenz mit Resource-Links)
+        $is_special_format = false;
+        if (stripos($content, '<rdf:li rdf:resource=') !== false) {
+            $this->consoleLog("Spezielles RDF-Format mit Sequenz-Ressourcen erkannt", 'info');
+            $is_special_format = true;
         }
         
         // Spezielle Debugging für die DOM-Struktur
@@ -354,9 +377,9 @@ class RdfParser implements FeedParserInterface {
         
         $this->consoleLog("DOM-Struktur-Analyse beendet", 'groupEnd');
         
-        // Spezielles Handling für tagesschau.de
-        if ($is_tagesschau) {
-            // Bei tagesschau.de sind die Items in einer Sequenz verlinkt und dann separat definiert
+        // Spezielles Handling für RDF-Feeds mit Sequenz
+        if ($is_special_format) {
+            // Bei diesem Format sind die Items in einer Sequenz verlinkt und dann separat definiert
             $item_urls = [];
             
             // Verschiedene XPath-Abfragen für die Sequenz-Items
@@ -424,13 +447,13 @@ class RdfParser implements FeedParserInterface {
                         'title' => '',
                         'link' => $url,
                         'date' => '',
-                        'author' => '',
+                        'author' => $domain,
                         'content' => '',
                         'description' => '',
                         'permalink' => $url,
                         'id' => $url,
                         'thumbnail' => null,
-                        'categories' => []
+                        'categories' => ['Allgemein']
                     ];
                     
                     // Extrahiere Item-Daten mit XPath relativ zum Item-Knoten
@@ -454,6 +477,11 @@ class RdfParser implements FeedParserInterface {
                                  $this->getNodeValueRelative($xpath, './*[contains(local-name(), "creator")]', $item_node) ?:
                                  $this->getNodeValueRelative($xpath, './*[contains(local-name(), "author")]', $item_node);
                     
+                    // Wenn kein Autor gefunden wurde, verwende die Domain
+                    if (empty($item['author'])) {
+                        $item['author'] = $domain;
+                    }
+                    
                     // Nur Items mit mindestens einem nicht-leeren Wert hinzufügen
                     if (!empty($item['title']) || !empty($item['description'])) {
                         $items[] = $item;
@@ -465,13 +493,13 @@ class RdfParser implements FeedParserInterface {
                 
                 // Wenn Items gefunden wurden, gib sie zurück
                 if (!empty($items)) {
-                    $this->consoleLog("Gefunden {" . count($items) . "} Items im tagesschau.de-Format", 'info');
+                    $this->consoleLog("Gefunden {" . count($items) . "} Items im speziellen RDF-Format", 'info');
                     return $items;
                 } else {
-                    $this->consoleLog("Keine Items im tagesschau.de-Format extrahiert", 'error');
+                    $this->consoleLog("Keine Items im speziellen RDF-Format extrahiert", 'error');
                 }
             } else {
-                $this->consoleLog("Keine Sequenz-Items gefunden im tagesschau.de-Format", 'error');
+                $this->consoleLog("Keine Sequenz-Items gefunden im RDF-Format", 'error');
                 
                 // Fallback: Versuche eine direkte Suche nach Items ohne Sequenz
                 $direct_items = $xpath->query('//item');
@@ -565,6 +593,11 @@ class RdfParser implements FeedParserInterface {
                          $this->getNodeValueRelative($xpath, './*[contains(local-name(), "creator")]', $item_node) ?:
                          $this->getNodeValueRelative($xpath, './*[contains(local-name(), "author")]', $item_node);
             
+            // Wenn kein Autor gefunden wurde, verwende die Domain
+            if (empty($item['author'])) {
+                $item['author'] = $domain;
+            }
+            
             // Kategorien extrahieren
             $category_queries = [
                 './dc:subject',
@@ -581,6 +614,11 @@ class RdfParser implements FeedParserInterface {
                     }
                     break; // Nehme die erste erfolgreiche Kategorie-Abfrage
                 }
+            }
+            
+            // Wenn keine Kategorien gefunden wurden, füge eine Standard-Kategorie hinzu
+            if (empty($item['categories'])) {
+                $item['categories'][] = 'Allgemein';
             }
             
             // Thumbnail extrahieren
@@ -696,16 +734,28 @@ class RdfParser implements FeedParserInterface {
     }
 
     /**
-     * Spezielle Parser-Methode für tagesschau.de Feeds
+     * Spezielle Parser-Methode für problematische RDF-Feeds
      * 
      * @param string $content Der Feed-Inhalt
      * @return array Die geparsten Feed-Items
      */
-    private function parseTagesschauFeed(string $content): array {
+    private function parseSpecialRdfFeed(string $content): array {
+        // Diese Methode wird generalisiert für alle problematischen RDF-Feeds
+        return $this->parseProblematicRdfFeed($content);
+    }
+
+    /**
+     * Parser-Methode für problematische RDF-Feeds
+     * 
+     * @param string $content Der Feed-Inhalt
+     * @return array Die geparsten Feed-Items
+     */
+    private function parseProblematicRdfFeed(string $content): array {
         $items = [];
+        $domain = $this->extractDomainFromContent($content);
         
         // Manuelle Extraktion der Items mit Regex für den speziellen Fall
-        $this->consoleLog('Versuche manuelle Extraktion mit Regex für tagesschau.de', 'info');
+        $this->consoleLog('Versuche manuelle Extraktion mit Regex für problematischen Feed', 'info');
         
         // Extrahiere alle item-Elemente mit regulären Ausdrücken
         $item_pattern = '/<item[^>]*>(.*?)<\/item>/s';
@@ -774,13 +824,15 @@ class RdfParser implements FeedParserInterface {
                     }
                 }
                 
-                // Setze Default-Werte für Tagesschau-spezifische Inhalte, falls nicht gefunden
-                if (empty($item['author']) && stripos($content, 'tagesschau.de') !== false) {
-                    $item['author'] = 'tagesschau.de';
+                // Setze Domain als Fallback für Autor
+                if (empty($item['author'])) {
+                    $item['author'] = $domain;
                 }
                 
-                // Für tagesschau.de: Füge standard Kategorie hinzu
-                $item['categories'][] = 'Nachrichten';
+                // Füge Standard-Kategorie hinzu
+                if (empty($item['categories'])) {
+                    $item['categories'][] = 'Allgemein';
+                }
                 
                 // Validiere das Item (benötigt mindestens Titel oder Beschreibung)
                 if (!empty($item['title']) || !empty($item['description'])) {
@@ -794,16 +846,16 @@ class RdfParser implements FeedParserInterface {
             $dom = new \DOMDocument();
             libxml_use_internal_errors(true);
             if (@$dom->loadXML($content)) {
-                $items = $this->parseTagesschauWithDom($dom);
+                $items = $this->parseRdfWithDom($dom, $domain);
             } else {
                 $this->consoleLog('Konnte XML nicht als DOM laden', 'error');
             }
             libxml_clear_errors();
         }
         
-        // Wenn immer noch keine Items gefunden wurden, letzter Fallback: Hardcoded Lösung
-        if (empty($items) && stripos($content, 'tagesschau.de') !== false) {
-            $this->consoleLog('Alle Parsing-Methoden fehlgeschlagen, verwende Notfall-Fallback für tagesschau.de', 'warn');
+        // Wenn immer noch keine Items gefunden wurden, letzter Fallback
+        if (empty($items)) {
+            $this->consoleLog('Alle Parsing-Methoden fehlgeschlagen, verwende Notfall-Fallback', 'warn');
             
             // Versuche, Sequenz-Items direkt zu extrahieren
             $seq_pattern = '/<rdf:Seq>(.*?)<\/rdf:Seq>/s';
@@ -850,13 +902,13 @@ class RdfParser implements FeedParserInterface {
                                 'title' => $title,
                                 'link' => $url,
                                 'date' => $date,
-                                'author' => 'tagesschau.de',
+                                'author' => $domain,
                                 'content' => $description,
                                 'description' => $description,
                                 'permalink' => $url,
                                 'id' => $url,
                                 'thumbnail' => null,
-                                'categories' => ['Nachrichten']
+                                'categories' => ['Allgemein']
                             ];
                         }
                     }
@@ -867,18 +919,18 @@ class RdfParser implements FeedParserInterface {
             
             // Absolute Notfalllösung: Ein Dummy-Item erstellen
             if (empty($items)) {
-                $this->consoleLog('LETZTER AUSWEG: Erstelle Dummy-Item für tagesschau.de', 'warn');
+                $this->consoleLog('LETZTER AUSWEG: Erstelle Dummy-Item', 'warn');
                 $items[] = [
-                    'title' => 'Tagesschau.de Nachrichten',
-                    'link' => 'https://www.tagesschau.de/',
+                    'title' => 'Aktuelle Inhalte - ' . $domain,
+                    'link' => 'https://' . $domain . '/',
                     'date' => date('Y-m-d H:i:s'),
-                    'author' => 'tagesschau.de',
-                    'content' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Tagesschau-Website.',
-                    'description' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Tagesschau-Website.',
-                    'permalink' => 'https://www.tagesschau.de/',
-                    'id' => 'tagesschau-fallback-' . time(),
+                    'author' => $domain,
+                    'content' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Website.',
+                    'description' => 'Feed konnte nicht korrekt geparst werden. Bitte besuchen Sie direkt die Website.',
+                    'permalink' => 'https://' . $domain . '/',
+                    'id' => 'feed-fallback-' . md5($domain . time()),
                     'thumbnail' => null,
-                    'categories' => ['Nachrichten']
+                    'categories' => ['Allgemein']
                 ];
             }
         }
@@ -887,12 +939,13 @@ class RdfParser implements FeedParserInterface {
     }
 
     /**
-     * Parst einen tagesschau.de Feed mit DOM
+     * Parst einen problematischen RDF-Feed mit DOM
      * 
      * @param \DOMDocument $dom Der DOM des Feeds
+     * @param string $domain Die Domain des Feeds für Fallback-Werte
      * @return array Die geparsten Feed-Items
      */
-    private function parseTagesschauWithDom(\DOMDocument $dom): array {
+    private function parseRdfWithDom(\DOMDocument $dom, string $domain = 'unknown'): array {
         $items = [];
         $xpath = new \DOMXPath($dom);
         
@@ -943,13 +996,13 @@ class RdfParser implements FeedParserInterface {
                     'title' => '',
                     'link' => $url,
                     'date' => '',
-                    'author' => 'tagesschau.de',
+                    'author' => $domain,
                     'content' => '',
                     'description' => '',
                     'permalink' => $url,
                     'id' => $url,
                     'thumbnail' => null,
-                    'categories' => ['Nachrichten']
+                    'categories' => ['Allgemein']
                 ];
                 
                 // Extrahiere den Titel
@@ -971,6 +1024,12 @@ class RdfParser implements FeedParserInterface {
                     $item['date'] = $date_nodes->item(0)->textContent;
                 }
                 
+                // Extrahiere den Autor
+                $author_nodes = $xpath->query('./dc:creator', $item_node);
+                if ($author_nodes && $author_nodes->length > 0) {
+                    $item['author'] = $author_nodes->item(0)->textContent;
+                }
+                
                 if (!empty($item['title']) || !empty($item['description'])) {
                     $items[] = $item;
                 }
@@ -990,13 +1049,13 @@ class RdfParser implements FeedParserInterface {
                         'title' => '',
                         'link' => $about ?: '',
                         'date' => '',
-                        'author' => 'tagesschau.de',
+                        'author' => $domain,
                         'content' => '',
                         'description' => '',
                         'permalink' => $about ?: '',
                         'id' => $about ?: '',
                         'thumbnail' => null,
-                        'categories' => ['Nachrichten']
+                        'categories' => ['Allgemein']
                     ];
                     
                     // Extrahiere den Titel
@@ -1016,6 +1075,12 @@ class RdfParser implements FeedParserInterface {
                     $date_nodes = $xpath->query('./dc:date', $item_node);
                     if ($date_nodes && $date_nodes->length > 0) {
                         $item['date'] = $date_nodes->item(0)->textContent;
+                    }
+                    
+                    // Extrahiere den Autor
+                    $author_nodes = $xpath->query('./dc:creator', $item_node);
+                    if ($author_nodes && $author_nodes->length > 0) {
+                        $item['author'] = $author_nodes->item(0)->textContent;
                     }
                     
                     // Falls die Link-URL leer ist, versuche sie zu extrahieren

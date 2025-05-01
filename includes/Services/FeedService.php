@@ -515,25 +515,8 @@ class FeedService {
             return false;
         }
         
-        // Feed-URL für Logging und Spezialfälle
+        // Feed-URL für Logging
         $feed_url = method_exists($feed, 'get_url') ? $feed->get_url() : 'unknown-url';
-        
-        // Spezialfall: tagesschau.de
-        if (strpos($feed_url, 'tagesschau.de') !== false || strpos($content, 'tagesschau.de') !== false) {
-            $this->logger->info("Tagesschau.de Feed erkannt, verwende spezielle Verarbeitung");
-            
-            try {
-                $items = $this->processTagesschauFeed($content, $feed);
-                if (!empty($items)) {
-                    $this->logger->info("Tagesschau.de Feed erfolgreich verarbeitet: " . count($items) . " Items gefunden");
-                    return $items;
-                }
-                $this->logger->warn("Spezielle Tagesschau-Verarbeitung lieferte keine Items, versuche Standardverarbeitung");
-            } catch (\Exception $e) {
-                $this->logger->error("Fehler bei der Tagesschau-Verarbeitung: " . $e->getMessage());
-                $this->logger->warn("Spezielle Tagesschau-Verarbeitung fehlgeschlagen, versuche Standardverarbeitung");
-            }
-        }
         
         // Versuche, den Feed als XML zu parsen
         libxml_use_internal_errors(true);
@@ -582,52 +565,33 @@ class FeedService {
             }
         }
 
-        // Wenn der Feed speziell für tagesschau.de ist, geben wir einen neuen Versuch mit dem Spezialparser
-        if (strpos($feed_url, 'tagesschau.de') !== false || strpos($content, 'tagesschau.de') !== false) {
-            $this->logger->info("Feed-Format nicht erkannt, weitere Versuche für tagesschau.de");
+        // Fallback: Versuche eine vereinfachte Extraktion mit Regex
+        $this->logger->info("Versuche Extraktion mit Regex als Fallback");
+        $items = $this->extractItemsWithRegex($content, $feed);
+        if (!empty($items)) {
+            $this->logger->info("Regex-Extraktion erfolgreich, " . count($items) . " Items gefunden");
+            return $items;
+        }
+
+        // Wenn alle Methoden fehlschlagen, versuche einen absoluten Fallback
+        if ($this->http_client->isProblemURL($feed_url)) {
+            $this->logger->warn("Erkannter problematischer Feed. Erstelle Fallback-Item.");
+            // Extrahiere Domain als Anzeigename
+            $domain = parse_url($feed_url, PHP_URL_HOST);
+            $domain = preg_replace('/^www\./', '', $domain ?: 'Unbekannte Quelle');
             
-            // Versuche erneut mit einem vereinfachten Regex-Ansatz
-            $item_pattern = '/<item[^>]*>.*?<title[^>]*>(.*?)<\/title>.*?<\/item>/s';
-            if (preg_match_all($item_pattern, $content, $matches)) {
-                $this->logger->info("Einfache Regex-Suche fand " . count($matches[0]) . " Items");
-                
-                $dummy_items = [];
-                foreach ($matches[1] as $index => $title) {
-                    $title = trim(html_entity_decode(strip_tags($title)));
-                    $dummy_items[] = [
-                        'title' => $title ?: "Artikel " . ($index + 1),
-                        'link' => "https://www.tagesschau.de/",
-                        'description' => "Inhalt nicht verfügbar",
-                        'guid' => "tagesschau-item-" . md5($title . $index . time()),
-                        'date' => $this->getCurrentTime(),
-                        'published' => $this->getCurrentTime(),
-                        'author' => 'tagesschau.de',
-                        'permalink' => "https://www.tagesschau.de/",
-                        'content' => "Inhalt nicht verfügbar",
-                        'categories' => ['Nachrichten']
-                    ];
-                }
-                
-                if (!empty($dummy_items)) {
-                    $this->logger->info("Feed-Notfall-Parsing für tagesschau.de erfolgreich, " . count($dummy_items) . " Items gefunden");
-                    return $dummy_items;
-                }
-            }
-            
-            // Absoluter Fallback: Ein Dummy-Item für tagesschau.de
-            $this->logger->warn("Alle Parsing-Methoden fehlgeschlagen, erstelle Dummy-Item für tagesschau.de");
             return [
                 [
-                    'title' => 'Aktuelle Nachrichten - tagesschau.de',
-                    'link' => 'https://www.tagesschau.de/',
+                    'title' => 'Aktuelle Inhalte - ' . $domain,
+                    'link' => $feed_url,
                     'date' => $this->getCurrentTime(),
                     'published' => $this->getCurrentTime(),
-                    'author' => 'tagesschau.de',
-                    'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                    'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                    'permalink' => 'https://www.tagesschau.de/',
-                    'guid' => 'tagesschau-emergency-' . time(),
-                    'id' => 'tagesschau-emergency-' . time(),
+                    'author' => $domain,
+                    'content' => 'Aktuelle Inhalte - ' . $domain,
+                    'description' => 'Aktuelle Inhalte - ' . $domain,
+                    'permalink' => $feed_url,
+                    'guid' => 'feed-emergency-' . md5($feed_url . time()),
+                    'id' => 'feed-emergency-' . md5($feed_url . time()),
                     'thumbnail' => null,
                     'categories' => ['Nachrichten']
                 ]
@@ -649,32 +613,25 @@ class FeedService {
     }
     
     /**
-     * Spezielle Verarbeitung für tagesschau.de Feeds.
+     * Extrahiert Feed-Items mit einfachen regulären Ausdrücken.
+     * Wird als Fallback verwendet, wenn XML- und JSON-Parsing fehlschlägt.
      *
-     * @param string $content Der Feed-Inhalt.
-     * @param Feed   $feed    Feed-Objekt für Fehlerbehandlung.
-     * @return array Array mit Feed-Items oder leeres Array bei Fehler.
+     * @param string $content Der Feed-Inhalt
+     * @param Feed   $feed    Feed-Objekt für Fehlerbehandlung
+     * @return array Array mit Feed-Items oder leeres Array bei Fehler
      */
-    private function processTagesschauFeed(string $content, Feed $feed) {
-        // Erstelle einen Array für die Feed-Items
+    private function extractItemsWithRegex(string $content, Feed $feed): array {
         $items = [];
-        $this->logger->info("Verarbeite tagesschau.de Feed mit spezieller Methode");
+        $this->logger->info("Versuche Feed-Extraktion mit regulären Ausdrücken");
         
-        // Speichere den Feed für Debugging-Zwecke
-        $debug_file = sys_get_temp_dir() . '/tagesschau_debug.xml';
-        file_put_contents($debug_file, $content);
-        $this->logger->info("Feed-Inhalt für Debugging gespeichert unter: " . $debug_file);
-        
-        // Überprüfe die ersten Zeilen, um das Format des Feeds zu bestimmen
-        $preview = substr($content, 0, 1000);
-        $this->logger->info("Feed-Vorschau: " . $preview);
-        
-        // Direkte Regex-Strategie für tagesschau.de RDF-Feed
-        $items = [];
+        // Speichere den Feed für Debugging-Zwecke im Verbose-Modus
+        if ($this->verbose_mode) {
+            $debug_file = sys_get_temp_dir() . '/feed_debug_' . time() . '.xml';
+            file_put_contents($debug_file, $content);
+            $this->logger->info("Feed-Inhalt für Debugging gespeichert unter: " . $debug_file);
+        }
         
         // 1. Extrahiere zunächst alle Items mit regulären Ausdrücken
-        $this->logger->info("Verwende direkte Regex-Methode für tagesschau.de");
-        
         $item_pattern = '/<item[^>]*>.*?<\/item>/s';
         if (preg_match_all($item_pattern, $content, $item_matches)) {
             $this->logger->info("Regex fand " . count($item_matches[0]) . " <item>-Tags");
@@ -707,7 +664,9 @@ class FeedService {
                 
                 // Wenn noch kein Link gefunden, verwende Fallback
                 if (empty($item['link'])) {
-                    $item['link'] = 'https://www.tagesschau.de/';
+                    // Versuche, die Feed-URL als Basis für den Link zu verwenden
+                    $feed_url = method_exists($feed, 'get_url') ? $feed->get_url() : '';
+                    $item['link'] = $feed_url ?: '#';
                     $this->logger->debug("Item $index: Kein Link gefunden, verwende Fallback");
                 }
                 
@@ -758,7 +717,10 @@ class FeedService {
                     $item['author'] = trim($creator_match[1]);
                     $this->logger->debug("Item $index: Autor aus dc:creator: " . $item['author']);
                 } else {
-                    $item['author'] = "tagesschau.de";
+                    // Extrahiere Domain als Autor-Fallback
+                    $domain = parse_url($item['link'], PHP_URL_HOST);
+                    $domain = preg_replace('/^www\./', '', $domain ?: 'Unbekannt');
+                    $item['author'] = $domain;
                     $this->logger->debug("Item $index: Kein Autor gefunden, verwende Fallback");
                 }
                 
@@ -777,7 +739,7 @@ class FeedService {
                 }
                 
                 if (empty($categories)) {
-                    $categories[] = "Nachrichten";
+                    $categories[] = "Allgemein";
                     $this->logger->debug("Item $index: Keine Kategorien gefunden, verwende Fallback");
                 }
                 
@@ -797,130 +759,46 @@ class FeedService {
             }
         }
         
-        // Wenn keine Items gefunden wurden, versuche alternative Strategie für RDF
+        // Versuche alternative Regex-Muster, wenn keine Items gefunden wurden
         if (empty($items)) {
-            $this->logger->info("Keine Items mit Regex gefunden, versuche RDF-Namespace-Methode");
+            $this->logger->info("Keine Items mit Standard-Regex gefunden, versuche alternative Muster");
             
-            libxml_use_internal_errors(true);
-            $xml = @simplexml_load_string($content);
-            
-            if ($xml !== false) {
-                $namespaces = $xml->getNamespaces(true);
-                $this->logger->info("Namespaces im Feed: " . implode(", ", array_keys($namespaces)));
+            // Versuch mit einfacheren Titelsuchmustern
+            $title_pattern = '/<title[^>]*>(.*?)<\/title>/s';
+            if (preg_match_all($title_pattern, $content, $title_matches)) {
+                $this->logger->info("Alternative Regex fand " . count($title_matches[0]) . " <title>-Tags");
                 
-                // Versuche, die RDF-Elemente zu finden
-                if (isset($xml->item)) {
-                    $this->logger->info("Root-level items gefunden: " . count($xml->item));
+                // Erstelle einfache Items basierend auf den gefundenen Titeln
+                foreach ($title_matches[1] as $index => $title) {
+                    // Überspringe den ersten Titel, der wahrscheinlich der Feed-Titel ist
+                    if ($index === 0) continue;
                     
-                    // Manuell jeden Namespace registrieren, falls nötig
-                    $ns_rdf = isset($namespaces['rdf']) ? $namespaces['rdf'] : 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-                    $ns_dc = isset($namespaces['dc']) ? $namespaces['dc'] : 'http://purl.org/dc/elements/1.1/';
-                    
-                    foreach ($xml->item as $index => $xmlItem) {
-                        $attrs = $xmlItem->attributes($ns_rdf);
-                        $item = [];
+                    $title = trim(html_entity_decode(strip_tags($title)));
+                    if (!empty($title)) {
+                        $feed_url = method_exists($feed, 'get_url') ? $feed->get_url() : '';
+                        $domain = parse_url($feed_url, PHP_URL_HOST);
+                        $domain = preg_replace('/^www\./', '', $domain ?: 'Unbekannt');
                         
-                        // Basisattribute
-                        $item['title'] = (string)$xmlItem->title;
-                        $item['link'] = isset($attrs->about) ? (string)$attrs->about : (string)$xmlItem->link;
-                        $item['description'] = (string)$xmlItem->description;
-                        
-                        // DC-Namespace Elemente
-                        if (isset($namespaces['dc'])) {
-                            $dc = $xmlItem->children($ns_dc);
-                            if (isset($dc->date)) {
-                                try {
-                                    $date_obj = new \DateTime((string)$dc->date);
-                                    $item['date'] = $date_obj->format('Y-m-d H:i:s');
-                                } catch (\Exception $e) {
-                                    $item['date'] = $this->getCurrentTime();
-                                }
-                            } else {
-                                $item['date'] = $this->getCurrentTime();
-                            }
-                            
-                            $item['author'] = isset($dc->creator) ? (string)$dc->creator : 'tagesschau.de';
-                            
-                            // Kategorien
-                            $categories = [];
-                            if (isset($dc->subject)) {
-                                foreach ($dc->subject as $subject) {
-                                    $categories[] = (string)$subject;
-                                }
-                            }
-                            if (empty($categories)) {
-                                $categories[] = 'Nachrichten';
-                            }
-                            $item['categories'] = $categories;
-                        } else {
-                            $item['date'] = $this->getCurrentTime();
-                            $item['author'] = 'tagesschau.de';
-                            $item['categories'] = ['Nachrichten'];
-                        }
-                        
-                        // GUID generieren
-                        if (isset($xmlItem->guid)) {
-                            $item['guid'] = (string)$xmlItem->guid;
-                        } else if (!empty($item['link'])) {
-                            $item['guid'] = $item['link'];
-                        } else {
-                            $item['guid'] = 'tagesschau-' . md5($item['title'] . $index);
-                        }
-                        
-                        // Weitere erforderliche Felder
-                        $item['published'] = $item['date'];
-                        $item['content'] = !empty($item['description']) ? $item['description'] : $item['title'];
-                        $item['permalink'] = $item['link'];
-                        $item['id'] = $item['guid'];
-                        $item['thumbnail'] = null;
-                        
-                        if (!empty($item['title']) || !empty($item['link'])) {
-                            $items[] = $item;
-                            $this->logger->info("XML-Item $index hinzugefügt: " . $item['title']);
-                        }
+                        $items[] = [
+                            'title' => $title,
+                            'link' => $feed_url ?: '#',
+                            'description' => "Inhalt nicht verfügbar",
+                            'guid' => "feed-item-" . md5($title . $index . time()),
+                            'date' => $this->getCurrentTime(),
+                            'published' => $this->getCurrentTime(),
+                            'author' => $domain,
+                            'permalink' => $feed_url ?: '#',
+                            'content' => "Inhalt nicht verfügbar",
+                            'id' => "feed-item-" . md5($title . $index . time()),
+                            'thumbnail' => null,
+                            'categories' => ['Allgemein']
+                        ];
+                        $this->logger->info("Alternativer Titel $index hinzugefügt: " . $title);
                     }
-                } else {
-                    $this->logger->warn("Keine Root-level items gefunden");
                 }
-            } else {
-                $errors = libxml_get_errors();
-                libxml_clear_errors();
-                
-                $error_msg = "XML-Parsing-Fehler: ";
-                foreach ($errors as $error) {
-                    $error_msg .= "Zeile {$error->line}, Spalte {$error->column}: {$error->message}; ";
-                }
-                $this->logger->error($error_msg);
             }
         }
         
-        // Manueller Fallback, wenn immer noch keine Items gefunden wurden
-        if (empty($items)) {
-            $this->logger->warn("Keine Items mit beiden Methoden gefunden, erstelle Notfall-Items");
-            
-            // Erstelle mindestens ein Item
-            $items[] = [
-                'title' => 'Aktuelle Nachrichten - tagesschau.de',
-                'link' => 'https://www.tagesschau.de/',
-                'date' => $this->getCurrentTime(),
-                'published' => $this->getCurrentTime(),
-                'author' => 'tagesschau.de',
-                'content' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                'description' => 'Aktuelle Nachrichten - Die Nachrichten der ARD',
-                'permalink' => 'https://www.tagesschau.de/',
-                'guid' => 'tagesschau-emergency-' . time(),
-                'id' => 'tagesschau-emergency-' . time(),
-                'thumbnail' => null,
-                'categories' => ['Nachrichten']
-            ];
-            
-            // Versuche, mehr Details aus dem Feed-Titel zu extrahieren
-            if (preg_match('/<title>(.*?)<\/title>/s', $content, $title_match)) {
-                $items[0]['title'] = html_entity_decode(strip_tags($title_match[1]));
-            }
-        }
-        
-        $this->logger->info("Tagesschau.de Feed verarbeitet: " . count($items) . " Items extrahiert");
         return $items;
     }
     
@@ -933,17 +811,7 @@ class FeedService {
      * @return array Array mit Feed-Items.
      */
     private function processXmlFeed(SimpleXMLElement $xml, Feed $feed) {
-        // Prüfe speziell auf tagesschau.de Feed
-        $feed_url = method_exists($feed, 'get_url') ? $feed->get_url() : '';
-        
-        if (strpos($feed_url, 'tagesschau.de') !== false) {
-            // Hole den Feed-Inhalt und verarbeite ihn mit der spezialisierten Methode
-            $feed_content = $xml->asXML();
-            $this->logger->info("tagesschau.de Feed erkannt, verwende spezielle Methode");
-            return $this->processTagesschauFeed($feed_content, $feed);
-        }
-        
-        // Standard-Verarbeitung für andere Feeds
+        // Standard-Verarbeitung für alle Feeds
         return $this->extractItemsFromXml($xml, $feed);
     }
     
@@ -958,7 +826,7 @@ class FeedService {
     private function extractItemsFromXml(SimpleXMLElement $xml, Feed $feed) {
         $items = [];
 
-        // RDF-Feed (tagesschau.de) verarbeiten
+        // RDF-Feed verarbeiten
         if (isset($xml->channel) && isset($xml->item)) {
             $this->logger->info("RDF-Feed erkannt. Items: " . count($xml->item));
             
@@ -991,7 +859,7 @@ class FeedService {
                 }
             }
         } else {
-            // Versuche RDF-Feed mit Namespaces (vor allem für tagesschau.de)
+            // Versuche RDF-Feed mit Namespaces
             $namespaces = $xml->getNamespaces(true);
             if (!empty($namespaces) && isset($xml->item)) {
                 $this->logger->info("RDF-Feed mit Namespaces erkannt. Items: " . count($xml->item));
@@ -1051,7 +919,7 @@ class FeedService {
         // Autor - versuche verschiedene Formate
         $data['author'] = (string)$item->author;
         
-        // Fallback für Dublin Core (tagesschau.de verwendet dies)
+        // Fallback für Dublin Core
         if (empty($data['author']) && isset($namespaces['dc'])) {
             $dc = $item->children($namespaces['dc']);
             $data['author'] = (string)$dc->creator;
