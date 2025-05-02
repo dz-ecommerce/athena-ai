@@ -437,130 +437,158 @@ if (!empty($items)) {
     
     <!-- Pagination -->
     <?php if ($total_items > $items_per_page): ?>
-    <div class="flex justify-between items-center mt-6">
-        <div class="text-sm text-gray-700">
-            <?php 
-            $from = min($offset + 1, $total_items);
-            $to = min($offset + $items_per_page, $total_items);
-            printf(esc_html__('Showing %1$d to %2$d of %3$d entries', 'athena-ai'), $from, $to, $total_items); 
-            ?>
-        </div>
-        
-        <div class="flex rounded-md shadow-sm">
-            <?php
-            $total_pages = ceil($total_items / $items_per_page);
-            $base_url = admin_url('admin.php?page=athena-feed-items');
-            if ($feed_filter) {
-                if (strpos($feed_filter, ',') !== false) {
-                    // Mehrere Feed-IDs
-                    $feed_ids = explode(',', $feed_filter);
-                    foreach ($feed_ids as $id) {
-                        $base_url .= '&feed_ids[]=' . $id;
-                    }
-                } else {
-                    // Einzelne Feed-ID
-                    $base_url .= '&feed_id=' . $feed_filter;
-                }
-            }
-            if ($date_filter) {
-                $base_url .= '&date_filter=' . $date_filter;
-            }
-            
-            // Add search term to pagination URL if specified
-            if (isset($_GET['search_term']) && !empty($_GET['search_term'])) {
-                $base_url .= '&search_term=' . urlencode($_GET['search_term']);
-            }
-            
-            // Previous button
-            if ($current_page > 1): 
-                $prev_url = add_query_arg('paged', $current_page - 1, $base_url);
-            ?>
-                <a href="<?php echo esc_url($prev_url); ?>" class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150">
-                    <i class="fa-solid fa-chevron-left mr-2"></i>
-                    <?php esc_html_e('Previous', 'athena-ai'); ?>
-                </a>
-            <?php else: ?>
-                <span class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
-                    <i class="fa-solid fa-chevron-left mr-2"></i>
-                    <?php esc_html_e('Previous', 'athena-ai'); ?>
-                </span>
-            <?php endif; ?>
-            
-            <!-- Page numbers -->
-            <div class="flex">
-                <?php
-                // Add First Page button if not on first page
-                if ($current_page > 1):
-                    $first_page_url = add_query_arg('paged', 1, $base_url);
+    <section class="flex items-center mt-6 bg-gray-50 dark:bg-gray-900">
+      <div class="w-full">
+        <!-- Start coding here -->
+        <div class="relative overflow-hidden bg-white rounded-b-lg shadow-md dark:bg-gray-800">
+          <nav class="flex flex-col items-start justify-between p-4 space-y-3 md:flex-row md:items-center md:space-y-0"
+               aria-label="Table navigation">
+            <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
+                <?php 
+                $from = min($offset + 1, $total_items);
+                $to = min($offset + $items_per_page, $total_items);
+                printf(esc_html__('Showing %1$d to %2$d of %3$d entries', 'athena-ai'), $from, $to, $total_items); 
                 ?>
-                <a href="<?php echo esc_url($first_page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150" title="<?php esc_attr_e('First Page', 'athena-ai'); ?>">
-                    <i class="fa-solid fa-angle-double-left"></i>
-                </a>
-                <?php endif; ?>
-                
-                <?php
-                // Calculate visible page ranges
-                $total_visible_pages = 5; // Number of page links to show
-                $start_page = max(1, min($current_page - floor($total_visible_pages/2), $total_pages - $total_visible_pages + 1));
-                $end_page = min($total_pages, $start_page + $total_visible_pages - 1);
-                
-                // Show ellipsis before first pages if needed
-                if ($start_page > 1): ?>
-                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                        ...
-                    </span>
-                <?php endif; ?>
-                
-                <?php
-                // Display page numbers
-                for ($i = $start_page; $i <= $end_page; $i++):
-                    $page_url = add_query_arg('paged', $i, $base_url);
-                    if ($i == $current_page): 
+            </span>
+            <ul class="inline-flex items-stretch -space-x-px">
+              <?php
+              $total_pages = ceil($total_items / $items_per_page);
+              $base_url = admin_url('admin.php?page=athena-feed-items');
+              
+              if ($feed_filter) {
+                  if (strpos($feed_filter, ',') !== false) {
+                      // Mehrere Feed-IDs
+                      $feed_ids = explode(',', $feed_filter);
+                      foreach ($feed_ids as $id) {
+                          $base_url .= '&feed_ids[]=' . $id;
+                      }
+                  } else {
+                      // Einzelne Feed-ID
+                      $base_url .= '&feed_id=' . $feed_filter;
+                  }
+              }
+              if ($date_filter) {
+                  $base_url .= '&date_filter=' . $date_filter;
+              }
+              
+              // Add search term to pagination URL if specified
+              if (isset($_GET['search_term']) && !empty($_GET['search_term'])) {
+                  $base_url .= '&search_term=' . urlencode($_GET['search_term']);
+              }
+              
+              // Previous button
+              ?>
+              <li>
+                <?php if ($current_page > 1): 
+                    $prev_url = add_query_arg('paged', $current_page - 1, $base_url);
                 ?>
-                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-blue-300 bg-blue-50 text-sm font-medium text-blue-600">
-                        <?php echo $i; ?>
-                    </span>
+                <a href="<?php echo esc_url($prev_url); ?>"
+                   class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                  <span class="sr-only"><?php esc_html_e('Previous', 'athena-ai'); ?></span>
+                  <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                          clip-rule="evenodd"></path>
+                  </svg>
+                </a>
                 <?php else: ?>
-                    <a href="<?php echo esc_url($page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150">
-                        <?php echo $i; ?>
-                    </a>
-                <?php endif; endfor; ?>
-                
-                <?php 
-                // Show ellipsis after last visible page if needed
-                if ($end_page < $total_pages): ?>
-                    <span class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                        ...
-                    </span>
-                <?php endif; ?>
-                
-                <?php 
-                // Add Last Page button if not on last page
-                if ($current_page < $total_pages):
-                    $last_page_url = add_query_arg('paged', $total_pages, $base_url);
-                ?>
-                <a href="<?php echo esc_url($last_page_url); ?>" class="relative inline-flex items-center px-2 sm:px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150" title="<?php esc_attr_e('Last Page', 'athena-ai'); ?>">
-                    <i class="fa-solid fa-angle-double-right"></i>
-                </a>
-                <?php endif; ?>
-            </div>
-            
-            <!-- Next button -->
-            <?php if ($current_page < $total_pages): 
-                $next_url = add_query_arg('paged', $current_page + 1, $base_url);
-            ?>
-                <a href="<?php echo esc_url($next_url); ?>" class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150">
-                    <?php esc_html_e('Next', 'athena-ai'); ?>
-                    <i class="fa-solid fa-chevron-right ml-2"></i>
-                </a>
-            <?php else: ?>
-                <span class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-500 cursor-not-allowed">
-                    <?php esc_html_e('Next', 'athena-ai'); ?>
-                    <i class="fa-solid fa-chevron-right ml-2"></i>
+                <span class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                  <span class="sr-only"><?php esc_html_e('Previous', 'athena-ai'); ?></span>
+                  <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                          clip-rule="evenodd"></path>
+                  </svg>
                 </span>
-            <?php endif; ?>
+                <?php endif; ?>
+              </li>
+              
+              <?php
+              // Calculate visible page ranges
+              $total_visible_pages = 5; // Number of page links to show
+              $start_page = max(1, min($current_page - floor($total_visible_pages/2), $total_pages - $total_visible_pages + 1));
+              $end_page = min($total_pages, $start_page + $total_visible_pages - 1);
+              
+              // First page button if needed
+              if ($start_page > 1): 
+                $first_page_url = add_query_arg('paged', 1, $base_url);
+              ?>
+              <li>
+                <a href="<?php echo esc_url($first_page_url); ?>"
+                   class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">1</a>
+              </li>
+              
+              <!-- Ellipsis after first page -->
+              <li>
+                <span class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">...</span>
+              </li>
+              <?php endif; ?>
+              
+              <?php
+              // Display page numbers
+              for ($i = $start_page; $i <= $end_page; $i++):
+                  $page_url = add_query_arg('paged', $i, $base_url);
+                  if ($i == $current_page): 
+              ?>
+              <li>
+                <a href="#" aria-current="page"
+                   class="z-10 flex items-center justify-center px-3 py-2 text-sm leading-tight border text-primary-600 bg-primary-50 border-primary-300 hover:bg-primary-100 hover:text-primary-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white"><?php echo $i; ?></a>
+              </li>
+              <?php else: ?>
+              <li>
+                <a href="<?php echo esc_url($page_url); ?>"
+                   class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><?php echo $i; ?></a>
+              </li>
+              <?php endif; endfor; ?>
+              
+              <?php 
+              // Ellipsis if needed
+              if ($end_page < $total_pages): ?>
+              <li>
+                <span class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">...</span>
+              </li>
+              
+              <!-- Last page button -->
+              <li>
+                <a href="<?php echo esc_url(add_query_arg('paged', $total_pages, $base_url)); ?>"
+                   class="flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"><?php echo $total_pages; ?></a>
+              </li>
+              <?php endif; ?>
+              
+              <!-- Next button -->
+              <li>
+                <?php if ($current_page < $total_pages): 
+                    $next_url = add_query_arg('paged', $current_page + 1, $base_url);
+                ?>
+                <a href="<?php echo esc_url($next_url); ?>"
+                   class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+                  <span class="sr-only"><?php esc_html_e('Next', 'athena-ai'); ?></span>
+                  <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                          clip-rule="evenodd"></path>
+                  </svg>
+                </a>
+                <?php else: ?>
+                <span class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                  <span class="sr-only"><?php esc_html_e('Next', 'athena-ai'); ?></span>
+                  <svg class="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                          clip-rule="evenodd"></path>
+                  </svg>
+                </span>
+                <?php endif; ?>
+              </li>
+            </ul>
+          </nav>
         </div>
-    </div>
+      </div>
+    </section>
     <?php endif; ?>
     <?php endif; ?>
     
