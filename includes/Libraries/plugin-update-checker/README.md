@@ -73,7 +73,7 @@ Getting Started
 		'unique-plugin-or-theme-slug'
 	);
 	```
-	Note: If you're using the Composer autoloader, you don't need to explicitly `require` the library.
+
 
 #### How to Release an Update
 
