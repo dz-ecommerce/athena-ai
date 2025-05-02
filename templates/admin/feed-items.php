@@ -498,161 +498,152 @@ if (!empty($items)) {
 
         // Previous button
 
+        // Previous button
+
         else: ?>
     
     <!-- Feed-Items-Tabelle -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-    <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <tr class="bg-gray-50">
-                        <th scope="col" class="px-6 py-3 whitespace-normal break-words"><?php esc_html_e(
-                            'Title',
-                            'athena-ai'
-                        ); ?></th>
-                        <th scope="col" class="px-6 py-3"><?php esc_html_e(
-                            'Feed Source',
-                            'athena-ai'
-                        ); ?></th>
-                        <th scope="col" class="px-6 py-3"><?php esc_html_e(
-                            'Publication Date',
-                            'athena-ai'
-                        ); ?></th>
-                        <th scope="col" class="px-6 py-3"><?php esc_html_e(
-                            'Imported Date',
-                            'athena-ai'
-                        ); ?></th>
-                        <th scope="col" class="px-6 py-3"><?php esc_html_e(
-                            'Actions',
-                            'athena-ai'
-                        ); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($items as $item):
+    <table class="w-full text-sm text-left text-gray-700">
+        <thead class="text-xs uppercase bg-gray-100">
+            <tr>
+                <th scope="col" class="px-6 py-3 whitespace-normal break-words"><?php esc_html_e(
+                    'Title',
+                    'athena-ai'
+                ); ?></th>
+                <th scope="col" class="px-6 py-3"><?php esc_html_e(
+                    'Feed Source',
+                    'athena-ai'
+                ); ?></th>
+                <th scope="col" class="px-6 py-3"><?php esc_html_e(
+                    'Publication Date',
+                    'athena-ai'
+                ); ?></th>
+                <th scope="col" class="px-6 py-3"><?php esc_html_e(
+                    'Imported Date',
+                    'athena-ai'
+                ); ?></th>
+                <th scope="col" class="px-6 py-3"><?php esc_html_e('Actions', 'athena-ai'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($items as $item):
 
-                        if (!isset($item->raw_content) || !is_string($item->raw_content)) {
-                            continue;
-                        }
+                if (!isset($item->raw_content) || !is_string($item->raw_content)) {
+                    continue;
+                }
 
-                        $raw_content = json_decode($item->raw_content);
-                        if (json_last_error() !== JSON_ERROR_NONE || !is_object($raw_content)) {
-                            continue;
-                        }
+                $raw_content = json_decode($item->raw_content);
+                if (json_last_error() !== JSON_ERROR_NONE || !is_object($raw_content)) {
+                    continue;
+                }
 
-                        $title = '';
-                        if (isset($raw_content->title)) {
-                            $title = is_scalar($raw_content->title)
-                                ? (string) $raw_content->title
-                                : '';
-                        }
+                $title = '';
+                if (isset($raw_content->title)) {
+                    $title = is_scalar($raw_content->title) ? (string) $raw_content->title : '';
+                }
 
-                        $link = '';
-                        if (isset($raw_content->link)) {
-                            $link = is_scalar($raw_content->link)
-                                ? (string) $raw_content->link
-                                : '';
-                        }
+                $link = '';
+                if (isset($raw_content->link)) {
+                    $link = is_scalar($raw_content->link) ? (string) $raw_content->link : '';
+                }
 
-                        $description = '';
-                        if (isset($raw_content->description)) {
-                            $description = is_scalar($raw_content->description)
-                                ? (string) $raw_content->description
-                                : '';
-                        }
+                $description = '';
+                if (isset($raw_content->description)) {
+                    $description = is_scalar($raw_content->description)
+                        ? (string) $raw_content->description
+                        : '';
+                }
 
-                        if (
-                            empty($link) &&
-                            isset($raw_content->guid) &&
-                            is_scalar($raw_content->guid)
-                        ) {
-                            $link = (string) $raw_content->guid;
-                        }
+                if (empty($link) && isset($raw_content->guid) && is_scalar($raw_content->guid)) {
+                    $link = (string) $raw_content->guid;
+                }
 
-                        if (empty($title) && !empty($description)) {
-                            $title = wp_trim_words($description, 10, '...');
-                        } elseif (empty($title)) {
-                            $title = __('(No Title)', 'athena-ai');
-                        }
-                        ?>
-            <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
-            <td class="px-6 py-4 whitespace-normal break-words">
-                            <div class="text-sm font-medium text-gray-900">
-                                <?php if ($link): ?>
-                                    <a href="<?php echo esc_url(
-                                        $link
-                                    ); ?>" target="_blank" class="hover:text-blue-600 transition-colors duration-150 flex items-center">
-                                        <?php echo esc_html($title); ?>
-                                        <i class="fa-solid fa-external-link-alt ml-1 text-xs text-gray-400"></i>
-                                    </a>
-                                <?php else: ?>
-                                    <?php echo esc_html($title); ?>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                <i class="fa-solid fa-rss mr-1"></i>
-                                <?php echo esc_html($item->feed_title); ?>
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
-                            <?php
-                            $pub_date = strtotime($item->pub_date);
-                            echo $pub_date
-                                ? date_i18n(
-                                    get_option('date_format') . ' ' . get_option('time_format'),
-                                    $pub_date
-                                )
-                                : '–';
-                            ?>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-500">
-                            <?php
-                            $import_date =
-                                isset($item->import_date) && !empty($item->import_date)
-                                    ? strtotime($item->import_date)
-                                    : false;
-                            echo $import_date
-                                ? date_i18n(
-                                    get_option('date_format') . ' ' . get_option('time_format'),
-                                    $import_date
-                                )
-                                : '–';
-                            ?>
-                        </td>
-                        <td class="px-6 py-4 text-sm font-medium">
-                            <div class="flex space-x-3">
-                                <button onclick="showItemContent(<?php echo esc_attr(
-                                    $item->id
-                                ); ?>); return false;" class="text-blue-600 hover:text-blue-900 transition-colors duration-150" title="<?php esc_attr_e(
+                if (empty($title) && !empty($description)) {
+                    $title = wp_trim_words($description, 10, '...');
+                } elseif (empty($title)) {
+                    $title = __('(No Title)', 'athena-ai');
+                }
+                ?>
+            <tr class="bg-white even:bg-gray-50 border-b border-gray-200">
+                <td class="px-6 py-4 whitespace-normal break-words">
+                    <div class="text-sm font-medium text-gray-900">
+                        <?php if ($link): ?>
+                            <a href="<?php echo esc_url(
+                                $link
+                            ); ?>" target="_blank" class="hover:text-blue-600 transition-colors duration-150 flex items-center">
+                                <?php echo esc_html($title); ?>
+                                <i class="fa-solid fa-external-link-alt ml-1 text-xs text-gray-400"></i>
+                            </a>
+                        <?php else: ?>
+                            <?php echo esc_html($title); ?>
+                        <?php endif; ?>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <i class="fa-solid fa-rss mr-1"></i>
+                        <?php echo esc_html($item->feed_title); ?>
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    <?php
+                    $pub_date = strtotime($item->pub_date);
+                    echo $pub_date
+                        ? date_i18n(
+                            get_option('date_format') . ' ' . get_option('time_format'),
+                            $pub_date
+                        )
+                        : '–';
+                    ?>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    <?php
+                    $import_date =
+                        isset($item->import_date) && !empty($item->import_date)
+                            ? strtotime($item->import_date)
+                            : false;
+                    echo $import_date
+                        ? date_i18n(
+                            get_option('date_format') . ' ' . get_option('time_format'),
+                            $import_date
+                        )
+                        : '–';
+                    ?>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium">
+                    <div class="flex space-x-3">
+                        <button onclick="showItemContent(<?php echo esc_attr(
+                            $item->id
+                        ); ?>); return false;" class="text-blue-600 hover:text-blue-900 transition-colors duration-150" title="<?php esc_attr_e(
     'View Content',
     'athena-ai'
 ); ?>">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                                <?php if (current_user_can('manage_options')): ?>
-                                <button onclick="if(confirm('<?php esc_attr_e(
-                                    'Are you sure you want to delete this item?',
-                                    'athena-ai'
-                                ); ?>')) deleteItem(<?php echo esc_attr(
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <?php if (current_user_can('manage_options')): ?>
+                        <button onclick="if(confirm('<?php esc_attr_e(
+                            'Are you sure you want to delete this item?',
+                            'athena-ai'
+                        ); ?>')) deleteItem(<?php echo esc_attr(
     $item->id
 ); ?>); return false;" class="text-red-600 hover:text-red-900 transition-colors duration-150" title="<?php esc_attr_e(
     'Delete Item',
     'athena-ai'
 ); ?>">
-                                    <i class="fa-solid fa-trash-alt"></i>
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php
-                    endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                            <i class="fa-solid fa-trash-alt"></i>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </td>
+            </tr>
+            <?php
+            endforeach; ?>
+        </tbody>
+    </table>
+</div>
+</div>
     
     <!-- Pagination -->
     <?php if ($total_items > $items_per_page): ?>
