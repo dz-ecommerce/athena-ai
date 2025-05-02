@@ -117,8 +117,8 @@ jobs:
           mkdir -p build/athena-ai-${{ steps.update_version.outputs.version }}
 
           # Plugin-Dateien in beide Verzeichnisse kopieren
-          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai/
-          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai-${{ steps.update_version.outputs.version }}/
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai/
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai-${{ steps.update_version.outputs.version }}/
 
           # ZIP-Archive erstellen
           cd build
