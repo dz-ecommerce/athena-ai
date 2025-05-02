@@ -17,7 +17,7 @@ if (!empty($items)) {
     }
 }
 ?>
-<div class="wrap athena-ai-admin m-4 min-h-screen">
+<div class="wrap athena-ai-admin min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
         <h1 class="text-2xl font-bold text-gray-800 m-0 flex items-center">
@@ -336,11 +336,11 @@ if (!empty($items)) {
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr class="bg-gray-50">
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><?php esc_html_e('Title', 'athena-ai'); ?></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><?php esc_html_e('Feed Source', 'athena-ai'); ?></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><?php esc_html_e('Publication Date', 'athena-ai'); ?></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><?php esc_html_e('Imported Date', 'athena-ai'); ?></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><?php esc_html_e('Actions', 'athena-ai'); ?></th>
+                        <th scope="col" class="px-6 py-3"><?php esc_html_e('Title', 'athena-ai'); ?></th>
+                        <th scope="col" class="px-6 py-3"><?php esc_html_e('Feed Source', 'athena-ai'); ?></th>
+                        <th scope="col" class="px-6 py-3"><?php esc_html_e('Publication Date', 'athena-ai'); ?></th>
+                        <th scope="col" class="px-6 py-3"><?php esc_html_e('Imported Date', 'athena-ai'); ?></th>
+                        <th scope="col" class="px-6 py-3"><?php esc_html_e('Actions', 'athena-ai'); ?></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
