@@ -269,6 +269,10 @@ class FeedItemsPage {
             ];
         }
 
+        // UpdateChecker Statusmeldung bereitstellen
+        $update_checker = new \AthenaAI\Core\UpdateChecker('dz-ecommerce', 'athena-ai');
+        $update_checker_status_message = $update_checker->get_status_message();
+
         // Include the template
         include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/feed-items.php';
     }

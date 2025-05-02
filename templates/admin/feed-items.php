@@ -18,6 +18,17 @@ if (!empty($items)) {
 }
 ?>
 <div class="wrap athena-ai-admin min-h-screen">
+    <?php if (!empty($update_checker_status_message)): ?>
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm flex items-center justify-between">
+        <div>
+            <i class="fa-solid fa-info-circle text-blue-500 mr-2"></i>
+            <span class="text-blue-700"><?php echo esc_html($update_checker_status_message); ?></span>
+        </div>
+        <button onclick="this.parentElement.parentElement.style.display='none'" class="text-blue-500 hover:text-blue-700">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+    <?php endif; ?>
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
         <h1 class="text-2xl font-bold text-gray-800 m-0 flex items-center">

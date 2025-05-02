@@ -106,24 +106,6 @@ class UpdateChecker {
                 }
                 return $transient;
             });
-
-            // Add debug information in WP_DEBUG mode
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                add_action('admin_notices', function () {
-                    if (current_user_can('manage_options')) {
-                        echo '<div class="notice notice-info is-dismissible"><p>';
-                        echo sprintf(
-                            esc_html__(
-                                'Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.',
-                                'athena-ai'
-                            ),
-                            esc_html($this->owner),
-                            esc_html($this->repo)
-                        );
-                        echo '</p></div>';
-                    }
-                });
-            }
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 add_action('admin_notices', function () use ($e) {
@@ -154,5 +136,21 @@ class UpdateChecker {
             'repo' => $this->repo,
             'has_token' => !empty($this->access_token),
         ];
+    }
+
+    /**
+     * Gibt die Statusmeldung für den Update Checker zurück
+     *
+     * @return string
+     */
+    public function get_status_message() {
+        return sprintf(
+            esc_html__(
+                'Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.',
+                'athena-ai'
+            ),
+            esc_html($this->owner),
+            esc_html($this->repo)
+        );
     }
 }
