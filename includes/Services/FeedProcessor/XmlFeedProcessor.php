@@ -1,7 +1,7 @@
 <?php
 /**
  * XML Feed Processor
- * 
+ *
  * Processes XML format feeds (RSS, Atom, etc.)
  *
  * @package AthenaAI\Services\FeedProcessor
@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace AthenaAI\Services\FeedProcessor;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -30,16 +30,17 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
         if ($content === null || empty($content)) {
             return false;
         }
-        
+
         // Check for XML/RSS markers
         $is_xml = strpos($content, '<?xml') !== false;
-        $has_rss = strpos($content, '<rss') !== false || 
-                   strpos($content, '<feed') !== false || 
-                   strpos($content, '<channel') !== false;
-                   
+        $has_rss =
+            strpos($content, '<rss') !== false ||
+            strpos($content, '<feed') !== false ||
+            strpos($content, '<channel') !== false;
+
         return $is_xml && $has_rss;
     }
-    
+
     /**
      * Get processor name.
      *
@@ -48,7 +49,7 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
     public function getName(): string {
         return 'XML/RSS';
     }
-    
+
     /**
      * Process XML feed content.
      *
@@ -56,15 +57,15 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
      * @return array The extracted feed items.
      */
     public function process(?string $content): array {
-        $this->consoleLog("Processing feed with XML/RSS processor", 'info');
-        
+        $this->consoleLog('Processing feed with XML/RSS processor', 'info');
+
         // Behandle NULL-Werte
         if ($content === null || empty($content)) {
-            $this->consoleLog("Feed content is null or empty", 'error');
-            $this->logError("Feed content is null or empty");
+            $this->consoleLog('Feed content is null or empty', 'error');
+            $this->logError('Feed content is null or empty');
             return [];
         }
-        
+
         // Initialize SimplePie
         $feed = new \SimplePie();
         $feed->set_raw_data($content);
@@ -72,15 +73,15 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
         $feed->set_stupidly_fast(true);
         $feed->enable_order_by_date(true);
         $feed->init();
-        
+
         if ($feed->error()) {
-            $this->consoleLog("SimplePie error: " . $feed->error(), 'error');
-            $this->logError("SimplePie error: " . $feed->error());
+            $this->consoleLog('SimplePie error: ' . $feed->error(), 'error');
+            $this->logError('SimplePie error: ' . $feed->error());
             return [];
         }
-        
-        $this->consoleLog("Found " . $feed->get_item_quantity() . " items in feed", 'info');
-        
+
+        $this->consoleLog('Found ' . $feed->get_item_quantity() . ' items in feed', 'info');
+
         // Process items
         $items = [];
         foreach ($feed->get_items() as $item) {
@@ -89,11 +90,11 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
                 $items[] = $processed_item;
             }
         }
-        
-        $this->consoleLog("Successfully processed " . count($items) . " items", 'info');
+
+        $this->consoleLog('Successfully processed ' . count($items) . ' items', 'info');
         return $items;
     }
-    
+
     /**
      * Process an individual feed item.
      *
@@ -103,20 +104,20 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
     protected function processItem(\SimplePie_Item $item): ?array {
         // Extract required fields
         $guid = $item->get_id();
-        
+
         // Skip items without GUID
         if (empty($guid)) {
-            $this->logError("Skipping item without GUID");
+            $this->logError('Skipping item without GUID');
             return null;
         }
-        
+
         // Get publication date
         $pub_date = $item->get_date('Y-m-d H:i:s');
         if (empty($pub_date)) {
             $pub_date = current_time('mysql');
-            $this->consoleLog("Using current time as fallback: " . $pub_date, 'warn');
+            $this->consoleLog('Using current time as fallback: ' . $pub_date, 'warn');
         }
-        
+
         // Process item into consistent format
         $processed_item = [
             'guid' => $guid,
@@ -125,17 +126,22 @@ class XmlFeedProcessor extends AbstractFeedProcessor {
             'description' => $this->cleanFieldValue($item->get_description()),
             'content' => $this->cleanFieldValue($item->get_content()),
             'pub_date' => $pub_date,
-            'author' => $this->cleanFieldValue($item->get_author() ? $item->get_author()->get_name() : null),
+            'author' => $this->cleanFieldValue(
+                $item->get_author() ? $item->get_author()->get_name() : null
+            ),
             'categories' => array_map(fn($cat) => $cat->get_term(), $item->get_categories() ?: []),
-            'enclosures' => array_map(function($enclosure) {
-                return [
-                    'link' => $enclosure->get_link(),
-                    'type' => $enclosure->get_type(),
-                    'length' => $enclosure->get_length()
-                ];
-            }, $item->get_enclosures() ?: [])
+            'enclosures' => array_map(
+                function ($enclosure) {
+                    return [
+                        'link' => $enclosure->get_link(),
+                        'type' => $enclosure->get_type(),
+                        'length' => $enclosure->get_length(),
+                    ];
+                },
+                $item->get_enclosures() ?: []
+            ),
         ];
-        
+
         return $processed_item;
     }
 }

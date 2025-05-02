@@ -1,7 +1,7 @@
 <?php
 /**
  * Abstract Feed Processor
- * 
+ *
  * Base class for feed processors.
  *
  * @package AthenaAI\Services\FeedProcessor
@@ -15,7 +15,7 @@ use AthenaAI\Interfaces\FeedProcessorInterface;
 use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -28,7 +28,7 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
      * @var LoggerService
      */
     protected LoggerService $logger;
-    
+
     /**
      * Constructor.
      *
@@ -39,7 +39,7 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
             ->setComponent('Feed Processor')
             ->setVerboseMode($verbose_console);
     }
-    
+
     /**
      * Log a message to the console.
      *
@@ -54,7 +54,7 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
         }
         $this->logger->console($message, $level);
     }
-    
+
     /**
      * Log an error message.
      *
@@ -68,7 +68,7 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
         }
         $this->logger->error($message, $code);
     }
-    
+
     /**
      * Clean and prepare a field value.
      *
@@ -79,15 +79,15 @@ abstract class AbstractFeedProcessor implements FeedProcessorInterface {
         if (empty($value)) {
             return null;
         }
-        
+
         if (is_array($value)) {
             $value = reset($value);
         }
-        
-        $value = strip_tags((string)$value);
+
+        $value = strip_tags((string) $value);
         $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
         $value = trim($value);
-        
+
         return empty($value) ? null : $value;
     }
 }

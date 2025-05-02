@@ -1,6 +1,6 @@
 <?php
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 $this->render_template('header');

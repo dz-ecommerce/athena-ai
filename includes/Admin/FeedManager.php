@@ -30,14 +30,17 @@ class FeedManager extends BaseAdmin {
      */
     public function set_current_menu($parent_file) {
         global $current_screen, $submenu_file;
-        
+
         if ($current_screen && 'athena-feed' === $current_screen->post_type) {
-            if ('edit-tags.php' === $current_screen->base && 'athena-feed-category' === $current_screen->taxonomy) {
+            if (
+                'edit-tags.php' === $current_screen->base &&
+                'athena-feed-category' === $current_screen->taxonomy
+            ) {
                 $submenu_file = 'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed';
             }
             $parent_file = 'edit.php?post_type=athena-feed';
         }
-        
+
         return $parent_file;
     }
 
@@ -46,30 +49,30 @@ class FeedManager extends BaseAdmin {
      */
     public function register_taxonomy() {
         $labels = [
-            'name'              => _x('Feed Categories', 'taxonomy general name', 'athena-ai'),
-            'singular_name'     => _x('Feed Category', 'taxonomy singular name', 'athena-ai'),
-            'search_items'      => __('Search Feed Categories', 'athena-ai'),
-            'all_items'         => __('All Feed Categories', 'athena-ai'),
-            'parent_item'       => __('Parent Feed Category', 'athena-ai'),
+            'name' => _x('Feed Categories', 'taxonomy general name', 'athena-ai'),
+            'singular_name' => _x('Feed Category', 'taxonomy singular name', 'athena-ai'),
+            'search_items' => __('Search Feed Categories', 'athena-ai'),
+            'all_items' => __('All Feed Categories', 'athena-ai'),
+            'parent_item' => __('Parent Feed Category', 'athena-ai'),
             'parent_item_colon' => __('Parent Feed Category:', 'athena-ai'),
-            'edit_item'         => __('Edit Feed Category', 'athena-ai'),
-            'update_item'       => __('Update Feed Category', 'athena-ai'),
-            'add_new_item'      => __('Add New Feed Category', 'athena-ai'),
-            'new_item_name'     => __('New Feed Category Name', 'athena-ai'),
-            'menu_name'         => __('Categories', 'athena-ai'),
+            'edit_item' => __('Edit Feed Category', 'athena-ai'),
+            'update_item' => __('Update Feed Category', 'athena-ai'),
+            'add_new_item' => __('Add New Feed Category', 'athena-ai'),
+            'new_item_name' => __('New Feed Category Name', 'athena-ai'),
+            'menu_name' => __('Categories', 'athena-ai'),
         ];
 
         $args = [
-            'hierarchical'      => true,
-            'labels'           => $labels,
-            'show_ui'          => true,
+            'hierarchical' => true,
+            'labels' => $labels,
+            'show_ui' => true,
             'show_admin_column' => true,
-            'query_var'        => true,
-            'rewrite'          => false,
-            'show_in_rest'     => true,
-            'capabilities'     => [
+            'query_var' => true,
+            'rewrite' => false,
+            'show_in_rest' => true,
+            'capabilities' => [
                 'manage_terms' => 'manage_athena_ai',
-                'edit_terms'   => 'manage_athena_ai',
+                'edit_terms' => 'manage_athena_ai',
                 'delete_terms' => 'manage_athena_ai',
                 'assign_terms' => 'edit_athena_feeds',
             ],
@@ -83,42 +86,42 @@ class FeedManager extends BaseAdmin {
      */
     public function register_post_type() {
         $labels = [
-            'name'                  => _x('Feeds', 'Post type general name', 'athena-ai'),
-            'singular_name'         => _x('Feed', 'Post type singular name', 'athena-ai'),
-            'menu_name'            => _x('Athena AI', 'Admin Menu text', 'athena-ai'),
-            'name_admin_bar'       => _x('Feed', 'Add New on Toolbar', 'athena-ai'),
-            'add_new'              => __('Add New', 'athena-ai'),
-            'add_new_item'         => __('Add New Feed', 'athena-ai'),
-            'new_item'             => __('New Feed', 'athena-ai'),
-            'edit_item'            => __('Edit Feed', 'athena-ai'),
-            'view_item'            => __('View Feed', 'athena-ai'),
-            'all_items'            => __('All Feeds', 'athena-ai'),
-            'search_items'         => __('Search Feeds', 'athena-ai'),
-            'not_found'            => __('No feeds found.', 'athena-ai'),
-            'not_found_in_trash'   => __('No feeds found in Trash.', 'athena-ai'),
+            'name' => _x('Feeds', 'Post type general name', 'athena-ai'),
+            'singular_name' => _x('Feed', 'Post type singular name', 'athena-ai'),
+            'menu_name' => _x('Athena AI', 'Admin Menu text', 'athena-ai'),
+            'name_admin_bar' => _x('Feed', 'Add New on Toolbar', 'athena-ai'),
+            'add_new' => __('Add New', 'athena-ai'),
+            'add_new_item' => __('Add New Feed', 'athena-ai'),
+            'new_item' => __('New Feed', 'athena-ai'),
+            'edit_item' => __('Edit Feed', 'athena-ai'),
+            'view_item' => __('View Feed', 'athena-ai'),
+            'all_items' => __('All Feeds', 'athena-ai'),
+            'search_items' => __('Search Feeds', 'athena-ai'),
+            'not_found' => __('No feeds found.', 'athena-ai'),
+            'not_found_in_trash' => __('No feeds found in Trash.', 'athena-ai'),
         ];
 
         $args = [
-            'labels'            => $labels,
-            'public'            => false,
-            'show_ui'           => true,
-            'show_in_menu'      => true, // Aktiviere das Standard-WordPress-Menü
-            'capability_type'   => 'athena_feed',
-            'capabilities'      => [
-                'publish_posts'     => 'edit_athena_feeds',
-                'edit_posts'        => 'edit_athena_feeds',
+            'labels' => $labels,
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => true, // Aktiviere das Standard-WordPress-Menü
+            'capability_type' => 'athena_feed',
+            'capabilities' => [
+                'publish_posts' => 'edit_athena_feeds',
+                'edit_posts' => 'edit_athena_feeds',
                 'edit_others_posts' => 'edit_athena_feeds',
-                'delete_posts'      => 'edit_athena_feeds',
+                'delete_posts' => 'edit_athena_feeds',
                 'read_private_posts' => 'manage_options',
-                'create_posts'       => 'manage_options',
+                'create_posts' => 'manage_options',
             ],
-            'map_meta_cap'      => false,
-            'hierarchical'       => false,
-            'supports'          => ['title'],
-            'has_archive'       => false,
-            'rewrite'          => false,
-            'show_in_rest'     => true,
-            'taxonomies'       => ['athena-feed-category'],
+            'map_meta_cap' => false,
+            'hierarchical' => false,
+            'supports' => ['title'],
+            'has_archive' => false,
+            'rewrite' => false,
+            'show_in_rest' => true,
+            'taxonomies' => ['athena-feed-category'],
         ];
 
         register_post_type('athena-feed', $args);
@@ -133,7 +136,7 @@ class FeedManager extends BaseAdmin {
         } elseif ('publish_athena_feeds' === $cap) {
             $caps = ['manage_options'];
         }
-        
+
         return $caps;
     }
 
@@ -210,24 +213,20 @@ class FeedManager extends BaseAdmin {
         if (isset($_POST['athena_feed_url'])) {
             // Verwende UrlHelper zur sicheren Verarbeitung der URL
             $feed_url = \AthenaAI\Helpers\UrlHelper::safe_esc_url_raw($_POST['athena_feed_url']);
-            
+
             // Aktualisiere die Datenbank nur, wenn die URL nicht leer ist
             if ($feed_url !== '') {
-                update_post_meta(
-                    $post_id,
-                    '_athena_feed_url',
-                    $feed_url
-                );
-                
+                update_post_meta($post_id, '_athena_feed_url', $feed_url);
+
                 // Update feed meta data
                 $this->update_feed_meta($post_id, $feed_url);
             }
         }
     }
-    
+
     /**
      * Update feed meta data when feed URL changes
-     * 
+     *
      * @param int $post_id The post ID
      * @param string|null $feed_url The feed URL
      */
@@ -236,7 +235,7 @@ class FeedManager extends BaseAdmin {
         if (!get_post_meta($post_id, '_athena_feed_update_interval', true)) {
             update_post_meta($post_id, '_athena_feed_update_interval', 3600); // Default: 1 hour
         }
-        
+
         if (!get_post_meta($post_id, '_athena_feed_active', true)) {
             update_post_meta($post_id, '_athena_feed_active', '1'); // Active by default
         }
@@ -244,7 +243,7 @@ class FeedManager extends BaseAdmin {
 
     /**
      * Register admin menu
-     * 
+     *
      * Hinweis: Dieser Code wurde angepasst, um zu verhindern, dass Menüpunkte doppelt angezeigt werden
      */
     public function register_admin_menu() {
@@ -269,7 +268,7 @@ class FeedManager extends BaseAdmin {
                 'manage_options',
                 'edit-tags.php?taxonomy=athena-feed-category&post_type=athena-feed'
             );*/
-            
+
             // Add ViewFeed News submenu
             /*add_submenu_page(
                 'edit.php?post_type=athena-feed',

@@ -4,15 +4,15 @@ declare(strict_types=1);
 namespace AthenaAI\Admin;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 class FeedItemsList extends \WP_List_Table {
     public function __construct() {
         parent::__construct([
             'singular' => 'feed_item',
-            'plural'   => 'feed_items',
-            'ajax'     => false
+            'plural' => 'feed_items',
+            'ajax' => false,
         ]);
     }
 
@@ -26,24 +26,19 @@ class FeedItemsList extends \WP_List_Table {
 
         $this->set_pagination_args([
             'total_items' => $total_items,
-            'per_page'    => $per_page,
-            'total_pages' => ceil($total_items / $per_page)
+            'per_page' => $per_page,
+            'total_pages' => ceil($total_items / $per_page),
         ]);
 
-        $this->_column_headers = [
-            $this->get_columns(),
-            [],
-            $this->get_sortable_columns(),
-            'title'
-        ];
+        $this->_column_headers = [$this->get_columns(), [], $this->get_sortable_columns(), 'title'];
     }
 
     public function get_columns(): array {
         return [
-            'title'      => __('Title', 'athena-ai'),
-            'feed_url'   => __('Feed Source', 'athena-ai'),
-            'pub_date'   => __('Published', 'athena-ai'),
-            'status'     => __('Status', 'athena-ai'),
+            'title' => __('Title', 'athena-ai'),
+            'feed_url' => __('Feed Source', 'athena-ai'),
+            'pub_date' => __('Published', 'athena-ai'),
+            'status' => __('Status', 'athena-ai'),
         ];
     }
 
@@ -88,7 +83,7 @@ class FeedItemsList extends \WP_List_Table {
 
     private function get_total_items(): int {
         global $wpdb;
-        return (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
     }
 
     public function column_default($item, $column_name): string {
@@ -100,7 +95,11 @@ class FeedItemsList extends \WP_List_Table {
         $actions = [
             'view' => sprintf(
                 '<a href="%s" target="_blank">%s</a>',
-                \AthenaAI\Core\SafetyWrapper::esc_url(isset($item['raw_content']) && is_string($item['raw_content']) ? (json_decode($item['raw_content'])->link ?? '#') : '#'),
+                \AthenaAI\Core\SafetyWrapper::esc_url(
+                    isset($item['raw_content']) && is_string($item['raw_content'])
+                        ? json_decode($item['raw_content'])->link ?? '#'
+                        : '#'
+                ),
                 __('View Original', 'athena-ai')
             ),
         ];
@@ -115,8 +114,14 @@ class FeedItemsList extends \WP_List_Table {
     public function column_feed_url($item): string {
         return sprintf(
             '<a href="%1$s" target="_blank">%2$s</a>',
-            \AthenaAI\Core\SafetyWrapper::esc_url(isset($item['feed_url']) && is_string($item['feed_url']) ? $item['feed_url'] : ''),
-            esc_html(isset($item['feed_url']) && is_string($item['feed_url']) ? wp_parse_url($item['feed_url'], PHP_URL_HOST) : '')
+            \AthenaAI\Core\SafetyWrapper::esc_url(
+                isset($item['feed_url']) && is_string($item['feed_url']) ? $item['feed_url'] : ''
+            ),
+            esc_html(
+                isset($item['feed_url']) && is_string($item['feed_url'])
+                    ? wp_parse_url($item['feed_url'], PHP_URL_HOST)
+                    : ''
+            )
         );
     }
 
@@ -146,7 +151,6 @@ class FeedItemsList extends \WP_List_Table {
         // Create an instance of our list table
         $list_table = new self();
         $list_table->prepare_items();
-
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -156,7 +160,11 @@ class FeedItemsList extends \WP_List_Table {
             </div>
 
             <form method="get">
-                <input type="hidden" name="page" value="<?php echo esc_attr(isset($_REQUEST['page']) && is_string($_REQUEST['page']) ? $_REQUEST['page'] : ''); ?>" />
+                <input type="hidden" name="page" value="<?php echo esc_attr(
+                    isset($_REQUEST['page']) && is_string($_REQUEST['page'])
+                        ? $_REQUEST['page']
+                        : ''
+                ); ?>" />
                 <?php $list_table->display(); ?>
             </form>
         </div>
@@ -173,18 +181,23 @@ class FeedItemsList extends \WP_List_Table {
                 MAX(pub_date) as latest_item
             FROM {$wpdb->prefix}feed_raw_items"
         );
-
         ?>
         <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(number_format_i18n($stats->total_items)); ?></span>
+            <span class="stats-number"><?php echo esc_html(
+                number_format_i18n($stats->total_items)
+            ); ?></span>
             <span class="stats-label"><?php esc_html_e('Total Items', 'athena-ai'); ?></span>
         </div>
         <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(number_format_i18n($stats->total_feeds)); ?></span>
+            <span class="stats-number"><?php echo esc_html(
+                number_format_i18n($stats->total_feeds)
+            ); ?></span>
             <span class="stats-label"><?php esc_html_e('Active Feeds', 'athena-ai'); ?></span>
         </div>
         <div class="stats-box">
-            <span class="stats-number"><?php echo esc_html(human_time_diff(strtotime($stats->latest_item))); ?></span>
+            <span class="stats-number"><?php echo esc_html(
+                human_time_diff(strtotime($stats->latest_item))
+            ); ?></span>
             <span class="stats-label"><?php esc_html_e('Since Last Item', 'athena-ai'); ?></span>
         </div>
         <?php

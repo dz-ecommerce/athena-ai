@@ -29,7 +29,10 @@
         <div id="github-settings" class="tab-content active">
             <h2><?php esc_html_e('GitHub Repository Settings', 'athena-ai'); ?></h2>
             <p class="description">
-                <?php esc_html_e('Configure GitHub repository settings for automatic updates.', 'athena-ai'); ?>
+                <?php esc_html_e(
+                    'Configure GitHub repository settings for automatic updates.',
+                    'athena-ai'
+                ); ?>
             </p>
             
             <table class="form-table">
@@ -46,7 +49,10 @@
                                value="<?php echo esc_attr($settings['github_token']); ?>" 
                                class="regular-text">
                         <p class="description">
-                            <?php esc_html_e('Enter your GitHub personal access token for private repositories', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Enter your GitHub personal access token for private repositories',
+                                'athena-ai'
+                            ); ?>
                             <br>
                             <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">
                                 <?php esc_html_e('Generate a token', 'athena-ai'); ?> ↗
@@ -67,7 +73,10 @@
                                value="<?php echo esc_attr($settings['github_owner']); ?>" 
                                class="regular-text">
                         <p class="description">
-                            <?php esc_html_e('GitHub username or organization name', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'GitHub username or organization name',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -134,7 +143,10 @@
                                value="<?php echo esc_attr($settings['openai_org_id']); ?>" 
                                class="regular-text">
                         <p class="description">
-                            <?php esc_html_e('Optional: Enter your OpenAI organization ID', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Optional: Enter your OpenAI organization ID',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -146,9 +158,12 @@
                     </th>
                     <td>
                         <select name="athena_ai_openai_default_model" id="athena_ai_openai_default_model">
-                            <?php foreach ($models['openai'] as $model_id => $model_name) : ?>
+                            <?php foreach ($models['openai'] as $model_id => $model_name): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
-                                    <?php selected($settings['openai_default_model'], $model_id); ?>>
+                                    <?php selected(
+                                        $settings['openai_default_model'],
+                                        $model_id
+                                    ); ?>>
                                     <?php echo esc_html($model_name); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -169,9 +184,14 @@
                                max="2" 
                                step="0.1" 
                                value="<?php echo esc_attr($settings['openai_temperature']); ?>">
-                        <span class="temperature-value"><?php echo esc_html($settings['openai_temperature']); ?></span>
+                        <span class="temperature-value"><?php echo esc_html(
+                            $settings['openai_temperature']
+                        ); ?></span>
                         <p class="description">
-                            <?php esc_html_e('Controls randomness: 0 is focused, 2 is more creative', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Controls randomness: 0 is focused, 2 is more creative',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -209,7 +229,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_anthropic_model" id="athena_ai_anthropic_model">
-                            <?php foreach ($models['anthropic'] as $model_id => $model_name) : ?>
+                            <?php foreach ($models['anthropic'] as $model_id => $model_name): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
                                     <?php selected($settings['anthropic_model'], $model_id); ?>>
                                     <?php echo esc_html($model_name); ?>
@@ -252,7 +272,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_google_model" id="athena_ai_google_model">
-                            <?php foreach ($models['google'] as $model_id => $model_name) : ?>
+                            <?php foreach ($models['google'] as $model_id => $model_name): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
                                     <?php selected($settings['google_model'], $model_id); ?>>
                                     <?php echo esc_html($model_name); ?>
@@ -295,7 +315,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_mistral_model" id="athena_ai_mistral_model">
-                            <?php foreach ($models['mistral'] as $model_id => $model_name) : ?>
+                            <?php foreach ($models['mistral'] as $model_id => $model_name): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
                                     <?php selected($settings['mistral_model'], $model_id); ?>>
                                     <?php echo esc_html($model_name); ?>
@@ -310,7 +330,10 @@
         <div id="image-ai-settings" class="tab-content">
             <h2><?php esc_html_e('Image AI Settings', 'athena-ai'); ?></h2>
             <p class="description">
-                <?php esc_html_e('Configure settings for image generation AI services.', 'athena-ai'); ?>
+                <?php esc_html_e(
+                    'Configure settings for image generation AI services.',
+                    'athena-ai'
+                ); ?>
             </p>
 
             <!-- DALL-E Settings -->
@@ -327,7 +350,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_dalle_size" id="athena_ai_dalle_size">
-                            <?php foreach ($models['dalle']['sizes'] as $size) : ?>
+                            <?php foreach ($models['dalle']['sizes'] as $size): ?>
                                 <option value="<?php echo esc_attr($size); ?>" 
                                     <?php selected($settings['dalle_size'], $size); ?>>
                                     <?php echo esc_html($size); ?>
@@ -344,7 +367,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_dalle_quality" id="athena_ai_dalle_quality">
-                            <?php foreach ($models['dalle']['qualities'] as $quality) : ?>
+                            <?php foreach ($models['dalle']['qualities'] as $quality): ?>
                                 <option value="<?php echo esc_attr($quality); ?>" 
                                     <?php selected($settings['dalle_quality'], $quality); ?>>
                                     <?php echo esc_html(ucfirst($quality)); ?>
@@ -361,7 +384,7 @@
                     </th>
                     <td>
                         <select name="athena_ai_dalle_style" id="athena_ai_dalle_style">
-                            <?php foreach ($models['dalle']['styles'] as $style) : ?>
+                            <?php foreach ($models['dalle']['styles'] as $style): ?>
                                 <option value="<?php echo esc_attr($style); ?>" 
                                     <?php selected($settings['dalle_style'], $style); ?>>
                                     <?php echo esc_html(ucfirst($style)); ?>
@@ -419,7 +442,10 @@
                                value="<?php echo esc_attr($settings['midjourney_style']); ?>" 
                                class="regular-text">
                         <p class="description">
-                            <?php esc_html_e('Default style preset for image generation', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Default style preset for image generation',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -438,7 +464,9 @@
                         <input type="password" 
                                name="athena_ai_stablediffusion_api_key" 
                                id="athena_ai_stablediffusion_api_key" 
-                               value="<?php echo esc_attr($settings['stablediffusion_api_key']); ?>" 
+                               value="<?php echo esc_attr(
+                                   $settings['stablediffusion_api_key']
+                               ); ?>" 
                                class="regular-text">
                         <p class="description">
                             <?php esc_html_e('Enter your Stable Diffusion API key', 'athena-ai'); ?>
@@ -457,9 +485,15 @@
                     </th>
                     <td>
                         <select name="athena_ai_stablediffusion_model" id="athena_ai_stablediffusion_model">
-                            <?php foreach ($models['stablediffusion']['models'] as $model_id => $model_name) : ?>
+                            <?php foreach (
+                                $models['stablediffusion']['models']
+                                as $model_id => $model_name
+                            ): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
-                                    <?php selected($settings['stablediffusion_model'], $model_id); ?>>
+                                    <?php selected(
+                                        $settings['stablediffusion_model'],
+                                        $model_id
+                                    ); ?>>
                                     <?php echo esc_html($model_name); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -481,7 +515,10 @@
                                max="150" 
                                class="small-text">
                         <p class="description">
-                            <?php esc_html_e('Number of inference steps (20-150). Higher values = better quality but slower generation', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Number of inference steps (20-150). Higher values = better quality but slower generation',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -492,7 +529,10 @@
         <div id="maintenance-settings" class="tab-content">
             <h2><?php esc_html_e('System Maintenance', 'athena-ai'); ?></h2>
             <p class="description">
-                <?php esc_html_e('Check and maintain system components for optimal performance.', 'athena-ai'); ?>
+                <?php esc_html_e(
+                    'Check and maintain system components for optimal performance.',
+                    'athena-ai'
+                ); ?>
             </p>
 
             <!-- Feed System Status -->
@@ -509,19 +549,34 @@
                 <tbody>
                     <!-- Feed Items Database -->
                     <tr>
-                        <td><strong><?php esc_html_e('Feed Items Database', 'athena-ai'); ?></strong></td>
+                        <td><strong><?php esc_html_e(
+                            'Feed Items Database',
+                            'athena-ai'
+                        ); ?></strong></td>
                         <td>
                             <?php if ($maintenance['feed_items_table_exists']): ?>
-                                <span class="status-ok"><?php esc_html_e('OK', 'athena-ai'); ?></span>
+                                <span class="status-ok"><?php esc_html_e(
+                                    'OK',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php else: ?>
-                                <span class="status-error"><?php esc_html_e('Missing', 'athena-ai'); ?></span>
+                                <span class="status-error"><?php esc_html_e(
+                                    'Missing',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['feed_items_table_exists']): ?>
-                                <?php printf(esc_html__('Table exists with %d items', 'athena-ai'), $maintenance['feed_items_count']); ?>
+                                <?php printf(
+                                    esc_html__('Table exists with %d items', 'athena-ai'),
+                                    $maintenance['feed_items_count']
+                                ); ?>
                             <?php else: ?>
-                                <?php esc_html_e('The feed items database table is missing', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'The feed items database table is missing',
+                                    'athena-ai'
+                                ); ?>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -529,7 +584,10 @@
                                 <form method="post" action="">
                                     <?php echo $maintenance_nonce_field; ?>
                                     <input type="hidden" name="create_tables" value="1">
-                                    <button type="submit" class="button button-small"><?php esc_html_e('Create Table', 'athena-ai'); ?></button>
+                                    <button type="submit" class="button button-small"><?php esc_html_e(
+                                        'Create Table',
+                                        'athena-ai'
+                                    ); ?></button>
                                 </form>
                             <?php endif; ?>
                         </td>
@@ -537,19 +595,34 @@
                     
                     <!-- Feed Metadata Database -->
                     <tr>
-                        <td><strong><?php esc_html_e('Feed Metadata Database', 'athena-ai'); ?></strong></td>
+                        <td><strong><?php esc_html_e(
+                            'Feed Metadata Database',
+                            'athena-ai'
+                        ); ?></strong></td>
                         <td>
                             <?php if ($maintenance['feed_metadata_table_exists']): ?>
-                                <span class="status-ok"><?php esc_html_e('OK', 'athena-ai'); ?></span>
+                                <span class="status-ok"><?php esc_html_e(
+                                    'OK',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php else: ?>
-                                <span class="status-error"><?php esc_html_e('Missing', 'athena-ai'); ?></span>
+                                <span class="status-error"><?php esc_html_e(
+                                    'Missing',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['feed_metadata_table_exists']): ?>
-                                <?php printf(esc_html__('Table exists with %d entries', 'athena-ai'), $maintenance['feed_metadata_count']); ?>
+                                <?php printf(
+                                    esc_html__('Table exists with %d entries', 'athena-ai'),
+                                    $maintenance['feed_metadata_count']
+                                ); ?>
                             <?php else: ?>
-                                <?php esc_html_e('The feed metadata database table is missing', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'The feed metadata database table is missing',
+                                    'athena-ai'
+                                ); ?>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -557,7 +630,10 @@
                                 <form method="post" action="">
                                     <?php echo $maintenance_nonce_field; ?>
                                     <input type="hidden" name="create_tables" value="1">
-                                    <button type="submit" class="button button-small"><?php esc_html_e('Create Table', 'athena-ai'); ?></button>
+                                    <button type="submit" class="button button-small"><?php esc_html_e(
+                                        'Create Table',
+                                        'athena-ai'
+                                    ); ?></button>
                                 </form>
                             <?php endif; ?>
                         </td>
@@ -565,54 +641,96 @@
                     
                     <!-- Feed Cron Job -->
                     <tr>
-                        <td><strong><?php esc_html_e('Feed Fetch Cron Job', 'athena-ai'); ?></strong></td>
+                        <td><strong><?php esc_html_e(
+                            'Feed Fetch Cron Job',
+                            'athena-ai'
+                        ); ?></strong></td>
                         <td>
                             <?php if ($maintenance['cron_event_scheduled']): ?>
-                                <span class="status-ok"><?php esc_html_e('Scheduled', 'athena-ai'); ?></span>
+                                <span class="status-ok"><?php esc_html_e(
+                                    'Scheduled',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php else: ?>
-                                <span class="status-error"><?php esc_html_e('Not Scheduled', 'athena-ai'); ?></span>
+                                <span class="status-error"><?php esc_html_e(
+                                    'Not Scheduled',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['cron_event_scheduled']): ?>
-                                <?php printf(esc_html__('Next run: %s', 'athena-ai'), $maintenance['next_cron_run_human']); ?>
+                                <?php printf(
+                                    esc_html__('Next run: %s', 'athena-ai'),
+                                    $maintenance['next_cron_run_human']
+                                ); ?>
                                 <br>
-                                <?php printf(esc_html__('Last fetch: %s', 'athena-ai'), $maintenance['last_fetch_human']); ?>
+                                <?php printf(
+                                    esc_html__('Last fetch: %s', 'athena-ai'),
+                                    $maintenance['last_fetch_human']
+                                ); ?>
                             <?php else: ?>
-                                <?php esc_html_e('The automatic feed fetch is not scheduled', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'The automatic feed fetch is not scheduled',
+                                    'athena-ai'
+                                ); ?>
                             <?php endif; ?>
                         </td>
                         <td>
                             <form method="post" action="">
                                 <?php echo $maintenance_nonce_field; ?>
                                 <input type="hidden" name="fix_cron" value="1">
-                                <button type="submit" class="button button-small"><?php esc_html_e('Fix Schedule', 'athena-ai'); ?></button>
+                                <button type="submit" class="button button-small"><?php esc_html_e(
+                                    'Fix Schedule',
+                                    'athena-ai'
+                                ); ?></button>
                             </form>
                         </td>
                     </tr>
                     
                     <!-- WordPress Cron Status -->
                     <tr>
-                        <td><strong><?php esc_html_e('WordPress Cron', 'athena-ai'); ?></strong></td>
+                        <td><strong><?php esc_html_e(
+                            'WordPress Cron',
+                            'athena-ai'
+                        ); ?></strong></td>
                         <td>
                             <?php if ($maintenance['wp_cron_disabled']): ?>
-                                <span class="status-warning"><?php esc_html_e('Disabled', 'athena-ai'); ?></span>
+                                <span class="status-warning"><?php esc_html_e(
+                                    'Disabled',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php else: ?>
-                                <span class="status-ok"><?php esc_html_e('Enabled', 'athena-ai'); ?></span>
+                                <span class="status-ok"><?php esc_html_e(
+                                    'Enabled',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['wp_cron_disabled']): ?>
-                                <?php esc_html_e('WordPress cron is disabled in wp-config.php (DISABLE_WP_CRON is set to true)', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'WordPress cron is disabled in wp-config.php (DISABLE_WP_CRON is set to true)',
+                                    'athena-ai'
+                                ); ?>
                                 <br>
-                                <?php esc_html_e('You need to set up a server cron job to trigger WordPress scheduled tasks', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'You need to set up a server cron job to trigger WordPress scheduled tasks',
+                                    'athena-ai'
+                                ); ?>
                             <?php else: ?>
-                                <?php esc_html_e('WordPress cron is enabled and will run on site visits', 'athena-ai'); ?>
+                                <?php esc_html_e(
+                                    'WordPress cron is enabled and will run on site visits',
+                                    'athena-ai'
+                                ); ?>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['wp_cron_disabled']): ?>
-                                <a href="https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/" target="_blank" class="button button-small"><?php esc_html_e('Learn More', 'athena-ai'); ?></a>
+                                <a href="https://developer.wordpress.org/plugins/cron/hooking-wp-cron-into-the-system-task-scheduler/" target="_blank" class="button button-small"><?php esc_html_e(
+                                    'Learn More',
+                                    'athena-ai'
+                                ); ?></a>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -622,20 +740,33 @@
                         <td><strong><?php esc_html_e('Active Feeds', 'athena-ai'); ?></strong></td>
                         <td>
                             <?php if ($maintenance['feed_count'] > 0): ?>
-                                <span class="status-ok"><?php echo esc_html($maintenance['feed_count']); ?></span>
+                                <span class="status-ok"><?php echo esc_html(
+                                    $maintenance['feed_count']
+                                ); ?></span>
                             <?php else: ?>
-                                <span class="status-warning"><?php esc_html_e('None', 'athena-ai'); ?></span>
+                                <span class="status-warning"><?php esc_html_e(
+                                    'None',
+                                    'athena-ai'
+                                ); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($maintenance['feed_count'] > 0): ?>
-                                <?php printf(esc_html__('%d active feeds configured', 'athena-ai'), $maintenance['feed_count']); ?>
+                                <?php printf(
+                                    esc_html__('%d active feeds configured', 'athena-ai'),
+                                    $maintenance['feed_count']
+                                ); ?>
                             <?php else: ?>
                                 <?php esc_html_e('No feeds are configured', 'athena-ai'); ?>
                             <?php endif; ?>
                         </td>
                         <td>
-                            <a href="<?php echo esc_url(admin_url('edit.php?post_type=athena-feed')); ?>" class="button button-small"><?php esc_html_e('Manage Feeds', 'athena-ai'); ?></a>
+                            <a href="<?php echo esc_url(
+                                admin_url('edit.php?post_type=athena-feed')
+                            ); ?>" class="button button-small"><?php esc_html_e(
+    'Manage Feeds',
+    'athena-ai'
+); ?></a>
                         </td>
                     </tr>
                 </tbody>
@@ -660,7 +791,10 @@
                             <?php esc_html_e('Enable debug mode', 'athena-ai'); ?>
                         </label>
                         <p class="description">
-                            <?php esc_html_e('When enabled, additional debug information will be logged to the WordPress debug log', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'When enabled, additional debug information will be logged to the WordPress debug log',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>
@@ -668,14 +802,35 @@
                     <th scope="row"><?php _e('Feed Fetch Interval', 'athena-ai'); ?></th>
                     <td>
                         <select name="athena_ai_feed_cron_interval">
-                            <option value="athena_1min" <?php selected($settings['feed_cron_interval'], 'athena_1min'); ?>><?php _e('Every Minute', 'athena-ai'); ?></option>
-                            <option value="athena_5min" <?php selected($settings['feed_cron_interval'], 'athena_5min'); ?>><?php _e('Every 5 Minutes', 'athena-ai'); ?></option>
-                            <option value="athena_15min" <?php selected($settings['feed_cron_interval'], 'athena_15min'); ?>><?php _e('Every 15 Minutes', 'athena-ai'); ?></option>
-                            <option value="athena_30min" <?php selected($settings['feed_cron_interval'], 'athena_30min'); ?>><?php _e('Every 30 Minutes', 'athena-ai'); ?></option>
-                            <option value="athena_45min" <?php selected($settings['feed_cron_interval'], 'athena_45min'); ?>><?php _e('Every 45 Minutes', 'athena-ai'); ?></option>
-                            <option value="hourly" <?php selected($settings['feed_cron_interval'], 'hourly'); ?>><?php _e('Hourly', 'athena-ai'); ?></option>
+                            <option value="athena_1min" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'athena_1min'
+                            ); ?>><?php _e('Every Minute', 'athena-ai'); ?></option>
+                            <option value="athena_5min" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'athena_5min'
+                            ); ?>><?php _e('Every 5 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_15min" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'athena_15min'
+                            ); ?>><?php _e('Every 15 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_30min" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'athena_30min'
+                            ); ?>><?php _e('Every 30 Minutes', 'athena-ai'); ?></option>
+                            <option value="athena_45min" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'athena_45min'
+                            ); ?>><?php _e('Every 45 Minutes', 'athena-ai'); ?></option>
+                            <option value="hourly" <?php selected(
+                                $settings['feed_cron_interval'],
+                                'hourly'
+                            ); ?>><?php _e('Hourly', 'athena-ai'); ?></option>
                         </select>
-                        <p class="description"><?php _e('How often should the plugin check for new feed items.', 'athena-ai'); ?></p>
+                        <p class="description"><?php _e(
+                            'How often should the plugin check for new feed items.',
+                            'athena-ai'
+                        ); ?></p>
                     </td>
                 </tr>
                 <tr>
@@ -683,11 +838,16 @@
                         <?php esc_html_e('Manual Feed Fetch', 'athena-ai'); ?>
                     </th>
                     <td>
-                        <a href="<?php echo esc_url(admin_url('admin-post.php?action=athena_debug_fetch_feeds')); ?>" class="button">
+                        <a href="<?php echo esc_url(
+                            admin_url('admin-post.php?action=athena_debug_fetch_feeds')
+                        ); ?>" class="button">
                             <?php esc_html_e('Fetch Feeds Now', 'athena-ai'); ?>
                         </a>
                         <p class="description">
-                            <?php esc_html_e('Manually trigger the feed fetch process for all active feeds', 'athena-ai'); ?>
+                            <?php esc_html_e(
+                                'Manually trigger the feed fetch process for all active feeds',
+                                'athena-ai'
+                            ); ?>
                         </p>
                     </td>
                 </tr>

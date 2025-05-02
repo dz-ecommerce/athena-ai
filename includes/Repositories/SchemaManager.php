@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace AthenaAI\Repositories;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -36,15 +36,17 @@ class SchemaManager {
         // Only check on specific admin pages to avoid unnecessary DB queries
         if (\function_exists('get_current_screen')) {
             $screen = \get_current_screen();
-            if (!$screen || !\in_array($screen->id, ['athena-feed', 'athena_page_athena-feed-items'])) {
+            if (
+                !$screen ||
+                !\in_array($screen->id, ['athena-feed', 'athena_page_athena-feed-items'])
+            ) {
                 return;
             }
-        } 
+        }
         // Only verify the main table – others are handled in setup_tables().
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            'SHOW TABLES LIKE %s',
-            $wpdb->prefix . 'feed_raw_items'
-        ));
+        $table_exists = $wpdb->get_var(
+            $wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . 'feed_raw_items')
+        );
 
         if (!$table_exists) {
             self::setup_tables();
@@ -58,9 +60,11 @@ class SchemaManager {
         global $wpdb;
         $prefix = $wpdb->prefix;
 
-        $items     = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_raw_items'));
-        $errors    = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_errors'));
-        $metadata  = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_metadata'));
+        $items = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_raw_items'));
+        $errors = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_errors'));
+        $metadata = $wpdb->get_var(
+            $wpdb->prepare('SHOW TABLES LIKE %s', $prefix . 'feed_metadata')
+        );
 
         return (bool) ($items && $errors && $metadata);
     }

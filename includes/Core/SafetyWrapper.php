@@ -24,7 +24,7 @@ class SafetyWrapper {
     public static function esc_url($url): string {
         return UrlHelper::safe_esc_url($url);
     }
-    
+
     /**
      * Sichere Version von esc_url_raw, die NULL-Werte abfängt.
      *
@@ -34,7 +34,7 @@ class SafetyWrapper {
     public static function esc_url_raw($url): string {
         return UrlHelper::safe_esc_url_raw($url);
     }
-    
+
     /**
      * Sichere Version von esc_attr, die NULL-Werte abfängt.
      *
@@ -44,7 +44,7 @@ class SafetyWrapper {
     public static function esc_attr($text): string {
         return StringHelper::safe_esc_attr($text);
     }
-    
+
     /**
      * Sichere Version von esc_html, die NULL-Werte abfängt.
      *
@@ -54,7 +54,7 @@ class SafetyWrapper {
     public static function esc_html($text): string {
         return StringHelper::safe_esc_html($text);
     }
-    
+
     /**
      * Sichere Version von esc_js, die NULL-Werte abfängt.
      *
@@ -65,21 +65,21 @@ class SafetyWrapper {
         if ($text === null) {
             return '';
         }
-        
+
         // Typumwandlung zu String
         if (!is_string($text)) {
-            $text = (string)$text;
+            $text = (string) $text;
         }
-        
+
         // WordPress esc_js verwenden, falls verfügbar
         if (function_exists('esc_js')) {
             return \esc_js($text);
         }
-        
+
         // Einfache Fallback-Implementierung - unsicher, aber besser als nichts
         return addslashes($text);
     }
-    
+
     /**
      * Sichere Version von sanitize_text_field, die NULL-Werte abfängt.
      *
@@ -89,7 +89,7 @@ class SafetyWrapper {
     public static function sanitize_text_field($text): string {
         return StringHelper::safe_sanitize_text($text);
     }
-    
+
     /**
      * Sichere Version von wp_kses_post
      *
@@ -101,21 +101,24 @@ class SafetyWrapper {
         if ($content === null) {
             return '';
         }
-        
+
         // Typumwandlung zu String
         if (!is_string($content)) {
-            $content = (string)$content;
+            $content = (string) $content;
         }
-        
+
         // WordPress wp_kses_post verwenden, falls verfügbar
         if (function_exists('wp_kses_post')) {
             return \wp_kses_post($content);
         }
-        
+
         // Einfache Fallback-Implementierung - unsicher, aber besser als nichts
-        return strip_tags($content, '<p><a><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><img><span><div>');
+        return strip_tags(
+            $content,
+            '<p><a><strong><em><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><img><span><div>'
+        );
     }
-    
+
     /**
      * Sichere Methode zur String-Konvertierung
      *
@@ -127,22 +130,22 @@ class SafetyWrapper {
         if ($value === null) {
             return $default;
         }
-        
+
         if (is_array($value) || is_object($value)) {
             // Bei Arrays oder Objekten sicher konvertieren
             try {
                 if (method_exists($value, '__toString')) {
-                    return (string)$value;
+                    return (string) $value;
                 } elseif (is_array($value)) {
                     return json_encode($value) ?: $default;
                 } else {
-                    return json_encode((array)$value) ?: $default;
+                    return json_encode((array) $value) ?: $default;
                 }
             } catch (\Throwable $e) {
                 return $default;
             }
         }
-        
-        return (string)$value;
+
+        return (string) $value;
     }
 }

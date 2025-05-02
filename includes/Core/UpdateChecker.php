@@ -27,7 +27,7 @@ class UpdateChecker {
 
     /**
      * Initialize the update checker
-     * 
+     *
      * @param string $owner GitHub repository owner
      * @param string $repo GitHub repository name
      * @param string|null $access_token Optional GitHub access token for private repositories
@@ -43,13 +43,18 @@ class UpdateChecker {
      */
     public function init() {
         // Define the path to the update checker
-        $updateCheckerPath = ATHENA_AI_PLUGIN_DIR . 'includes/Libraries/plugin-update-checker/plugin-update-checker.php';
-        
+        $updateCheckerPath =
+            ATHENA_AI_PLUGIN_DIR .
+            'includes/Libraries/plugin-update-checker/plugin-update-checker.php';
+
         // Check if update checker exists
         if (!file_exists($updateCheckerPath)) {
-            add_action('admin_notices', function() {
+            add_action('admin_notices', function () {
                 echo '<div class="error"><p>';
-                echo esc_html__('Athena AI Plugin: Update checker library is missing. Please reinstall the plugin.', 'athena-ai');
+                echo esc_html__(
+                    'Athena AI Plugin: Update checker library is missing. Please reinstall the plugin.',
+                    'athena-ai'
+                );
                 echo '</p></div>';
             });
             return;
@@ -61,14 +66,18 @@ class UpdateChecker {
         try {
             // Create the update checker instance
             $updateChecker = PucFactory::buildUpdateChecker(
-                sprintf('https://github.com/%s/%s/', urlencode($this->owner), urlencode($this->repo)),
+                sprintf(
+                    'https://github.com/%s/%s/',
+                    urlencode($this->owner),
+                    urlencode($this->repo)
+                ),
                 ATHENA_AI_PLUGIN_FILE,
                 'athena-ai'
             );
 
             // Set to use releases instead of tags
             $updateChecker->getVcsApi()->enableReleaseAssets();
-            
+
             // Set the branch that contains the stable release
             $updateChecker->setBranch('main');
 
@@ -79,11 +88,19 @@ class UpdateChecker {
 
             // Add filters for update checking
             $pluginFile = plugin_basename(ATHENA_AI_PLUGIN_FILE);
-            add_filter('pre_set_site_transient_update_plugins', function($transient) use ($updateChecker, $pluginFile) {
+            add_filter('pre_set_site_transient_update_plugins', function ($transient) use (
+                $updateChecker,
+                $pluginFile
+            ) {
                 if (!empty($transient) && isset($transient->response[$pluginFile])) {
                     $update = $transient->response[$pluginFile];
                     // Ensure the update ZIP is from a release
-                    if (isset($update->package) && is_string($update->package) && $update->package !== '' && strpos($update->package, '/releases/download/') === false) {
+                    if (
+                        isset($update->package) &&
+                        is_string($update->package) &&
+                        $update->package !== '' &&
+                        strpos($update->package, '/releases/download/') === false
+                    ) {
                         unset($transient->response[$pluginFile]);
                     }
                 }
@@ -92,11 +109,14 @@ class UpdateChecker {
 
             // Add debug information in WP_DEBUG mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                add_action('admin_notices', function() {
+                add_action('admin_notices', function () {
                     if (current_user_can('manage_options')) {
                         echo '<div class="notice notice-info is-dismissible"><p>';
                         echo sprintf(
-                            esc_html__('Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.', 'athena-ai'),
+                            esc_html__(
+                                'Athena AI Update Checker Status: Connected to GitHub repository at https://github.com/%s/%s. Updates will be checked automatically.',
+                                'athena-ai'
+                            ),
                             esc_html($this->owner),
                             esc_html($this->repo)
                         );
@@ -104,15 +124,19 @@ class UpdateChecker {
                     }
                 });
             }
-
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                add_action('admin_notices', function() use ($e) {
+                add_action('admin_notices', function () use ($e) {
                     echo '<div class="error"><p>';
-                    echo esc_html(sprintf(
-                        __('Athena AI Plugin: Error initializing update checker: %s', 'athena-ai'),
-                        $e->getMessage()
-                    ));
+                    echo esc_html(
+                        sprintf(
+                            __(
+                                'Athena AI Plugin: Error initializing update checker: %s',
+                                'athena-ai'
+                            ),
+                            $e->getMessage()
+                        )
+                    );
                     echo '</p></div>';
                 });
             }
@@ -121,14 +145,14 @@ class UpdateChecker {
 
     /**
      * Get the update checker settings
-     * 
+     *
      * @return array Settings including owner and repo (but not access token for security)
      */
     public function get_settings() {
         return [
             'owner' => $this->owner,
             'repo' => $this->repo,
-            'has_token' => !empty($this->access_token)
+            'has_token' => !empty($this->access_token),
         ];
     }
 }

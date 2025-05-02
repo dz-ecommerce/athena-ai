@@ -26,7 +26,7 @@ class I18n {
     public static function init(): void {
         // Textdomain auf dem admin_init Hook laden, um "Translation loading triggered too early" zu vermeiden
         \add_action('admin_init', [self::class, 'load_textdomain']);
-        
+
         // Auch für Frontend-Anfragen auf dem wp Hook laden
         \add_action('wp', [self::class, 'load_textdomain']);
     }

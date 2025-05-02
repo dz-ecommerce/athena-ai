@@ -17,7 +17,7 @@ class Plugin {
      * @var \AthenaAI\Admin\Settings
      */
     private $settings;
-    
+
     /**
      * @var \AthenaAI\Frontend\FeedDisplay
      */
@@ -110,7 +110,7 @@ class Plugin {
             'athena-ai-settings',
             [$this->settings, 'render_page']
         );
-        
+
         // Add ViewFeed News submenu
         /*add_submenu_page(
             'edit.php?post_type=athena-feed',
@@ -126,10 +126,10 @@ class Plugin {
         if (isset($submenu['edit.php?post_type=athena-feed'])) {
             // Store the current menu items
             $menu_items = $submenu['edit.php?post_type=athena-feed'];
-            
+
             // Reset the menu
             $submenu['edit.php?post_type=athena-feed'] = [];
-            
+
             // Add items in the desired order
             foreach ($menu_items as $item) {
                 if ($item[2] === 'edit.php?post_type=athena-feed') {
@@ -137,28 +137,28 @@ class Plugin {
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }
-            
+
             foreach ($menu_items as $item) {
                 if ($item[2] === 'post-new.php?post_type=athena-feed') {
                     // Add New
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }
-            
+
             /*foreach ($menu_items as $item) {
                 if ($item[2] === 'edit-tags.php?taxonomy=athena-feed-category&amp;post_type=athena-feed') {
                     // Categories
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }*/
-            
+
             /*foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-viewfeed-news') {
                     // ViewFeed News
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }*/
-            
+
             foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-ai-settings') {
                     // Settings
@@ -167,7 +167,7 @@ class Plugin {
             }
         }
     }
-    
+
     /**
      * Handle admin redirects
      */
@@ -194,14 +194,22 @@ class Plugin {
         if (!is_string($hook)) {
             $hook = '';
         }
-        
+
         // Check if we're on an Athena AI admin page
-        $is_athena_page = (
+        $is_athena_page =
             ($hook !== '' && strpos($hook, 'athena-ai') !== false) ||
-            ($hook !== '' && strpos($hook, 'post.php') !== false && function_exists('get_post_type') && get_post_type() === 'athena-feed') ||
-            ($hook !== '' && strpos($hook, 'post-new.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
-            ($hook !== '' && strpos($hook, 'edit.php') !== false && isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed')
-        );
+            ($hook !== '' &&
+                strpos($hook, 'post.php') !== false &&
+                function_exists('get_post_type') &&
+                get_post_type() === 'athena-feed') ||
+            ($hook !== '' &&
+                strpos($hook, 'post-new.php') !== false &&
+                isset($_GET['post_type']) &&
+                $_GET['post_type'] === 'athena-feed') ||
+            ($hook !== '' &&
+                strpos($hook, 'edit.php') !== false &&
+                isset($_GET['post_type']) &&
+                $_GET['post_type'] === 'athena-feed');
 
         if (!$is_athena_page) {
             return;

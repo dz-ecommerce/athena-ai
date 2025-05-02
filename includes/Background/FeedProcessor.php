@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace AthenaAI\Background;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 class FeedProcessor {
@@ -24,13 +24,13 @@ class FeedProcessor {
         $feeds = \AthenaAI\Models\Feed::get_feeds_to_update();
 
         $processed = 0;
-        
+
         foreach ($feeds as $feed) {
             if ($feed->fetch()) {
                 $processed++;
             }
         }
-        
+
         // Update the last fetch time if any feeds were processed
         if ($processed > 0) {
             update_option('athena_last_feed_fetch', time());

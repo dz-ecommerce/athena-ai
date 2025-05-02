@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace AthenaAI\Database;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 class DatabaseSetup {
@@ -13,7 +13,7 @@ class DatabaseSetup {
 
     public static function init(): void {
         add_action('plugins_loaded', [self::class, 'check_version']);
-        
+
         // Also check on admin page load for the feed items page
         add_action('admin_init', [self::class, 'check_tables']);
     }
@@ -23,39 +23,39 @@ class DatabaseSetup {
             self::setup_tables();
         }
     }
-    
+
     /**
      * Check if tables exist and create them if they don't
      */
     public static function check_tables(): void {
         global $wpdb;
-        
+
         // Only run this check on the feed items page
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
         if (!$screen || !isset($_GET['page']) || $_GET['page'] !== 'athena-feed-items') {
             return;
         }
-        
+
         // Check if the feed_raw_items table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
-        
+
         if (!$table_exists) {
             self::setup_tables();
         }
     }
-    
+
     /**
      * Check if the required tables exist
-     * 
+     *
      * @return bool True if all required tables exist
      */
     public static function tables_exist(): bool {
         global $wpdb;
-        
+
         $items_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
         $errors_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_errors'");
         $metadata_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_metadata'");
-        
+
         return $items_exists && $errors_exists && $metadata_exists;
     }
 
@@ -64,7 +64,7 @@ class DatabaseSetup {
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
         $charset_collate = $wpdb->get_charset_collate();
-        
+
         // Feed Metadata Table
         $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_metadata (
             feed_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -76,7 +76,7 @@ class DatabaseSetup {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) $charset_collate;";
-        
+
         dbDelta($sql);
 
         // Feed Raw Items Table - now references post IDs directly
@@ -90,7 +90,7 @@ class DatabaseSetup {
             INDEX (feed_id),
             INDEX (pub_date)
         ) $charset_collate;";
-        
+
         dbDelta($sql);
 
         // Feed Errors Table - now references post IDs directly
@@ -103,7 +103,7 @@ class DatabaseSetup {
             INDEX (feed_id),
             INDEX (created)
         ) $charset_collate;";
-        
+
         dbDelta($sql);
 
         update_option(self::VERSION_OPTION, self::VERSION);

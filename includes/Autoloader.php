@@ -48,12 +48,12 @@ class Autoloader {
 
         // Relativen Klassennamen bekommen (ohne Namespace-Präfix)
         $relative_class = substr($class, $len);
-        
+
         // Sicherstellen, dass $relative_class ein String ist
         if (!is_string($relative_class) || $relative_class === null) {
             return;
         }
-        
+
         // Relativen Klassennamen in einen Dateipfad umwandeln
         $file = $this->base_dir . str_replace('\\', '/', $relative_class) . '.php';
 

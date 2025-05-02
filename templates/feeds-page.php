@@ -7,7 +7,7 @@
 
 // Exit if accessed directly
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 // Get category from query var if available
@@ -15,7 +15,9 @@ $category = get_query_var('athena_feed_category', '');
 $category_term = !empty($category) ? get_term_by('slug', $category, 'athena-feed-category') : null;
 
 // Set page title
-$title = $category_term ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->name) : __('All Feeds', 'athena-ai');
+$title = $category_term
+    ? sprintf(__('Feeds: %s', 'athena-ai'), $category_term->name)
+    : __('All Feeds', 'athena-ai');
 
 get_header();
 ?>
@@ -32,7 +34,9 @@ get_header();
                     <h2><?php esc_html_e('Categories', 'athena-ai'); ?></h2>
                     <ul class="athena-feed-category-list">
                         <li class="<?php echo empty($category) ? 'active' : ''; ?>">
-                            <a href="<?php echo esc_url(get_permalink(get_page_by_path('athena-feeds'))); ?>">
+                            <a href="<?php echo esc_url(
+                                get_permalink(get_page_by_path('athena-feeds'))
+                            ); ?>">
                                 <?php esc_html_e('All', 'athena-ai'); ?>
                             </a>
                         </li>
@@ -41,7 +45,7 @@ get_header();
                             'taxonomy' => 'athena-feed-category',
                             'hide_empty' => true,
                         ]);
-                        
+
                         foreach ($categories as $cat) {
                             $is_active = $category === $cat->slug;
                             printf(
@@ -56,7 +60,9 @@ get_header();
                 </div>
 
                 <div class="athena-feeds-content">
-                    <?php echo do_shortcode('[athena_feeds category="' . esc_attr($category) . '" limit="10"]'); ?>
+                    <?php echo do_shortcode(
+                        '[athena_feeds category="' . esc_attr($category) . '" limit="10"]'
+                    ); ?>
                 </div>
             </div><!-- .entry-content -->
         </article><!-- #post-## -->
@@ -66,4 +72,6 @@ get_header();
 <?php
 get_sidebar();
 get_footer();
+
+
 ?>

@@ -10,13 +10,13 @@ abstract class BaseAdmin {
      */
     protected function render_template($template, $args = []) {
         $template_path = ATHENA_AI_PLUGIN_DIR . 'templates/admin/' . $template . '.php';
-        
+
         if (file_exists($template_path)) {
             // Ensure title is always set
             if (!isset($args['title'])) {
                 $args['title'] = $this->__('Athena AI', 'athena-ai');
             }
-            
+
             extract($args);
             include $template_path;
         } else {
@@ -64,4 +64,4 @@ abstract class BaseAdmin {
     protected function _x($text, $context) {
         return _x($text, $context, 'athena-ai');
     }
-} 
+}

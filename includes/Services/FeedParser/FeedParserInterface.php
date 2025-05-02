@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace AthenaAI\Services\FeedParser;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -24,7 +24,7 @@ interface FeedParserInterface {
      * @return bool Whether this parser can handle the content.
      */
     public function canParse(string $content): bool;
-    
+
     /**
      * Parse the feed content.
      *

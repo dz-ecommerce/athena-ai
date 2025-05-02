@@ -1,6 +1,6 @@
 <?php
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 $this->render_template('header');
@@ -12,11 +12,15 @@ $this->render_template('header');
         <div class="athena-ai-stats">
             <div class="stat-item">
                 <span class="stat-value">0</span>
-                <span class="stat-label"><?php echo esc_html($this->__('Total Interactions')); ?></span>
+                <span class="stat-label"><?php echo esc_html(
+                    $this->__('Total Interactions')
+                ); ?></span>
             </div>
             <div class="stat-item">
                 <span class="stat-value">0</span>
-                <span class="stat-label"><?php echo esc_html($this->__('Active Features')); ?></span>
+                <span class="stat-label"><?php echo esc_html(
+                    $this->__('Active Features')
+                ); ?></span>
             </div>
         </div>
     </div>

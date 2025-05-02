@@ -8,13 +8,13 @@ class Activator {
     public static function activate() {
         // Create necessary database tables
         self::create_tables();
-        
+
         // Create default options
         self::create_default_options();
-        
+
         // Create cache directory
         self::create_cache_directory();
-        
+
         // Flush rewrite rules
         flush_rewrite_rules();
     }
@@ -35,7 +35,7 @@ class Activator {
             PRIMARY KEY  (id)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
     }
 
@@ -55,19 +55,19 @@ class Activator {
             }
         }
     }
-    
+
     /**
      * Create cache directory for SimplePie
      */
     private static function create_cache_directory() {
         $upload_dir = wp_upload_dir();
         $cache_dir = trailingslashit($upload_dir['basedir']) . 'athena-ai-cache';
-        
+
         // Create the directory if it doesn't exist
         if (!file_exists($cache_dir)) {
             wp_mkdir_p($cache_dir);
         }
-        
+
         // Create an index.php file to prevent directory listing
         $index_file = $cache_dir . '/index.php';
         if (!file_exists($index_file)) {
@@ -77,18 +77,18 @@ class Activator {
                 fclose($file_handle);
             }
         }
-        
+
         // Create .htaccess to protect the directory
         $htaccess_file = $cache_dir . '/.htaccess';
         if (!file_exists($htaccess_file)) {
             $file_handle = @fopen($htaccess_file, 'w');
             if ($file_handle) {
-                fwrite($file_handle, "Deny from all");
+                fwrite($file_handle, 'Deny from all');
                 fclose($file_handle);
             }
         }
-        
+
         // Try to set permissions
         @chmod($cache_dir, 0755);
     }
-} 
+}

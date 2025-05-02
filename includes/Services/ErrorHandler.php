@@ -1,7 +1,7 @@
 <?php
 /**
  * Error Handler Service
- * 
+ *
  * Handles error logging and reporting for the feed system.
  *
  * @package AthenaAI\Services
@@ -16,7 +16,7 @@ use AthenaAI\Repositories\FeedRepository;
 use AthenaAI\Services\LoggerService;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -29,14 +29,14 @@ class ErrorHandler {
      * @var FeedRepository
      */
     private FeedRepository $repository;
-    
+
     /**
      * Logger service instance.
      *
      * @var LoggerService
      */
     private LoggerService $logger;
-    
+
     /**
      * Constructor.
      *
@@ -49,7 +49,7 @@ class ErrorHandler {
             ->setComponent('Error Handler')
             ->setVerboseMode($verbose_console);
     }
-    
+
     /**
      * Set verbose console output mode.
      *
@@ -60,7 +60,7 @@ class ErrorHandler {
         $this->logger->setVerboseMode($verbose);
         return $this;
     }
-    
+
     /**
      * Log an error for a feed.
      *
@@ -74,16 +74,16 @@ class ErrorHandler {
         if (method_exists($feed, 'set_last_error')) {
             $feed->set_last_error($message);
         }
-        
+
         // Update feed error in database if it has an ID
         if ($feed->get_id()) {
             $this->repository->update_feed_error($feed, $code, $message);
         }
-        
+
         // Logger handles console output and error logging as needed
         $this->logger->error($message, $code);
     }
-    
+
     /**
      * Log a general error without requiring a feed.
      *
@@ -95,7 +95,7 @@ class ErrorHandler {
         // Logger handles both console and error_log output
         $this->logger->error($message, $code);
     }
-    
+
     /**
      * Output a console log message.
      *

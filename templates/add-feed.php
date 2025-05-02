@@ -17,7 +17,10 @@
                 </th>
                 <td>
                     <input name="feed_title" type="text" id="feed_title" class="regular-text" required>
-                    <p class="description"><?php esc_html_e('Enter a name for this feed', 'athena-ai'); ?></p>
+                    <p class="description"><?php esc_html_e(
+                        'Enter a name for this feed',
+                        'athena-ai'
+                    ); ?></p>
                 </td>
             </tr>
             <tr>
@@ -26,7 +29,10 @@
                 </th>
                 <td>
                     <input name="feed_url" type="url" id="feed_url" class="regular-text" required>
-                    <p class="description"><?php esc_html_e('Enter the URL of the RSS/Atom feed', 'athena-ai'); ?></p>
+                    <p class="description"><?php esc_html_e(
+                        'Enter the URL of the RSS/Atom feed',
+                        'athena-ai'
+                    ); ?></p>
                 </td>
             </tr>
         </table>

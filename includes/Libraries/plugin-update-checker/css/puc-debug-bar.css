@@ -1,5 +1,5 @@
 .puc-debug-bar-panel-v5 pre {
-	margin-top: 0;
+    margin-top: 0;
 }
 
 /* Style the debug data table to match "widefat" table style used by WordPress. */
@@ -21,18 +21,19 @@ table.puc-debug-data * {
 }
 
 table.puc-debug-data th {
-	width: 11em;
+    width: 11em;
     padding: 7px 7px 8px;
     text-align: left;
 
-    font-family: "Georgia", "Times New Roman", "Bitstream Charter", "Times", serif;
+    font-family: 'Georgia', 'Times New Roman', 'Bitstream Charter', 'Times', serif;
     font-weight: 400;
     font-size: 14px;
     line-height: 1.3em;
     text-shadow: rgba(255, 255, 255, 0.804) 0 1px 0;
 }
 
-table.puc-debug-data td, table.puc-debug-data th {
+table.puc-debug-data td,
+table.puc-debug-data th {
     border-width: 1px 0;
     border-style: solid;
 
@@ -50,21 +51,21 @@ table.puc-debug-data td {
 }
 
 .puc-ajax-response {
-	border: 1px solid #dfdfdf;
-	border-radius: 3px;
-	padding: 0.5em;
-	margin: 5px 0;
-	background-color: white;
+    border: 1px solid #dfdfdf;
+    border-radius: 3px;
+    padding: 0.5em;
+    margin: 5px 0;
+    background-color: white;
 }
 
 .puc-ajax-nonce {
-	display: none;
+    display: none;
 }
 
 .puc-ajax-response dt {
-	margin: 0;
+    margin: 0;
 }
 
 .puc-ajax-response dd {
-	margin: 0 0 1em;
+    margin: 0 0 1em;
 }

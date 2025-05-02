@@ -1,7 +1,7 @@
 <?php
 /**
  * Feed Processor Interface
- * 
+ *
  * Interface for feed processors that extract and format feed items.
  *
  * @package AthenaAI\Interfaces
@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace AthenaAI\Interfaces;
 
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 /**
@@ -26,7 +26,7 @@ interface FeedProcessorInterface {
      * @return bool True if this processor can handle the content.
      */
     public function canProcess(?string $content): bool;
-    
+
     /**
      * Process the feed content and extract feed items.
      *
@@ -34,7 +34,7 @@ interface FeedProcessorInterface {
      * @return array The extracted feed items.
      */
     public function process(?string $content): array;
-    
+
     /**
      * Get processor name for identification.
      *

@@ -5,14 +5,19 @@
 ?>
 <div class="wrap">
     <h1 class="wp-heading-inline"><?php echo \AthenaAI\Core\SafetyWrapper::esc_html($title); ?></h1>
-    <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(admin_url('admin.php?page=athena-ai-add-feed')); ?>" class="page-title-action"><?php esc_html_e('Add New', 'athena-ai'); ?></a>
+    <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+        admin_url('admin.php?page=athena-ai-add-feed')
+    ); ?>" class="page-title-action"><?php esc_html_e('Add New', 'athena-ai'); ?></a>
     <hr class="wp-header-end">
 
     <?php echo $nonce_field; ?>
 
     <?php if (empty($feeds)): ?>
         <div class="notice notice-info">
-            <p><?php esc_html_e('No feeds found. Click "Add New" to create your first feed.', 'athena-ai'); ?></p>
+            <p><?php esc_html_e(
+                'No feeds found. Click "Add New" to create your first feed.',
+                'athena-ai'
+            ); ?></p>
         </div>
     <?php else: ?>
         <table class="wp-list-table widefat fixed striped">
@@ -29,26 +34,43 @@
                     <tr>
                         <td>
                             <strong>
-                                <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(admin_url('post.php?post=' . $feed['id'] . '&action=edit')); ?>">
-                                    <?php echo \AthenaAI\Core\SafetyWrapper::esc_html($feed['title']); ?>
+                                <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+                                    admin_url('post.php?post=' . $feed['id'] . '&action=edit')
+                                ); ?>">
+                                    <?php echo \AthenaAI\Core\SafetyWrapper::esc_html(
+                                        $feed['title']
+                                    ); ?>
                                 </a>
                             </strong>
                         </td>
                         <td><?php echo \AthenaAI\Core\SafetyWrapper::esc_url($feed['url']); ?></td>
                         <td>
-                            <?php 
-                            if ($feed['last_updated']) {
-                                echo \AthenaAI\Core\SafetyWrapper::esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($feed['last_updated'])));
+                            <?php if ($feed['last_updated']) {
+                                echo \AthenaAI\Core\SafetyWrapper::esc_html(
+                                    date_i18n(
+                                        get_option('date_format') . ' ' . get_option('time_format'),
+                                        strtotime($feed['last_updated'])
+                                    )
+                                );
                             } else {
                                 esc_html_e('Never', 'athena-ai');
-                            }
-                            ?>
+                            } ?>
                         </td>
                         <td>
-                            <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(admin_url('post.php?post=' . $feed['id'] . '&action=edit')); ?>" class="button button-small">
+                            <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+                                admin_url('post.php?post=' . $feed['id'] . '&action=edit')
+                            ); ?>" class="button button-small">
                                 <?php esc_html_e('Edit', 'athena-ai'); ?>
                             </a>
-                            <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(wp_nonce_url(admin_url('admin-post.php?action=athena_ai_refresh_feed&feed_id=' . $feed['id']), 'refresh_feed_' . $feed['id'])); ?>" class="button button-small">
+                            <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+                                wp_nonce_url(
+                                    admin_url(
+                                        'admin-post.php?action=athena_ai_refresh_feed&feed_id=' .
+                                            $feed['id']
+                                    ),
+                                    'refresh_feed_' . $feed['id']
+                                )
+                            ); ?>" class="button button-small">
                                 <?php esc_html_e('Refresh', 'athena-ai'); ?>
                             </a>
                         </td>

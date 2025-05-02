@@ -9,14 +9,10 @@ class FeedWidget extends \WP_Widget {
      * Initialize the widget
      */
     public function __construct() {
-        parent::__construct(
-            'athena_feed_widget',
-            __('Athena AI Feeds', 'athena-ai'),
-            [
-                'description' => __('Display RSS feeds from Athena AI', 'athena-ai'),
-                'classname' => 'athena-feed-widget',
-            ]
-        );
+        parent::__construct('athena_feed_widget', __('Athena AI Feeds', 'athena-ai'), [
+            'description' => __('Display RSS feeds from Athena AI', 'athena-ai'),
+            'classname' => 'athena-feed-widget',
+        ]);
     }
 
     /**
@@ -26,7 +22,9 @@ class FeedWidget extends \WP_Widget {
      * @param array $instance Saved widget values
      */
     public function widget($args, $instance) {
-        $title = !empty($instance['title']) ? apply_filters('widget_title', $instance['title']) : '';
+        $title = !empty($instance['title'])
+            ? apply_filters('widget_title', $instance['title'])
+            : '';
         $category = !empty($instance['category']) ? sanitize_text_field($instance['category']) : '';
         $limit = !empty($instance['limit']) ? absint($instance['limit']) : 5;
 
@@ -37,7 +35,9 @@ class FeedWidget extends \WP_Widget {
         }
 
         // Display feeds using the shortcode
-        echo do_shortcode('[athena_feeds category="' . esc_attr($category) . '" limit="' . esc_attr($limit) . '"]');
+        echo do_shortcode(
+            '[athena_feeds category="' . esc_attr($category) . '" limit="' . esc_attr($limit) . '"]'
+        );
 
         echo $args['after_widget'];
     }
@@ -80,8 +80,11 @@ class FeedWidget extends \WP_Widget {
                 <option value="" <?php selected($category, ''); ?>>
                     <?php esc_html_e('All Categories', 'athena-ai'); ?>
                 </option>
-                <?php foreach ($categories as $cat) : ?>
-                    <option value="<?php echo esc_attr($cat->slug); ?>" <?php selected($category, $cat->slug); ?>>
+                <?php foreach ($categories as $cat): ?>
+                    <option value="<?php echo esc_attr($cat->slug); ?>" <?php selected(
+    $category,
+    $cat->slug
+); ?>>
                         <?php echo esc_html($cat->name); ?>
                     </option>
                 <?php endforeach; ?>
@@ -113,8 +116,12 @@ class FeedWidget extends \WP_Widget {
      */
     public function update($new_instance, $old_instance) {
         $instance = [];
-        $instance['title'] = !empty($new_instance['title']) ? sanitize_text_field($new_instance['title']) : '';
-        $instance['category'] = !empty($new_instance['category']) ? sanitize_text_field($new_instance['category']) : '';
+        $instance['title'] = !empty($new_instance['title'])
+            ? sanitize_text_field($new_instance['title'])
+            : '';
+        $instance['category'] = !empty($new_instance['category'])
+            ? sanitize_text_field($new_instance['category'])
+            : '';
         $instance['limit'] = !empty($new_instance['limit']) ? absint($new_instance['limit']) : 5;
 
         return $instance;

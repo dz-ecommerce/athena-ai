@@ -1,12 +1,14 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) {
+    exit();
+}
 
 // Get all feed posts
 $feeds = get_posts([
     'post_type' => 'athena-feed',
     'posts_per_page' => -1,
     'orderby' => 'title',
-    'order' => 'ASC'
+    'order' => 'ASC',
 ]);
 
 // Helper function to safely fetch feed items
@@ -14,11 +16,11 @@ function fetch_feed_items($feed_url) {
     try {
         // Use WordPress's built-in feed fetching
         $rss = fetch_feed($feed_url);
-        
+
         if (is_wp_error($rss)) {
             return [
                 'error' => $rss->get_error_message(),
-                'items' => []
+                'items' => [],
             ];
         }
 
@@ -27,34 +29,38 @@ function fetch_feed_items($feed_url) {
 
         return [
             'error' => null,
-            'items' => $items
+            'items' => $items,
         ];
     } catch (\Exception $e) {
         return [
             'error' => $e->getMessage(),
-            'items' => []
+            'items' => [],
         ];
     }
 }
 
 // Helper function to get and validate thumbnail
 function get_feed_item_thumbnail($item, $feed_link) {
-    if (!$item) return '';
-    
+    if (!$item) {
+        return '';
+    }
+
     $thumbnail = '';
-    
+
     // 1. Try to get image from enclosure
     $enclosure = $item->get_enclosure();
-    if ($enclosure && 
-        method_exists($enclosure, 'get_link') && 
-        method_exists($enclosure, 'get_type')) {
+    if (
+        $enclosure &&
+        method_exists($enclosure, 'get_link') &&
+        method_exists($enclosure, 'get_type')
+    ) {
         $link = $enclosure->get_link();
         $type = $enclosure->get_type();
         if ($link && $type && str_starts_with($type, 'image/')) {
             $thumbnail = $link;
         }
     }
-    
+
     // 2. Try to get image from media:content
     if (!$thumbnail) {
         $mediaContent = $item->get_item_tags('http://search.yahoo.com/mrss/', 'content');
@@ -62,7 +68,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
             $thumbnail = $mediaContent[0]['attribs']['']['url'];
         }
     }
-    
+
     // 3. Try to get image from media:thumbnail
     if (!$thumbnail) {
         $mediaThumbnail = $item->get_item_tags('http://search.yahoo.com/mrss/', 'thumbnail');
@@ -70,7 +76,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
             $thumbnail = $mediaThumbnail[0]['attribs']['']['url'];
         }
     }
-    
+
     // 4. Try to find first image in content
     if (!$thumbnail) {
         $content = $item->get_content();
@@ -81,7 +87,7 @@ function get_feed_item_thumbnail($item, $feed_link) {
             }
         }
     }
-    
+
     // 5. Try to find image in description
     if (!$thumbnail) {
         $description = $item->get_description();
@@ -98,11 +104,11 @@ function get_feed_item_thumbnail($item, $feed_link) {
         // Convert relative URLs to absolute
         if (!str_starts_with($thumbnail, 'http')) {
             // Sicherstellen, dass feed_link kein null ist, bevor wp_parse_url aufgerufen wird
-            $safe_feed_link = ($feed_link === null) ? '' : $feed_link;
+            $safe_feed_link = $feed_link === null ? '' : $feed_link;
             $parsed_url = \AthenaAI\Core\SafetyWrapper::wp_parse_url($safe_feed_link);
             if ($parsed_url && isset($parsed_url['scheme'], $parsed_url['host'])) {
                 $base_url = $parsed_url['scheme'] . '://' . $parsed_url['host'];
-                
+
                 if (str_starts_with($thumbnail, '//')) {
                     $thumbnail = $parsed_url['scheme'] . ':' . $thumbnail;
                 } elseif (str_starts_with($thumbnail, '/')) {
@@ -112,57 +118,74 @@ function get_feed_item_thumbnail($item, $feed_link) {
                 }
             }
         }
-        
+
         return \AthenaAI\Core\SafetyWrapper::esc_url($thumbnail);
     }
-    
+
     return '';
 }
-
 ?>
 <div class="wrap athena-feed-news">
     <h1 class="wp-heading-inline"><?php echo esc_html__('View Feed News', 'athena-ai'); ?></h1>
     
     <?php if (empty($feeds)): ?>
         <div class="notice notice-warning">
-            <p><?php echo esc_html__('No feeds found. Please add some feeds first.', 'athena-ai'); ?></p>
+            <p><?php echo esc_html__(
+                'No feeds found. Please add some feeds first.',
+                'athena-ai'
+            ); ?></p>
         </div>
-    <?php else: ?>
+    <?php
+
+        // Get cached feed items
+        // Get cached feed items
+        // Get cached feed items
+        // Get cached feed items
+        else: ?>
         <div id="poststuff">
             <div id="post-body" class="metabox-holder">
                 <div id="post-body-content">
                     <div class="meta-box-sortables">
-                        <?php 
-                        foreach ($feeds as $feed): 
+                        <?php foreach ($feeds as $feed):
+
                             $feed_url = get_post_meta($feed->ID, '_athena_feed_url', true);
                             $feed_categories = get_the_terms($feed->ID, 'athena-feed-category');
-                            
-                            // Get cached feed items
+
                             $result = fetch_feed_items($feed_url);
-                            
+
                             if ($result['error']): ?>
                                 <div class="notice notice-error notice-alt">
                                     <p><?php printf(
-                                        esc_html__('Error loading feed: %s. Please check the feed URL and try again.', 'athena-ai'),
+                                        esc_html__(
+                                            'Error loading feed: %s. Please check the feed URL and try again.',
+                                            'athena-ai'
+                                        ),
                                         esc_html($feed->post_title)
                                     ); ?></p>
                                 </div>
-                                <?php continue;
-                            endif;
+                                <?php continue;endif;
                             ?>
                             <div class="postbox">
                                 <div class="postbox-header">
                                     <h2 class="hndle">
                                         <span class="dashicons dashicons-rss"></span>
                                         <?php echo esc_html($feed->post_title); ?>
-                                        <?php if ($feed_categories && !is_wp_error($feed_categories)): ?>
+                                        <?php if (
+                                            $feed_categories &&
+                                            !is_wp_error($feed_categories)
+                                        ): ?>
                                             <span class="feed-categories">
                                                 <span class="dashicons dashicons-category"></span>
-                                                <?php 
-                                                $category_links = array_map(function($category) {
+                                                <?php
+                                                $category_links = array_map(function ($category) {
                                                     return sprintf(
                                                         '<a href="%s">%s</a>',
-                                                        esc_url(admin_url('edit.php?post_type=athena-feed&athena-feed-category=' . $category->slug)),
+                                                        esc_url(
+                                                            admin_url(
+                                                                'edit.php?post_type=athena-feed&athena-feed-category=' .
+                                                                    $category->slug
+                                                            )
+                                                        ),
                                                         esc_html($category->name)
                                                     );
                                                 }, $feed_categories);
@@ -175,23 +198,37 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                 <div class="inside">
                                     <?php if (empty($result['items'])): ?>
                                         <div class="notice notice-info notice-alt">
-                                            <p><?php echo esc_html__('No items found in this feed.', 'athena-ai'); ?></p>
+                                            <p><?php echo esc_html__(
+                                                'No items found in this feed.',
+                                                'athena-ai'
+                                            ); ?></p>
                                         </div>
                                     <?php else: ?>
                                         <table class="wp-list-table widefat fixed striped">
                                             <tbody>
-                                                <?php foreach ($result['items'] as $item): 
+                                                <?php foreach ($result['items'] as $item):
+
                                                     $pub_date = $item->get_date('Y-m-d H:i:s');
-                                                    $human_date = human_time_diff(strtotime($pub_date), current_time('timestamp'));
-                                                    $thumbnail = get_feed_item_thumbnail($item, $item->get_permalink());
-                                                ?>
+                                                    $human_date = human_time_diff(
+                                                        strtotime($pub_date),
+                                                        current_time('timestamp')
+                                                    );
+                                                    $thumbnail = get_feed_item_thumbnail(
+                                                        $item,
+                                                        $item->get_permalink()
+                                                    );
+                                                    ?>
                                                     <tr>
                                                         <td>
                                                             <div class="feed-item-content">
                                                                 <?php if ($thumbnail): ?>
                                                                 <div class="feed-thumbnail">
-                                                                    <img src="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url($thumbnail); ?>" 
-                                                                         alt="<?php echo \AthenaAI\Core\SafetyWrapper::esc_attr($item->get_title()); ?>"
+                                                                    <img src="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+                                                                        $thumbnail
+                                                                    ); ?>" 
+                                                                         alt="<?php echo \AthenaAI\Core\SafetyWrapper::esc_attr(
+                                                                             $item->get_title()
+                                                                         ); ?>"
                                                                          loading="lazy"
                                                                          crossorigin="anonymous"
                                                                          onerror="this.style.display='none'; console.log('Failed to load image:', this.src);"
@@ -200,48 +237,79 @@ function get_feed_item_thumbnail($item, $feed_link) {
                                                                 <?php endif; ?>
                                                                 <div class="feed-text">
                                                                     <strong>
-                                                                        <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url($item->get_permalink()); ?>" target="_blank">
-                                                                            <?php echo \AthenaAI\Core\SafetyWrapper::esc_html($item->get_title()); ?>
+                                                                        <a href="<?php echo \AthenaAI\Core\SafetyWrapper::esc_url(
+                                                                            $item->get_permalink()
+                                                                        ); ?>" target="_blank">
+                                                                            <?php echo \AthenaAI\Core\SafetyWrapper::esc_html(
+                                                                                $item->get_title()
+                                                                            ); ?>
                                                                             <span class="dashicons dashicons-external"></span>
                                                                         </a>
                                                                     </strong>
                                                                     <div class="row-actions">
                                                                         <span class="date">
                                                                             <span class="dashicons dashicons-clock"></span>
-                                                                            <?php printf(esc_html__('%s ago', 'athena-ai'), $human_date); ?>
+                                                                            <?php printf(
+                                                                                esc_html__(
+                                                                                    '%s ago',
+                                                                                    'athena-ai'
+                                                                                ),
+                                                                                $human_date
+                                                                            ); ?>
                                                                         </span>
-                                                                        <?php 
+                                                                        <?php
                                                                         $categories = $item->get_categories();
                                                                         if (!empty($categories)): ?>
                                                                             <span class="item-categories">
                                                                                 <span class="separator">|</span>
                                                                                 <span class="dashicons dashicons-tag"></span>
-                                                                                <?php 
-                                                                                $category_names = array_map(function($category) {
-                                                                                    return esc_html($category->get_label());
-                                                                                }, $categories);
-                                                                                echo implode(', ', $category_names);
+                                                                                <?php
+                                                                                $category_names = array_map(
+                                                                                    function (
+                                                                                        $category
+                                                                                    ) {
+                                                                                        return esc_html(
+                                                                                            $category->get_label()
+                                                                                        );
+                                                                                    },
+                                                                                    $categories
+                                                                                );
+                                                                                echo implode(
+                                                                                    ', ',
+                                                                                    $category_names
+                                                                                );
                                                                                 ?>
                                                                             </span>
-                                                                        <?php endif; ?>
+                                                                        <?php endif;
+                                                                        ?>
                                                                     </div>
                                                                     <div class="feed-excerpt">
-                                                                        <?php 
-                                                                        $excerpt = wp_strip_all_tags($item->get_description());
-                                                                        echo esc_html(wp_trim_words($excerpt, 30, '...')); 
+                                                                        <?php
+                                                                        $excerpt = wp_strip_all_tags(
+                                                                            $item->get_description()
+                                                                        );
+                                                                        echo esc_html(
+                                                                            wp_trim_words(
+                                                                                $excerpt,
+                                                                                30,
+                                                                                '...'
+                                                                            )
+                                                                        );
                                                                         ?>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                <?php endforeach; ?>
+                                                <?php
+                                                endforeach; ?>
                                             </tbody>
                                         </table>
                                     <?php endif; ?>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
+                        <?php
+                        endforeach; ?>
                     </div>
                 </div>
             </div>
