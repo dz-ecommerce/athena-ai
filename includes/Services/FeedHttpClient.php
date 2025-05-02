@@ -54,6 +54,57 @@ class FeedHttpClient {
      */
     private bool $verbose_console = false;
 
+    private array $user_agents = [
+        // Desktop Browser
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 OPR/110.0.0.0',
+        // Mobile Browser
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+        'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+        // Feedreader
+        'Feedly/1.0 (+http://feedly.com/fetcher.html; like FeedFetcher-Google)',
+        'Mozilla/5.0 (compatible; Inoreader/1.0; +http://www.inoreader.com)',
+        'FeedFetcher-Google; (+http://www.google.com/feedfetcher.html)',
+        'Mozilla/5.0 (compatible; FeedFetcher/1.0)',
+    ];
+
+    private function getRandomUserAgent(): string {
+        return $this->user_agents[array_rand($this->user_agents)];
+    }
+
+    private function getDefaultHeaders(string $url = ''): array {
+        $referers = [
+            'https://www.google.com/',
+            'https://www.bing.com/',
+            'https://duckduckgo.com/',
+            'https://search.yahoo.com/',
+            'https://www.ecosia.org/',
+        ];
+        $referer = $referers[array_rand($referers)];
+        if ($url) {
+            $host = parse_url($url, PHP_URL_HOST);
+            if ($host) {
+                $referer = 'https://www.google.com/search?q=' . urlencode($host);
+            }
+        }
+        return [
+            'User-Agent' => $this->getRandomUserAgent(),
+            'Accept' =>
+                'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language' => 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding' => 'gzip, deflate, br',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'Referer' => $referer,
+            'Upgrade-Insecure-Requests' => '1',
+            'DNT' => '1',
+            'Pragma' => 'no-cache',
+        ];
+    }
+
     /**
      * Set verbose console output mode.
      *
@@ -184,7 +235,8 @@ class FeedHttpClient {
             $this->consoleLog($error, 'error');
             return null;
         }
-
+        // Wartezeit zwischen Requests (Anti-Bot)
+        usleep(rand(200000, 800000)); // 200-800ms
         // Prüfe auf bekannte problematische URLs und behandle sie speziell
         if ($this->isProblemURL($url)) {
             $this->consoleLog(
@@ -193,28 +245,14 @@ class FeedHttpClient {
             );
             return $this->fetchWithAntiBlockStrategy($url, $options);
         }
-
         // Optimierte Standardkonfiguration für alle Feed-Anfragen verwenden
         $special_options = $this->default_options;
-        $special_options['headers'] = [
-            'User-Agent' =>
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept' =>
-                'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language' => 'en-US,en;q=0.9',
-            'Accept-Encoding' => 'gzip, deflate, br',
-            'Cache-Control' => 'no-cache',
-            'Connection' => 'keep-alive',
-            'Upgrade-Insecure-Requests' => '1',
-            'Sec-Fetch-Dest' => 'document',
-            'Sec-Fetch-Mode' => 'navigate',
-            'Sec-Fetch-Site' => 'none',
-            'Sec-Fetch-User' => '?1',
-            'DNT' => '1',
-            'Pragma' => 'no-cache',
-        ];
-
+        $special_options['headers'] = $this->getDefaultHeaders($url);
         // Try to use cURL directly for more control
+        $this->consoleLog(
+            'Sende folgende Header: ' . print_r($special_options['headers'], true),
+            'info'
+        );
         return $this->curlFetch($url, $special_options);
     }
 
