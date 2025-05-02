@@ -22,7 +22,9 @@ if (!empty($items)) {
     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm flex items-center justify-between">
         <div>
             <i class="fa-solid fa-info-circle text-blue-500 mr-2"></i>
-            <span class="text-blue-700"><?php echo esc_html($update_checker_status_message); ?></span>
+            <span class="text-blue-700"><?php echo esc_html(
+                $update_checker_status_message
+            ); ?></span>
         </div>
         <button onclick="this.parentElement.parentElement.style.display='none'" class="text-blue-500 hover:text-blue-700">
             <i class="fa-solid fa-times"></i>
@@ -492,6 +494,10 @@ if (!empty($items)) {
 
         // Previous button
 
+        // Previous button
+
+        // Previous button
+
         else: ?>
     
     <!-- Feed-Items-Tabelle -->
@@ -500,7 +506,7 @@ if (!empty($items)) {
     <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr class="bg-gray-50">
-                        <th scope="col" class="px-6 py-3"><?php esc_html_e(
+                        <th scope="col" class="px-6 py-3 whitespace-normal break-words"><?php esc_html_e(
                             'Title',
                             'athena-ai'
                         ); ?></th>
@@ -570,7 +576,7 @@ if (!empty($items)) {
                         }
                         ?>
             <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="px-6 py-4 whitespace-normal break-words">
                             <div class="text-sm font-medium text-gray-900">
                                 <?php if ($link): ?>
                                     <a href="<?php echo esc_url(
@@ -584,13 +590,13 @@ if (!empty($items)) {
                                 <?php endif; ?>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-6 py-4">
                             <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                 <i class="fa-solid fa-rss mr-1"></i>
                                 <?php echo esc_html($item->feed_title); ?>
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-6 py-4 text-sm text-gray-500">
                             <?php
                             $pub_date = strtotime($item->pub_date);
                             echo $pub_date
@@ -601,7 +607,7 @@ if (!empty($items)) {
                                 : '–';
                             ?>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-6 py-4 text-sm text-gray-500">
                             <?php
                             $import_date =
                                 isset($item->import_date) && !empty($item->import_date)
@@ -615,7 +621,7 @@ if (!empty($items)) {
                                 : '–';
                             ?>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td class="px-6 py-4 text-sm font-medium">
                             <div class="flex space-x-3">
                                 <button onclick="showItemContent(<?php echo esc_attr(
                                     $item->id
