@@ -1941,15 +1941,15 @@ class FeedService {
             if (empty($html)) {
                 return null;
             }
-            require_once __DIR__ . '/../../vendor/autoload.php';
-            $readability = new \andreskrey\Readability\Readability($html, $url);
-            $result = $readability->init();
-            if ($result) {
-                $content = $readability->getContent();
-                return $content;
+            // Nur den Body-Text extrahieren (ohne Readability)
+            if (preg_match('/<body[^>]*>(.*?)<\/body>/is', $html, $matches)) {
+                $body = strip_tags($matches[1]);
+                return trim($body);
             }
+            // Fallback: Gesamten HTML-Inhalt als Text
+            return strip_tags($html);
         } catch (\Throwable $e) {
-            $this->logger->warn('Readability-Fehler: ' . $e->getMessage());
+            $this->logger->warn('Fehler beim Extrahieren des Volltexts: ' . $e->getMessage());
         }
         return null;
     }
