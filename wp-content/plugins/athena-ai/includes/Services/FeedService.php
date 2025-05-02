@@ -1,6 +1,6 @@
 <?php
 /**
- * Feed Service class
+ * Feed Service class (minimal, Readability-Integration)
  *
  * @package AthenaAI\Services
  */
@@ -9,85 +9,33 @@ declare(strict_types=1);
 
 namespace AthenaAI\Services;
 
-use AthenaAI\Models\Feed;
-use AthenaAI\Repositories\FeedRepository;
-use AthenaAI\Services\FeedProcessor\FeedProcessorFactory;
-use AthenaAI\Services\LoggerService;
-use SimpleXMLElement;
-
 if (!defined('ABSPATH')) {
     exit();
 }
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-/**
- * Service class for feed operations.
- */
 class FeedService {
     /**
-     * Feed repository.
+     * Extrahiert den Volltext einer News-Seite anhand der Link-URL.
      *
-     * @var FeedRepository
+     * @param string $url Die URL der News-Seite
+     * @return string|null Der extrahierte Hauptinhalt oder null bei Fehler
      */
-    private FeedRepository $repository;
-
-    /**
-     * HTTP client.
-     *
-     * @var FeedHttpClient
-     */
-    private FeedHttpClient $http_client;
-
-    /**
-     * Feed processor factory.
-     *
-     * @var FeedProcessorFactory
-     */
-    private FeedProcessorFactory $processor_factory;
-
-    /**
-     * Logger service.
-     *
-     * @var LoggerService
-     */
-    private LoggerService $logger;
-
-    /**
-     * Error handler instance.
-     *
-     * @var ErrorHandler
-     */
-    private ErrorHandler $error_handler;
-
-    /**
-     * Verbose-Modus aktiviert/deaktiviert
-     *
-     * @var bool
-     */
-    private bool $verbose_mode = false;
-
-    /**
-     * Cache-Dauer in Sekunden
-     *
-     * @var int
-     */
-    private int $cache_expiration = 1800; // 30 Minuten Standard-Cache-Zeit
-
-    /**
-     * Constructor.
-     *
-     * @param FeedHttpClient      $http_client       HTTP client.
-     * @param LoggerService       $logger            Logger service.
-     */
-    public function __construct(FeedHttpClient $http_client, LoggerService $logger) {
-        $this->http_client = $http_client;
-        $this->logger = $logger->setComponent('FeedService');
-        $this->verbose_mode = false;
-    }
-
-    if (empty($html)) {
+    private function extractFullTextFromUrl(string $url): ?string {
+        try {
+            $html = file_get_contents($url); // Beispiel: Ersetze ggf. durch deinen HTTP-Client
+            if (empty($html)) {
+                return null;
+            }
+            $readability = new \andreskrey\Readability\Readability($html, $url);
+            $result = $readability->init();
+            if ($result) {
+                return $readability->getContent();
+            }
+        } catch (\Throwable $e) {
+            // Fehlerbehandlung (z.B. Logging)
+        }
         return null;
     }
-    $readability = new \andreskrey\Readability\Readability($html, $url);
 }
