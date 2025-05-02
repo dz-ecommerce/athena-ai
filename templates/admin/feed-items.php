@@ -332,10 +332,10 @@ if (!empty($items)) {
     
     <!-- Feed-Items-Tabelle -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead>
-                    <tr class="bg-gray-50">
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+    <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr class="bg-gray-50">
                         <th scope="col" class="px-6 py-3"><?php esc_html_e('Title', 'athena-ai'); ?></th>
                         <th scope="col" class="px-6 py-3"><?php esc_html_e('Feed Source', 'athena-ai'); ?></th>
                         <th scope="col" class="px-6 py-3"><?php esc_html_e('Publication Date', 'athena-ai'); ?></th>
