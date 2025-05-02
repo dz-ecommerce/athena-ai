@@ -17,7 +17,7 @@ if (!empty($items)) {
     }
 }
 ?>
-<div class="wrap athena-ai-admin bg-gray-50 -mx-4 px-4 pb-10 min-h-screen">
+<div class="wrap athena-ai-admin m-4 min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
         <h1 class="text-2xl font-bold text-gray-800 m-0 flex items-center">
