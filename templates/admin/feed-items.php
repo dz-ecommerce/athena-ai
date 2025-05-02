@@ -500,6 +500,8 @@ if (!empty($items)) {
 
         // Previous button
 
+        // Previous button
+
         else: ?>
     
     <!-- Feed-Items-Tabelle -->
