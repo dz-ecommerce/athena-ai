@@ -6,7 +6,7 @@ on:
       changelog:
         description: 'Änderungen in dieser Version'
         required: true
-        type: text
+        type: string
 
 permissions:
   contents: write
@@ -33,7 +33,6 @@ jobs:
           php-version: '8.3'
           coverage: none
           extensions: mbstring, intl
-          tools: composer:v2
 
       - name: Get PHP version
         id: php_version
@@ -80,16 +79,10 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install PHP dependencies
-        run: |
-          composer validate --strict
-          composer install --no-dev --no-progress --no-interaction
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "16"
-          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
