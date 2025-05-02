@@ -1746,6 +1746,14 @@ class FeedService {
                 continue;
             }
 
+            // Volltext automatisch nachladen, falls Link vorhanden und noch kein full_content
+            if (!empty($item['link']) && empty($item['full_content'])) {
+                $full_content = $this->extractFullTextFromUrl($item['link']);
+                if (!empty($full_content)) {
+                    $item['full_content'] = $full_content;
+                }
+            }
+
             // Generiere einen Hash für das Item als Primärschlüssel
             $item_hash = md5($item['guid']);
 
@@ -1919,5 +1927,30 @@ class FeedService {
         }
 
         return $item;
+    }
+
+    /**
+     * Extrahiert den Volltext einer News-Seite anhand der Link-URL.
+     *
+     * @param string $url Die URL der News-Seite
+     * @return string|null Der extrahierte Hauptinhalt oder null bei Fehler
+     */
+    private function extractFullTextFromUrl(string $url): ?string {
+        try {
+            $html = $this->http_client->fetch($url);
+            if (empty($html)) {
+                return null;
+            }
+            require_once ABSPATH . 'vendor/autoload.php';
+            $readability = new \andreskrey\Readability\Readability($html, $url);
+            $result = $readability->init();
+            if ($result) {
+                $content = $readability->getContent();
+                return $content;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warn('Readability-Fehler: ' . $e->getMessage());
+        }
+        return null;
     }
 }
