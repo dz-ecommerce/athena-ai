@@ -1,0 +1,129 @@
+name: Update Minor Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      changelog:
+        description: 'Änderungen in dieser Version'
+        required: true
+        type: text
+
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  update-minor-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure Git
+        run: |
+          git config --global user.email "info@dz-ecom.de"
+          git config --global user.name "dz-ecommerce"
+          git config --global core.autocrlf false
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Increment minor version
+        id: update_version
+        run: |
+          echo "Reading version from athena-ai.php..."
+          # Aktuelle Version extrahieren
+          CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+          echo "Aktuelle Version: $CURRENT_VERSION"
+
+          # Version in Teile aufteilen
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+
+          # Minor Version (mittlere Zahl) erhöhen und Patch Version auf 0 setzen
+          MINOR_VERSION=$((VERSION_PARTS[1] + 1))
+          NEW_VERSION="${VERSION_PARTS[0]}.$MINOR_VERSION.0"
+          echo "Neue Version: $NEW_VERSION"
+
+          # Version im Plugin-Header aktualisieren
+          sed -i "s/Version: $CURRENT_VERSION/Version: $NEW_VERSION/" athena-ai.php
+
+          # Version in Konstantendefinitionen aktualisieren
+          sed -i "s/ATHENA_AI_VERSION', '$CURRENT_VERSION'/ATHENA_AI_VERSION', '$NEW_VERSION'/" athena-ai.php
+          sed -i "s/ATHENA_AI_VERSION', \"$CURRENT_VERSION\"/ATHENA_AI_VERSION', \"$NEW_VERSION\"/" athena-ai.php
+          sed -i "s/ATHENA_AI_VERSION\\', '$CURRENT_VERSION'/ATHENA_AI_VERSION\\', '$NEW_VERSION'/" athena-ai.php
+          sed -i "s/define('ATHENA_AI_VERSION', '$CURRENT_VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
+
+          # Debug-Ausgabe
+          echo "Aktualisierte Version in Dateien:"
+          grep -n "Version:" athena-ai.php
+          grep -n "ATHENA_AI_VERSION" athena-ai.php
+
+          # Änderungen zum Commit vorbereiten
+          git add athena-ai.php
+          git commit -m "Minorversion auf $NEW_VERSION erhöht [skip ci]"
+          git push
+
+          # Output für spätere Schritte setzen
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CSS with Tailwind
+        run: npm run build:css
+
+      - name: Commit compiled CSS files
+        run: |
+          # CSS-Dateien zum Commit vorbereiten
+          git add assets/css/*.css
+
+          # Nur commiten, wenn es Änderungen gibt
+          if git diff --staged --quiet; then
+            echo "Keine CSS-Änderungen zum Commit vorhanden"
+          else
+            git commit -m "Kompilierte CSS-Dateien für v${{ steps.update_version.outputs.version }} [skip ci]"
+            git push
+          fi
+
+      - name: Create plugin archives
+        run: |
+          # Temporäre Verzeichnisse erstellen
+          mkdir -p build/athena-ai
+          mkdir -p build/athena-ai-${{ steps.update_version.outputs.version }}
+
+          # Plugin-Dateien in beide Verzeichnisse kopieren
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai/
+          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' . build/athena-ai-${{ steps.update_version.outputs.version }}/
+
+          # ZIP-Archive erstellen
+          cd build
+          zip -r athena-ai.zip athena-ai
+          zip -r athena-ai-${{ steps.update_version.outputs.version }}.zip athena-ai-${{ steps.update_version.outputs.version }}
+          cd ..
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        with:
+          tag_name: v${{ steps.update_version.outputs.version }}
+          name: Release v${{ steps.update_version.outputs.version }}
+          files: |
+            build/athena-ai.zip
+            build/athena-ai-${{ steps.update_version.outputs.version }}.zip
+          body: |
+            Release für v${{ steps.update_version.outputs.version }}
+
+            Änderungen in dieser Version:
+            ${{ github.event.inputs.changelog }}
+            
+            - Versionsaktualisierung von v${{ steps.update_version.outputs.previous_version }} auf v${{ steps.update_version.outputs.version }}
+            - Kompilierte CSS-Dateien mit den neuesten Tailwind-Änderungen
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }} 
