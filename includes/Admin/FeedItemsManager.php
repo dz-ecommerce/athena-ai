@@ -81,14 +81,24 @@ class FeedItemsManager extends BaseAdmin {
                 // Beschreibung extrahieren
                 $desc = '';
                 $content_field = '';
+                $full_content = '';
+                if (isset($raw_content->full_content) && is_scalar($raw_content->full_content)) {
+                    $full_content = (string) $raw_content->full_content;
+                }
                 if (isset($raw_content->description) && is_scalar($raw_content->description)) {
                     $desc = (string) $raw_content->description;
                 }
                 if (isset($raw_content->content) && is_scalar($raw_content->content)) {
                     $content_field = (string) $raw_content->content;
                 }
-                // Wähle den längeren Text
-                $description = strlen($content_field) > strlen($desc) ? $content_field : $desc;
+                // Wähle den längsten verfügbaren Text: full_content > content > description
+                if (!empty($full_content)) {
+                    $description = $full_content;
+                } elseif (strlen($content_field) > strlen($desc)) {
+                    $description = $content_field;
+                } else {
+                    $description = $desc;
+                }
 
                 // Autor extrahieren
                 if (isset($raw_content->author) && is_scalar($raw_content->author)) {
