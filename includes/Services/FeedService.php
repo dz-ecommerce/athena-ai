@@ -1941,7 +1941,7 @@ class FeedService {
             if (empty($html)) {
                 return null;
             }
-            require_once ABSPATH . 'vendor/autoload.php';
+            require_once __DIR__ . '/../../vendor/autoload.php';
             $readability = new \andreskrey\Readability\Readability($html, $url);
             $result = $readability->init();
             if ($result) {
