@@ -408,11 +408,11 @@ class FeedRepository {
     /**
      * Save a feed item to the database
      *
-     * @param Feed $feed The feed the item belongs to
-     * @param array $item The feed item data
-     * @param string $guid The item's unique identifier
-     * @param string $pub_date The item's publication date
-     * @return bool Whether the save was successful
+     * @param Feed  $feed     The feed the item belongs to
+     * @param array $item     The item data
+     * @param string $guid     The item GUID
+     * @param string $pub_date The item publication date
+     * @return bool Success or failure
      */
     public function save_feed_item(Feed $feed, array $item, string $guid, string $pub_date): bool {
         global $wpdb;
@@ -421,52 +421,154 @@ class FeedRepository {
             return false;
         }
 
-        // Check if the table exists
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
-        if (!$table_exists) {
+        // Check if the tables exist
+        $items_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_raw_items'");
+        $categories_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_item_categories'");
+        if (!$items_table_exists) {
             return false;
         }
 
-        // Check if an item with this GUID already exists for this feed
-        $existing = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
-                $feed->get_post_id(),
-                $guid
-            )
+        // Beginne eine Transaktion für atomare Operationen
+        $wpdb->query('START TRANSACTION');
+
+        try {
+            // Check if an item with this GUID already exists for this feed
+            $existing_id = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}feed_raw_items WHERE feed_id = %d AND guid = %s",
+                    $feed->get_post_id(),
+                    $guid
+                )
+            );
+
+            // Wenn das Item bereits existiert, aktualisieren wir nur die Kategorien
+            if ($existing_id) {
+                // Wenn die Kategorien-Tabelle existiert, aktualisieren wir die Kategorien
+                if ($categories_table_exists && isset($item['categories']) && is_array($item['categories'])) {
+                    $this->update_item_categories((int)$existing_id, $item['categories']);
+                }
+                $wpdb->query('COMMIT');
+                return true;
+            }
+
+            // Prepare JSON content with error handling
+            $json_content = \wp_json_encode($item, JSON_UNESCAPED_UNICODE);
+            if ($json_content === false) {
+                $wpdb->query('ROLLBACK');
+                return false;
+            }
+
+            // Insert the data
+            $result = $wpdb->insert(
+                $wpdb->prefix . 'feed_raw_items',
+                [
+                    'feed_id' => $feed->get_post_id(),
+                    'guid' => $guid,
+                    'pub_date' => $pub_date,
+                    'raw_content' => $json_content,
+                    'created_at' => \current_time('mysql'),
+                ],
+                ['%d', '%s', '%s', '%s', '%s']
+            );
+
+            if ($result === false) {
+                $wpdb->query('ROLLBACK');
+                return false;
+            }
+
+            // Get the inserted item ID
+            $item_id = $wpdb->insert_id;
+
+            // Speichere die Kategorien, wenn die Tabelle existiert
+            if ($categories_table_exists && isset($item['categories']) && is_array($item['categories']) && !empty($item_id)) {
+                $this->save_item_categories($item_id, $item['categories']);
+            }
+
+            $wpdb->query('COMMIT');
+            return true;
+
+        } catch (\Exception $e) {
+            $wpdb->query('ROLLBACK');
+            return false;
+        }
+    }
+
+    /**
+     * Speichert die Kategorien eines Feed-Items in der Datenbank
+     *
+     * @param int   $item_id    Die ID des Feed-Items
+     * @param array $categories Liste der Kategorien
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function save_item_categories(int $item_id, array $categories): bool {
+        global $wpdb;
+
+        if (empty($item_id) || empty($categories)) {
+            return false;
+        }
+
+        $success = true;
+
+        foreach ($categories as $category) {
+            if (empty($category)) {
+                continue;
+            }
+
+            // Normalisiere die Kategorie (trimmen, auf 255 Zeichen beschränken)
+            $category = \substr(\trim($category), 0, 255);
+
+            $result = $wpdb->insert(
+                $wpdb->prefix . 'feed_item_categories',
+                [
+                    'item_id' => $item_id,
+                    'category' => $category,
+                    'created_at' => \current_time('mysql'),
+                ],
+                ['%d', '%s', '%s']
+            );
+
+            if ($result === false) {
+                $success = false;
+            }
+        }
+
+        return $success;
+    }
+
+    /**
+     * Aktualisiert die Kategorien eines bestehenden Feed-Items
+     *
+     * @param int   $item_id    Die ID des Feed-Items
+     * @param array $categories Liste der Kategorien
+     * @return bool Erfolg oder Misserfolg
+     */
+    private function update_item_categories(int $item_id, array $categories): bool {
+        global $wpdb;
+
+        if (empty($item_id)) {
+            return false;
+        }
+
+        // Lösche zuerst alle bestehenden Kategorien für dieses Item
+        $wpdb->delete(
+            $wpdb->prefix . 'feed_item_categories',
+            ['item_id' => $item_id],
+            ['%d']
         );
 
-        // If it exists, we'll consider it a success but not insert it again
-        if ($existing) {
+        // Wenn keine neuen Kategorien zu speichern sind, sind wir fertig
+        if (empty($categories)) {
             return true;
         }
 
-        // Prepare JSON content with error handling
-        $json_content = \wp_json_encode($item, JSON_UNESCAPED_UNICODE);
-        if ($json_content === false) {
-            return false;
-        }
-
-        // Insert the data
-        $result = $wpdb->insert(
-            $wpdb->prefix . 'feed_raw_items',
-            [
-                'feed_id' => $feed->get_post_id(),
-                'guid' => $guid,
-                'pub_date' => $pub_date,
-                'content' => $json_content,
-                'created_at' => \current_time('mysql'),
-            ],
-            ['%d', '%s', '%s', '%s', '%s']
-        );
-
-        return $result !== false;
+        // Speichere die neuen Kategorien
+        return $this->save_item_categories($item_id, $categories);
     }
 
     /**
      * Process and save multiple feed items
      *
-     * @param Feed $feed The feed the items belong to
+     * @param Feed  $feed  The feed the items belong to
      * @param array $items Array of feed items
      * @return array Returns statistics about the operation: ['processed' => int, 'new_items' => int, 'existing_items' => int, 'errors' => int]
      */

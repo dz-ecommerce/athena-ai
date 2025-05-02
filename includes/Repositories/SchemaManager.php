@@ -105,6 +105,17 @@ class SchemaManager {
             INDEX (item_hash),
             UNIQUE KEY (item_hash, feed_id)
         ) $charset_collate;");
+        
+        // Feed Item Categories
+        \dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_item_categories (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            item_id BIGINT UNSIGNED NOT NULL,
+            category VARCHAR(255) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX (item_id),
+            INDEX (category),
+            UNIQUE KEY (item_id, category)
+        ) $charset_collate;");
 
         // Errors
         \dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}feed_errors (
