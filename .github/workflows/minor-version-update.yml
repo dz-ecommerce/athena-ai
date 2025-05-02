@@ -27,6 +27,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mbstring, intl
+          tools: composer:v2
+
+      - name: Get PHP version
+        id: php_version
+        run: |
+          echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
+          echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
+
       - name: Increment minor version
         id: update_version
         run: |
@@ -65,6 +79,11 @@ jobs:
           # Output für spätere Schritte setzen
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install PHP dependencies
+        run: |
+          composer validate --strict
+          composer install --no-dev --no-progress --no-interaction
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -125,5 +144,6 @@ jobs:
             
             - Versionsaktualisierung von v${{ steps.update_version.outputs.previous_version }} auf v${{ steps.update_version.outputs.version }}
             - Kompilierte CSS-Dateien mit den neuesten Tailwind-Änderungen
+            - Erstellt mit PHP ${{ steps.php_version.outputs.php_version }}
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }} 
