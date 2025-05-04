@@ -1741,6 +1741,26 @@ class FeedService {
 
             if (empty($item['guid'])) {
                 $this->logger->warn(
+                    "Item ohne GUID trotz Normalisierung übersprungen (Index: {$index})."
+                );
+                continue;
+            }
+            
+            // Volltext automatisch nachladen, falls Link vorhanden und noch kein full_content
+            // Deaktiviert um ungewünschte Website-Inhalte zu vermeiden
+            /*
+            if (!empty($item['link']) && empty($item['full_content'])) {
+                $full_content = $this->extractFullTextFromUrl($item['link']);
+                if (!empty($full_content)) {
+                    $item['full_content'] = $full_content;
+                }
+            }
+            */
+
+            // Generiere einen Hash für das Item als Primärschlüssel
+            $item_hash = md5($item['guid']);
+            
+            // Prüfe, ob das Item bereits existiert
             $exists = $wpdb->get_var(
                 $wpdb->prepare(
                     "SELECT COUNT(*) FROM {$table_name} WHERE item_hash = %s AND feed_id = %d",
