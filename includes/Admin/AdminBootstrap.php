@@ -8,6 +8,7 @@
 namespace AthenaAI\Admin;
 
 use AthenaAI\Admin\DatabaseUpgrade;
+use AthenaAI\Admin\ProfilePage;
 
 /**
  * Initialisiert alle Admin-spezifischen Komponenten.
@@ -99,6 +100,9 @@ class AdminBootstrap {
 
         // Datenbank-Upgrade-Seite initialisieren
         DatabaseUpgrade::init();
+
+        // Profilseite initialisieren
+        ProfilePage::register();
     }
 
     /**
