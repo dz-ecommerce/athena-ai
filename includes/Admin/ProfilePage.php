@@ -37,14 +37,14 @@ class ProfilePage {
      * @return void
      */
     public static function add_profile_page(): void {
-        // Hauptmenü-Hook ermitteln (je nach Plugin-Struktur)
+        // Im Athena AI Hauptmenü registrieren (vor Settings)
         $parent_slug = 'edit.php?post_type=athena-feed';
         
         add_submenu_page(
             $parent_slug,
             __('Athena AI Profiles', 'athena-ai'),
             __('Profiles', 'athena-ai'),
-            'manage_options',
+            'manage_athena_ai', // Verwende die gleiche Berechtigung wie Settings
             'athena-ai-profiles',
             [self::class, 'render_page']
         );

@@ -158,6 +158,13 @@ class Plugin {
                     $submenu['edit.php?post_type=athena-feed'][] = $item;
                 }
             }*/
+            
+            foreach ($menu_items as $item) {
+                if ($item[2] === 'athena-ai-profiles') {
+                    // Profiles (vor Settings)
+                    $submenu['edit.php?post_type=athena-feed'][] = $item;
+                }
+            }
 
             foreach ($menu_items as $item) {
                 if ($item[2] === 'athena-ai-settings') {
