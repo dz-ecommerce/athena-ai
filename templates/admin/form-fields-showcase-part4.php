@@ -32,27 +32,49 @@ if (!defined('ABSPATH')) {
                 
                 <div id="searchable_select_dropdown" class="hidden absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                     <div class="sticky top-0 z-10 bg-white">
-                        <input type="text"
+                        <input type="text" id="industry_search_input"
                             class="w-full border-0 border-b border-gray-300 focus:ring-0 focus:border-blue-500 rounded-t-md px-4 py-2"
-                            placeholder="<?php esc_attr_e('Search options...', 'athena-ai'); ?>"
+                            placeholder="<?php esc_attr_e('Branche suchen...', 'athena-ai'); ?>"
                             oninput="filterSearchableOptions(this, 'searchable_select_options')">
                     </div>
                     <ul id="searchable_select_options" class="py-2">
-                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900">
-                            <?php esc_html_e('Option 1', 'athena-ai'); ?>
-                        </li>
-                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900">
-                            <?php esc_html_e('Option 2', 'athena-ai'); ?>
-                        </li>
-                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900">
-                            <?php esc_html_e('Option 3', 'athena-ai'); ?>
-                        </li>
-                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900">
-                            <?php esc_html_e('Another Option', 'athena-ai'); ?>
-                        </li>
-                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900">
-                            <?php esc_html_e('Something Else', 'athena-ai'); ?>
-                        </li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="accounting">Buchhaltung & Steuern</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="advertising">Werbung & Marketing</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="agriculture">Landwirtschaft</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="architecture">Architektur & Ingenieurwesen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="art">Kunst & Design</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="automotive">Automobilindustrie</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="banking">Banken & Finanzdienstleistungen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="beauty">Schönheit & Kosmetik</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="biotechnology">Biotechnologie</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="broadcasting">Rundfunk & Medien</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="construction">Bauwesen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="consulting">Unternehmensberatung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="consumer_goods">Konsumgüter</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="education">Bildung & Erziehung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="electronics">Elektronik & Elektrotechnik</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="energy">Energie & Versorgung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="entertainment">Unterhaltung & Freizeit</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="fashion">Mode & Bekleidung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="food">Lebensmittel & Getränke</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="healthcare">Gesundheitswesen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="hospitality">Hotellerie & Gastronomie</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="insurance">Versicherungen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="it">IT & Softwareentwicklung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="legal">Rechtsberatung</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="manufacturing">Fertigungsindustrie</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="media">Medien & Kommunikation</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="mining">Bergbau & Rohstoffe</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="non_profit">Gemeinnützige Organisationen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="pharmaceuticals">Pharmazeutische Industrie</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="real_estate">Immobilien</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="retail">Einzelhandel</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="sports">Sport & Fitness</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="telecommunications">Telekommunikation</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="tourism">Tourismus & Reisen</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="transportation">Transport & Logistik</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="utilities">Versorgungswirtschaft</li>
+                        <li class="cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-100 hover:text-blue-900" data-value="wholesale">Großhandel</li>
                     </ul>
                 </div>
                 <input type="hidden" name="searchable_select" id="searchable_select" value="">
