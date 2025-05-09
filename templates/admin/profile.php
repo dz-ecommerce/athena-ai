@@ -358,16 +358,7 @@ if (!defined('ABSPATH')) {
                 </fieldset>
             </div>
 
-            <!-- Form Fields Showcase -->
-            <?php
-            // Füge die Form-Showcase-Dateien ein
-            require_once(ATHENA_AI_PLUGIN_DIR . 'templates/admin/form-fields-showcase.php');
-            require_once(ATHENA_AI_PLUGIN_DIR . 'templates/admin/form-fields-showcase-part2.php');
-            require_once(ATHENA_AI_PLUGIN_DIR . 'templates/admin/form-fields-showcase-part3.php');
-            require_once(ATHENA_AI_PLUGIN_DIR . 'templates/admin/form-fields-showcase-part4.php');
-            // JavaScript für die Formulare
-            require_once(ATHENA_AI_PLUGIN_DIR . 'templates/admin/form-fields-showcase-js.php');
-            ?>
+
             
             <?php submit_button(__('Save Profile Settings', 'athena-ai'), 'primary', 'submit', false, ['class' => 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 text-white rounded-lg px-4 py-2']); ?>
         </form>
