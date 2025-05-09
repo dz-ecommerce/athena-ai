@@ -21,109 +21,11 @@ if (!defined('ABSPATH')) {
 
     <!-- Content -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-100 p-6">
-        <div class="mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">
-                <?php esc_html_e('Profile Settings', 'athena-ai'); ?>
-            </h2>
-            <p class="text-gray-600">
-                <?php esc_html_e('Here you can customize your Athena AI profiles and manage their related settings.', 'athena-ai'); ?>
-            </p>
-        </div>
-
         <form method="post" action="options.php" class="space-y-6">
             <?php
             settings_fields('athena_ai_profile_settings');
             do_settings_sections('athena_ai_profile_settings');
             ?>
-
-            <!-- Profile List Section -->
-            <div class="mb-8">
-                <h3 class="text-lg font-medium text-gray-700 mb-4">
-                    <?php esc_html_e('Available Profiles', 'athena-ai'); ?>
-                </h3>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <?php esc_html_e('Profile Name', 'athena-ai'); ?>
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <?php esc_html_e('Description', 'athena-ai'); ?>
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <?php esc_html_e('Status', 'athena-ai'); ?>
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <?php esc_html_e('Actions', 'athena-ai'); ?>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <!-- Beispiel-Profil Zeile -->
-                            <tr>
-                                <td class="px-4 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">Default</div>
-                                </td>
-                                <td class="px-4 py-4">
-                                    <div class="text-sm text-gray-500">Standard Profile für Feed-Verarbeitung</div>
-                                </td>
-                                <td class="px-4 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                        <?php esc_html_e('Active', 'athena-ai'); ?>
-                                    </span>
-                                </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="#" class="text-blue-600 hover:text-blue-900 mr-3">
-                                        <?php esc_html_e('Edit', 'athena-ai'); ?>
-                                    </a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Add New Profile Section -->
-            <div class="mb-8 border-t pt-6">
-                <h3 class="text-lg font-medium text-gray-700 mb-4">
-                    <?php esc_html_e('Add New Profile', 'athena-ai'); ?>
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="profile_name" class="block text-sm font-medium text-gray-700 mb-1">
-                            <?php esc_html_e('Profile Name', 'athena-ai'); ?>
-                        </label>
-                        <input type="text" name="profile_name" id="profile_name" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="<?php esc_attr_e('Enter profile name', 'athena-ai'); ?>">
-                    </div>
-                    <div>
-                        <label for="profile_description" class="block text-sm font-medium text-gray-700 mb-1">
-                            <?php esc_html_e('Description', 'athena-ai'); ?>
-                        </label>
-                        <input type="text" name="profile_description" id="profile_description" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="<?php esc_attr_e('Enter description', 'athena-ai'); ?>">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Profile Settings Section -->
-            <div class="mb-8 border-t pt-6">
-                <h3 class="text-lg font-medium text-gray-700 mb-4">
-                    <?php esc_html_e('Profile Settings', 'athena-ai'); ?>
-                </h3>
-                <div class="grid grid-cols-1 gap-6">
-                    <div>
-                        <label for="default_profile" class="block text-sm font-medium text-gray-700 mb-1">
-                            <?php esc_html_e('Default Profile', 'athena-ai'); ?>
-                        </label>
-                        <select name="default_profile" id="default_profile" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                            <option value="default">Default</option>
-                        </select>
-                        <p class="mt-2 text-sm text-gray-500">
-                            <?php esc_html_e('This profile will be used as the default for new feeds.', 'athena-ai'); ?>
-                        </p>
-                    </div>
-                </div>
-            </div>
 
             <!-- Unternehmens-Stammdaten Section -->
             <div class="mb-8 border-t pt-6">
@@ -144,19 +46,80 @@ if (!defined('ABSPATH')) {
                             <input type="text" name="company_name" id="company_name" placeholder="<?php esc_attr_e('Firmenname', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4">
                         </div>
                         <div>
-                            <label for="company_industry" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Branche', 'athena-ai'); ?>
-                            </label>
-                            <select name="company_industry" id="company_industry" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                <option value=""><?php esc_html_e('Bitte auswählen', 'athena-ai'); ?></option>
-                                <option value="it"><?php esc_html_e('IT & Software', 'athena-ai'); ?></option>
-                                <option value="finance"><?php esc_html_e('Finanzen & Versicherung', 'athena-ai'); ?></option>
-                                <option value="retail"><?php esc_html_e('Einzelhandel', 'athena-ai'); ?></option>
-                                <option value="manufacturing"><?php esc_html_e('Produktion & Fertigung', 'athena-ai'); ?></option>
-                                <option value="healthcare"><?php esc_html_e('Gesundheitswesen', 'athena-ai'); ?></option>
-                                <option value="education"><?php esc_html_e('Bildung & Forschung', 'athena-ai'); ?></option>
-                                <option value="media"><?php esc_html_e('Medien & Kommunikation', 'athena-ai'); ?></option>
-                                <option value="other"><?php esc_html_e('Sonstige', 'athena-ai'); ?></option>
+                            <select name="company_industry" id="company_industry" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-10 py-2.5 px-4 border-gray-300 rounded-md">
+                                <option value="" disabled selected><?php esc_html_e('Branche auswählen', 'athena-ai'); ?></option>
+                                <optgroup label="<?php esc_attr_e('Dienstleistungen', 'athena-ai'); ?>">
+                                    <option value="accounting">Buchhaltung & Steuern</option>
+                                    <option value="advertising">Werbung & Marketing</option>
+                                    <option value="consulting">Unternehmensberatung</option>
+                                    <option value="financial">Finanzdienstleistungen</option>
+                                    <option value="insurance">Versicherungen</option>
+                                    <option value="legal">Rechtsberatung</option>
+                                    <option value="real_estate">Immobilien</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('IT & Technologie', 'athena-ai'); ?>">
+                                    <option value="it_services">IT-Dienstleistungen</option>
+                                    <option value="software">Softwareentwicklung</option>
+                                    <option value="web_design">Webdesign & -entwicklung</option>
+                                    <option value="ecommerce">E-Commerce</option>
+                                    <option value="telecommunications">Telekommunikation</option>
+                                    <option value="data_analytics">Datenanalyse</option>
+                                    <option value="cloud_computing">Cloud Computing</option>
+                                    <option value="cybersecurity">IT-Sicherheit</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('Handel & Einzelhandel', 'athena-ai'); ?>">
+                                    <option value="retail">Einzelhandel</option>
+                                    <option value="wholesale">Großhandel</option>
+                                    <option value="ecommerce_retail">Online-Handel</option>
+                                    <option value="consumer_goods">Konsumgüter</option>
+                                    <option value="food_retail">Lebensmittelhandel</option>
+                                    <option value="fashion">Mode & Bekleidung</option>
+                                    <option value="electronics_retail">Elektronik</option>
+                                    <option value="furniture">Möbel & Einrichtung</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('Produktion & Fertigung', 'athena-ai'); ?>">
+                                    <option value="manufacturing">Fertigungsindustrie</option>
+                                    <option value="automotive">Automobilindustrie</option>
+                                    <option value="aerospace">Luft- und Raumfahrt</option>
+                                    <option value="electronics">Elektronik & Elektrotechnik</option>
+                                    <option value="chemicals">Chemische Industrie</option>
+                                    <option value="pharma">Pharmazeutische Industrie</option>
+                                    <option value="machinery">Maschinenbau</option>
+                                    <option value="textiles">Textilindustrie</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('Gesundheitswesen', 'athena-ai'); ?>">
+                                    <option value="healthcare">Gesundheitswesen</option>
+                                    <option value="medical_practice">Arztpraxis</option>
+                                    <option value="hospital">Krankenhaus</option>
+                                    <option value="biotech">Biotechnologie</option>
+                                    <option value="medical_devices">Medizintechnik</option>
+                                    <option value="pharmaceutical">Pharmaindustrie</option>
+                                    <option value="healthcare_services">Gesundheitsdienstleistungen</option>
+                                    <option value="eldercare">Altenpflege</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('Bildung & Forschung', 'athena-ai'); ?>">
+                                    <option value="education">Bildungseinrichtungen</option>
+                                    <option value="school">Schulen</option>
+                                    <option value="university">Hochschulen & Universitäten</option>
+                                    <option value="vocational_training">Berufsbildung</option>
+                                    <option value="research">Forschungseinrichtungen</option>
+                                    <option value="e_learning">E-Learning & Online-Bildung</option>
+                                </optgroup>
+                                <optgroup label="<?php esc_attr_e('Weitere Branchen', 'athena-ai'); ?>">
+                                    <option value="agriculture">Landwirtschaft</option>
+                                    <option value="architecture">Architektur & Ingenieurwesen</option>
+                                    <option value="art">Kunst & Design</option>
+                                    <option value="beauty">Schönheit & Kosmetik</option>
+                                    <option value="construction">Bauwesen</option>
+                                    <option value="energy">Energie & Versorgung</option>
+                                    <option value="entertainment">Unterhaltung & Freizeit</option>
+                                    <option value="food">Gastronomie & Lebensmittel</option>
+                                    <option value="hospitality">Hotellerie & Gastgewerbe</option>
+                                    <option value="media">Medien & Kommunikation</option>
+                                    <option value="transport">Transport & Logistik</option>
+                                    <option value="travel">Tourismus & Reisen</option>
+                                    <option value="other">Sonstige</option>
+                                </optgroup>
                             </select>
                         </div>
 
@@ -388,24 +351,9 @@ if (!defined('ABSPATH')) {
                     <legend class="text-md font-medium text-gray-700 px-2">
                         <?php esc_html_e('Zusätzliche Informationen', 'athena-ai'); ?>
                     </legend>
-                    <div class="grid grid-cols-1 gap-6">
-                        <div>
-                            <textarea name="avoided_topics" id="avoided_topics" rows="3" placeholder="<?php esc_attr_e('Themen, die vermieden werden sollen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
-                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Optional', 'athena-ai'); ?></p>
-                        </div>
-                        <div>
-                            <label for="preferred_cta" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Gewünschte CTA', 'athena-ai'); ?>
-                            </label>
-                            <select name="preferred_cta" id="preferred_cta" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                <option value=""><?php esc_html_e('Bitte auswählen', 'athena-ai'); ?></option>
-                                <option value="contact"><?php esc_html_e('Kontaktaufnahme', 'athena-ai'); ?></option>
-                                <option value="newsletter"><?php esc_html_e('Newsletter-Anmeldung', 'athena-ai'); ?></option>
-                                <option value="demo"><?php esc_html_e('Produkt-Demo', 'athena-ai'); ?></option>
-                                <option value="consultation"><?php esc_html_e('Beratungsgespräch', 'athena-ai'); ?></option>
-                                <option value="other"><?php esc_html_e('Sonstiges', 'athena-ai'); ?></option>
-                            </select>
-                        </div>
+                    <div>
+                        <textarea name="avoided_topics" id="avoided_topics" rows="3" placeholder="<?php esc_attr_e('Themen, die vermieden werden sollen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
+                        <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Optional', 'athena-ai'); ?></p>
                     </div>
                 </fieldset>
             </div>
