@@ -129,6 +129,21 @@ class ProfilePage {
             $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
         }
         
+        // B2B oder B2C
+        if (isset($input['customer_type'])) {
+            $sanitized['customer_type'] = sanitize_text_field($input['customer_type']);
+        }
+        
+        // Bevorzugte Ansprache
+        if (isset($input['preferred_tone'])) {
+            $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);
+        }
+        
+        // Tonalität
+        if (isset($input['tonality']) && is_array($input['tonality'])) {
+            $sanitized['tonality'] = array_map('sanitize_text_field', $input['tonality']);
+        }
+        
         return $sanitized;
     }
 
