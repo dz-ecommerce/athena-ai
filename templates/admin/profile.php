@@ -141,10 +141,7 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Firmenname', 'athena-ai'); ?>
-                            </label>
-                            <input type="text" name="company_name" id="company_name" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            <input type="text" name="company_name" id="company_name" placeholder="<?php esc_attr_e('Firmenname', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4">
                         </div>
                         <div>
                             <label for="company_industry" class="block text-sm font-medium text-gray-700 mb-1">
@@ -162,17 +159,9 @@ if (!defined('ABSPATH')) {
                                 <option value="other"><?php esc_html_e('Sonstige', 'athena-ai'); ?></option>
                             </select>
                         </div>
-                        <div>
-                            <label for="company_founded" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Gründungsjahr', 'athena-ai'); ?>
-                            </label>
-                            <input type="number" name="company_founded" id="company_founded" min="1900" max="<?php echo date('Y'); ?>" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                        </div>
+
                         <div class="md:col-span-2">
-                            <label for="company_description" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Kurzbeschreibung des Unternehmens', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="company_description" id="company_description" rows="3" maxlength="500" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="company_description" id="company_description" rows="3" maxlength="500" placeholder="<?php esc_attr_e('Kurzbeschreibung des Unternehmens', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 500 Zeichen', 'athena-ai'); ?></p>
                         </div>
                     </div>
@@ -185,17 +174,11 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label for="company_products" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="company_products" id="company_products" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="company_products" id="company_products" rows="3" placeholder="<?php esc_attr_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Einträge, je ein Eintrag pro Zeile', 'athena-ai'); ?></p>
                         </div>
                         <div>
-                            <label for="company_usps" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Alleinstellungsmerkmale', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="company_usps" id="company_usps" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="company_usps" id="company_usps" rows="3" placeholder="<?php esc_attr_e('Alleinstellungsmerkmale', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                         </div>
                     </div>
                 </fieldset>
@@ -226,35 +209,62 @@ if (!defined('ABSPATH')) {
                             </div>
                         </div>
                         <div>
-                            <label for="target_audience" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Zielgruppenbeschreibung', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="target_audience" id="target_audience" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="target_audience" id="target_audience" rows="3" placeholder="<?php esc_attr_e('Zielgruppenbeschreibung', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 <?php esc_html_e('Altersgruppe der Zielkunden', 'athena-ai'); ?>
                             </label>
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="age_group[]" id="age_group_18_25" value="18-25" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="age_group_18_25" class="ml-2 block text-sm text-gray-700">18-25</label>
+                            <div class="flex flex-wrap -mx-2">
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="age_group[]" id="age_group_18_25" value="18-25" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="age_group_18_25" class="font-medium text-gray-700">18-25</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="age_group[]" id="age_group_26_35" value="26-35" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="age_group_26_35" class="ml-2 block text-sm text-gray-700">26-35</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="age_group[]" id="age_group_26_35" value="26-35" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="age_group_26_35" class="font-medium text-gray-700">26-35</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="age_group[]" id="age_group_36_45" value="36-45" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="age_group_36_45" class="ml-2 block text-sm text-gray-700">36-45</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="age_group[]" id="age_group_36_45" value="36-45" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="age_group_36_45" class="font-medium text-gray-700">36-45</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="age_group[]" id="age_group_46_60" value="46-60" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="age_group_46_60" class="ml-2 block text-sm text-gray-700">46-60</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="age_group[]" id="age_group_46_60" value="46-60" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="age_group_46_60" class="font-medium text-gray-700">46-60</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="age_group[]" id="age_group_60_plus" value="60+" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="age_group_60_plus" class="ml-2 block text-sm text-gray-700">60+</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="age_group[]" id="age_group_60_plus" value="60+" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="age_group_60_plus" class="font-medium text-gray-700">60+</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -268,10 +278,7 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label for="company_values" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Wichtigste Unternehmenswerte', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="company_values" id="company_values" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="company_values" id="company_values" rows="3" placeholder="<?php esc_attr_e('Wichtigste Unternehmenswerte', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Werte, je ein Wert pro Zeile', 'athena-ai'); ?></p>
                         </div>
                         <div>
@@ -293,26 +300,56 @@ if (!defined('ABSPATH')) {
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 <?php esc_html_e('Tonalität', 'athena-ai'); ?>
                             </label>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="tonality[]" id="tonality_professional" value="professional" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="tonality_professional" class="ml-2 block text-sm text-gray-700">Professionell</label>
+                            <div class="flex flex-wrap -mx-2">
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="tonality[]" id="tonality_professional" value="professional" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="tonality_professional" class="font-medium text-gray-700">Professionell</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="tonality[]" id="tonality_friendly" value="friendly" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="tonality_friendly" class="ml-2 block text-sm text-gray-700">Freundlich</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="tonality[]" id="tonality_friendly" value="friendly" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="tonality_friendly" class="font-medium text-gray-700">Freundlich</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="tonality[]" id="tonality_humorous" value="humorous" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="tonality_humorous" class="ml-2 block text-sm text-gray-700">Humorvoll</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="tonality[]" id="tonality_humorous" value="humorous" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="tonality_humorous" class="font-medium text-gray-700">Humorvoll</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="tonality[]" id="tonality_informative" value="informative" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="tonality_informative" class="ml-2 block text-sm text-gray-700">Informativ</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="tonality[]" id="tonality_informative" value="informative" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="tonality_informative" class="font-medium text-gray-700">Informativ</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="tonality[]" id="tonality_authoritative" value="authoritative" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                    <label for="tonality_authoritative" class="ml-2 block text-sm text-gray-700">Autoritativ</label>
+                                <div class="px-2 py-1.5 flex items-center">
+                                    <div class="relative flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="tonality[]" id="tonality_authoritative" value="authoritative" class="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-2.5 text-sm">
+                                            <label for="tonality_authoritative" class="font-medium text-gray-700">Autoritativ</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -326,17 +363,11 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label for="expertise_areas" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Fachgebiete', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="expertise_areas" id="expertise_areas" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="expertise_areas" id="expertise_areas" rows="3" placeholder="<?php esc_attr_e('Fachgebiete', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Stichpunkte, ein Eintrag pro Zeile', 'athena-ai'); ?></p>
                         </div>
                         <div>
-                            <label for="certifications" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Besondere Qualifikationen oder Zertifizierungen', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="certifications" id="certifications" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="certifications" id="certifications" rows="3" placeholder="<?php esc_attr_e('Besondere Qualifikationen oder Zertifizierungen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                         </div>
                     </div>
                 </fieldset>
@@ -347,10 +378,7 @@ if (!defined('ABSPATH')) {
                         <?php esc_html_e('Wichtige Keywords', 'athena-ai'); ?>
                     </legend>
                     <div>
-                        <label for="seo_keywords" class="block text-sm font-medium text-gray-700 mb-1">
-                            <?php esc_html_e('SEO-Keywords', 'athena-ai'); ?>
-                        </label>
-                        <textarea name="seo_keywords" id="seo_keywords" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                        <textarea name="seo_keywords" id="seo_keywords" rows="3" placeholder="<?php esc_attr_e('SEO-Keywords', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                         <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 5 Begriffe, je ein Begriff pro Zeile', 'athena-ai'); ?></p>
                     </div>
                 </fieldset>
@@ -362,10 +390,7 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label for="avoided_topics" class="block text-sm font-medium text-gray-700 mb-1">
-                                <?php esc_html_e('Themen, die vermieden werden sollen', 'athena-ai'); ?>
-                            </label>
-                            <textarea name="avoided_topics" id="avoided_topics" rows="3" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                            <textarea name="avoided_topics" id="avoided_topics" rows="3" placeholder="<?php esc_attr_e('Themen, die vermieden werden sollen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Optional', 'athena-ai'); ?></p>
                         </div>
                         <div>
