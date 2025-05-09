@@ -73,6 +73,62 @@ class ProfilePage {
      */
     public static function sanitize_profile_settings(array $input): array {
         $sanitized = [];
+        
+        // Unternehmensprofil
+        if (isset($input['company_name'])) {
+            $sanitized['company_name'] = sanitize_text_field($input['company_name']);
+        }
+        
+        if (isset($input['company_industry'])) {
+            $sanitized['company_industry'] = sanitize_text_field($input['company_industry']);
+        }
+        
+        if (isset($input['company_description'])) {
+            $sanitized['company_description'] = sanitize_textarea_field($input['company_description']);
+        }
+        
+        // Produkte und Dienstleistungen
+        if (isset($input['company_products'])) {
+            $sanitized['company_products'] = sanitize_textarea_field($input['company_products']);
+        }
+        
+        if (isset($input['company_usps'])) {
+            $sanitized['company_usps'] = sanitize_textarea_field($input['company_usps']);
+        }
+        
+        // Zielgruppe
+        if (isset($input['target_audience'])) {
+            $sanitized['target_audience'] = sanitize_textarea_field($input['target_audience']);
+        }
+        
+        if (isset($input['age_group']) && is_array($input['age_group'])) {
+            $sanitized['age_group'] = array_map('sanitize_text_field', $input['age_group']);
+        }
+        
+        // Unternehmenswerte
+        if (isset($input['company_values'])) {
+            $sanitized['company_values'] = sanitize_textarea_field($input['company_values']);
+        }
+        
+        // Fachwissen und Expertise
+        if (isset($input['expertise_areas'])) {
+            $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);
+        }
+        
+        if (isset($input['certifications'])) {
+            $sanitized['certifications'] = sanitize_textarea_field($input['certifications']);
+        }
+        
+        // Wichtige Keywords
+        if (isset($input['seo_keywords'])) {
+            $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);
+        }
+        
+        // Zusätzliche Informationen
+        if (isset($input['avoided_topics'])) {
+            $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
+        }
+        
         return $sanitized;
     }
 
