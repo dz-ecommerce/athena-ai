@@ -61,49 +61,10 @@ class ProfilePage {
             'athena_ai_profiles', 
             ['sanitize_callback' => [self::class, 'sanitize_profile_settings']]
         );
-
-        // Einstellungsgruppen und Felder hinzufügen
-        add_settings_section(
-            'athena_ai_profile_section',
-            __('Profile Configuration', 'athena-ai'),
-            [self::class, 'profile_section_callback'],
-            'athena_ai_profile_settings'
-        );
-
-        // Beispielfeld für Profileinstellungen
-        add_settings_field(
-            'athena_ai_default_profile',
-            __('Default Profile', 'athena-ai'),
-            [self::class, 'default_profile_callback'],
-            'athena_ai_profile_settings',
-            'athena_ai_profile_section'
-        );
-    }
-
-    /**
-     * Callback für die Profilsektion.
-     *
-     * @return void
-     */
-    public static function profile_section_callback(): void {
-        echo '<p>' . esc_html__('Configure your Athena AI profiles here.', 'athena-ai') . '</p>';
-    }
-
-    /**
-     * Callback für das Default-Profile-Feld.
-     *
-     * @return void
-     */
-    public static function default_profile_callback(): void {
-        $options = get_option('athena_ai_profiles', ['default_profile' => 'default']);
-        $default_profile = $options['default_profile'] ?? 'default';
         
-        echo '<select id="athena_ai_default_profile" name="athena_ai_profiles[default_profile]">';
-        echo '<option value="default"' . selected($default_profile, 'default', false) . '>' . esc_html__('Default', 'athena-ai') . '</option>';
-        echo '</select>';
-        echo '<p class="description">' . esc_html__('Select the default profile for new feeds.', 'athena-ai') . '</p>';
+        // Keine Einstellungsgruppen oder Felder für Profile Configuration
     }
-
+    
     /**
      * Sanitiert die Profileinstellungen.
      *
@@ -112,11 +73,6 @@ class ProfilePage {
      */
     public static function sanitize_profile_settings(array $input): array {
         $sanitized = [];
-        
-        if (isset($input['default_profile'])) {
-            $sanitized['default_profile'] = sanitize_text_field($input['default_profile']);
-        }
-        
         return $sanitized;
     }
 
