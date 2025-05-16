@@ -17,16 +17,6 @@ class Settings extends BaseAdmin {
         'openai_default_model' => 'gpt-4',
         'openai_temperature' => '0.7',
 
-        'anthropic_api_key' => '',
-        'anthropic_model' => 'claude-2',
-
-        'google_api_key' => '',
-        'google_model' => 'gemini-pro',
-        'google_safety_setting' => 'standard',
-
-        'mistral_api_key' => '',
-        'mistral_model' => 'mistral-medium',
-
         // Image AI Settings
         'dalle_size' => '1024x1024',
         'dalle_quality' => 'standard',
@@ -79,19 +69,6 @@ class Settings extends BaseAdmin {
                     'gpt-4' => 'GPT-4',
                     'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
                 ],
-                'anthropic' => [
-                    'claude-2' => 'Claude 2',
-                    'claude-instant' => 'Claude Instant',
-                ],
-                'google' => [
-                    'gemini-pro' => 'Gemini Pro',
-                    'gemini-ultra' => 'Gemini Ultra',
-                ],
-                'mistral' => [
-                    'mistral-small' => 'Mistral Small',
-                    'mistral-medium' => 'Mistral Medium',
-                    'mistral-large' => 'Mistral Large',
-                ],
                 'dalle' => [
                     'sizes' => ['256x256', '512x512', '1024x1024'],
                     'qualities' => ['standard', 'hd'],
@@ -136,30 +113,6 @@ class Settings extends BaseAdmin {
         );
         $settings['athena_ai_openai_temperature'] = floatval(
             $_POST['athena_ai_openai_temperature'] ?? 0.7
-        );
-
-        $settings['athena_ai_anthropic_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_anthropic_api_key'] ?? ''
-        );
-        $settings['athena_ai_anthropic_model'] = sanitize_text_field(
-            $_POST['athena_ai_anthropic_model'] ?? ''
-        );
-
-        $settings['athena_ai_google_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_google_api_key'] ?? ''
-        );
-        $settings['athena_ai_google_model'] = sanitize_text_field(
-            $_POST['athena_ai_google_model'] ?? ''
-        );
-        $settings['athena_ai_google_safety_setting'] = sanitize_text_field(
-            $_POST['athena_ai_google_safety_setting'] ?? ''
-        );
-
-        $settings['athena_ai_mistral_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_mistral_api_key'] ?? ''
-        );
-        $settings['athena_ai_mistral_model'] = sanitize_text_field(
-            $_POST['athena_ai_mistral_model'] ?? ''
         );
 
         // Image AI Settings
@@ -275,28 +228,6 @@ class Settings extends BaseAdmin {
         $settings['openai_temperature'] = get_option(
             'athena_ai_openai_temperature',
             $this->default_settings['openai_temperature']
-        );
-
-        $settings['anthropic_api_key'] = get_option('athena_ai_anthropic_api_key', '');
-        $settings['anthropic_model'] = get_option(
-            'athena_ai_anthropic_model',
-            $this->default_settings['anthropic_model']
-        );
-
-        $settings['google_api_key'] = get_option('athena_ai_google_api_key', '');
-        $settings['google_model'] = get_option(
-            'athena_ai_google_model',
-            $this->default_settings['google_model']
-        );
-        $settings['google_safety_setting'] = get_option(
-            'athena_ai_google_safety_setting',
-            $this->default_settings['google_safety_setting']
-        );
-
-        $settings['mistral_api_key'] = get_option('athena_ai_mistral_api_key', '');
-        $settings['mistral_model'] = get_option(
-            'athena_ai_mistral_model',
-            $this->default_settings['mistral_model']
         );
 
         // Image AI Settings
