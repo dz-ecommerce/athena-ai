@@ -41,27 +41,33 @@ class Settings extends BaseAdmin {
     public function render_page() {
         // Debug-Ausgabe vor der Verarbeitung
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Athena AI: Pre-processing - API Key in DB: ' . 
-                (empty(get_option('athena_ai_openai_api_key')) ? 'EMPTY' : 'SET (' . substr(get_option('athena_ai_openai_api_key'), 0, 5) . '...)'));
-            error_log('Athena AI: Pre-processing - Org ID in DB: ' . 
-                get_option('athena_ai_openai_org_id', 'NOT SET'));
-            error_log('Athena AI: Pre-processing - Default Model in DB: ' . 
-                get_option('athena_ai_openai_default_model', 'NOT SET'));
-            error_log('Athena AI: Pre-processing - Temperature in DB: ' . 
-                get_option('athena_ai_openai_temperature', 'NOT SET'));
+            $this->log_current_settings_state('Pre-render settings state');
         }
         
+        // Verarbeite Formular-Submission
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
-            // Versuch mit der regulären Speichermethode
+            // Speichere die Einstellungen
             $this->save_settings();
             
-            // Zusätzlich den direkten Force-Save-Mechanismus verwenden
-            $this->force_save_settings();
-            
             // Nach dem Speichern sofort neu laden, um die aktuellen Werte anzuzeigen
-            // Dieser Ansatz verhindert Probleme mit veralteten Werten im Speicher
-            wp_safe_redirect(add_query_arg('settings-updated', 'true', $_SERVER['REQUEST_URI']));
+            // und Caching-Probleme zu vermeiden
+            wp_redirect(remove_query_arg('settings-updated', add_query_arg('settings-updated', 'true')));
             exit;
+        }
+        
+        // Wenn die Einstellungen aktualisiert wurden, zeige eine Erfolgsmeldung an
+        if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
+            add_settings_error(
+                'athena_ai_messages',
+                'athena_ai_message',
+                __('Settings saved successfully!', 'athena-ai'),
+                'updated'
+            );
+            
+            // Logge den aktuellen Zustand nach dem Speichern
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                $this->log_current_settings_state('Post-save settings state');
+            }
         }
         
         // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde
@@ -351,43 +357,110 @@ class Settings extends BaseAdmin {
      *
      * @return array
      */
-    private function get_settings() {
-        $settings = [];
-
-        // GitHub Settings
-        $settings['github_token'] = get_option('athena_ai_github_token', '');
-        $settings['github_owner'] = get_option(
-            'athena_ai_github_owner',
-            $this->default_settings['github_owner']
-        );
-        $settings['github_repo'] = get_option(
-            'athena_ai_github_repo',
-            $this->default_settings['github_repo']
-        );
-
-        // Text AI Settings
-        // Verbesserte Abfrage für API-Schlüssel
-        $openai_api_key = get_option('athena_ai_openai_api_key', '');
-        $openai_org_id = get_option('athena_ai_openai_org_id', '');
+    /**
+     * Logs the current state of all settings for debugging purposes
+     * 
+     * @param string $context Context for the log message
+     */
+    private function log_current_settings_state($context = '') {
+        $settings_to_log = [
+            'athena_ai_openai_api_key',
+            'athena_ai_openai_org_id',
+            'athena_ai_openai_default_model',
+            'athena_ai_openai_temperature'
+        ];
         
-        // Spezielles Debug-Logging für Diagnosezwecke
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Athena AI: Retrieved API Key from DB: ' . 
-                (empty($openai_api_key) ? 'EMPTY' : 'SET (length: ' . strlen($openai_api_key) . ')'));
-            error_log('Athena AI: Retrieved Org ID from DB: ' . 
-                (empty($openai_org_id) ? 'EMPTY' : 'SET (length: ' . strlen($openai_org_id) . ')'));
+        $log_message = "=== ATHENA AI SETTINGS STATE: {$context} ===\n";
+        
+        foreach ($settings_to_log as $setting) {
+            $value = get_option($setting, 'NOT_SET');
+            $log_message .= sprintf(
+                "%s: %s\n",
+                $setting,
+                $setting === 'athena_ai_openai_api_key' && !empty($value) && $value !== 'NOT_SET' 
+                    ? substr($value, 0, 3) . '...' . substr($value, -3) . " (length: " . strlen($value) . ")"
+                    : (is_string($value) ? $value : print_r($value, true))
+            );
         }
         
-        $settings['openai_api_key'] = $openai_api_key;
-        $settings['openai_org_id'] = $openai_org_id;
-        $settings['openai_default_model'] = get_option(
-            'athena_ai_openai_default_model',
-            $this->default_settings['openai_default_model']
-        );
-        $settings['openai_temperature'] = get_option(
-            'athena_ai_openai_temperature',
-            $this->default_settings['openai_temperature']
-        );
+        error_log($log_message . "======================================\n");
+    }
+    
+    /**
+     * Get current settings with proper error handling and fallbacks
+     *
+     * @return array
+     */
+    private function get_settings() {
+        $settings = [];
+        
+        // Define all settings with their default values
+        $setting_definitions = [
+            // GitHub Settings
+            'github_token' => 'athena_ai_github_token',
+            'github_owner' => 'athena_ai_github_owner',
+            'github_repo' => 'athena_ai_github_repo',
+            
+            // Text AI Settings
+            'openai_api_key' => 'athena_ai_openai_api_key',
+            'openai_org_id' => 'athena_ai_openai_org_id',
+            'openai_default_model' => 'athena_ai_openai_default_model',
+            'openai_temperature' => 'athena_ai_openai_temperature',
+            
+            // Image AI Settings
+            'dalle_size' => 'athena_ai_dalle_size',
+            'dalle_quality' => 'athena_ai_dalle_quality',
+            'dalle_style' => 'athena_ai_dalle_style',
+            'midjourney_api_key' => 'athena_ai_midjourney_api_key',
+            'midjourney_version' => 'athena_ai_midjourney_version',
+            'midjourney_style' => 'athena_ai_midjourney_style',
+            'stablediffusion_api_key' => 'athena_ai_stablediffusion_api_key',
+            'stablediffusion_model' => 'athena_ai_stablediffusion_model',
+            'stablediffusion_steps' => 'athena_ai_stablediffusion_steps',
+            
+            // Maintenance Settings
+            'enable_debug_mode' => 'athena_ai_enable_debug_mode',
+            'feed_cron_interval' => 'athena_ai_feed_cron_interval'
+        ];
+        
+        // Get all settings in one database query for better performance
+        $all_options = [];
+        $option_names = array_values($setting_definitions);
+        
+        if (!empty($option_names)) {
+            global $wpdb;
+            $placeholders = implode(', ', array_fill(0, count($option_names), '%s'));
+            $query = $wpdb->prepare(
+                "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name IN ($placeholders)",
+                $option_names
+            );
+            
+            $results = $wpdb->get_results($query, OBJECT_K);
+            
+            if ($results) {
+                foreach ($results as $option) {
+                    $all_options[$option->option_name] = maybe_unserialize($option->option_value);
+                }
+            }
+        }
+        
+        // Set values with proper fallbacks
+        foreach ($setting_definitions as $setting_key => $option_name) {
+            if (array_key_exists($option_name, $all_options)) {
+                $settings[$setting_key] = $all_options[$option_name];
+            } elseif (array_key_exists($setting_key, $this->default_settings)) {
+                $settings[$setting_key] = $this->default_settings[$setting_key];
+            } else {
+                $settings[$setting_key] = '';
+            }
+        }
+        
+        // Ensure sensitive data is properly handled
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $this->log_current_settings_state('After loading settings');
+        }
+        
+        return $settings;
 
         // Image AI Settings
         $settings['dalle_size'] = get_option(
