@@ -116,58 +116,115 @@ class Settings extends BaseAdmin {
     }
 
     /**
-     * Save settings
+     * Save settings with direct database access and verification
      */
     private function save_settings() {
+        // Enable error logging
+        if (!defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
+            define('WP_DEBUG_LOG', true);
+        }
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            define('WP_DEBUG', true);
+        }
+        
+        // Log start of save process
+        error_log('=== ATHENA AI SETTINGS SAVE PROCESS STARTED ===');
+        error_log('POST data: ' . print_r($_POST, true));
+        
+        // Initialize settings array
         $settings = [];
+        $results = [];
         
-        // Validiere die API-Schlüssel vor dem Speichern
-        $validation_errors = $this->validate_api_keys();
-
-        // GitHub Settings
-        $settings['athena_ai_github_token'] = sanitize_text_field(
-            $_POST['athena_ai_github_token'] ?? ''
-        );
-        $settings['athena_ai_github_owner'] = sanitize_text_field(
-            $_POST['athena_ai_github_owner'] ?? ''
-        );
-        $settings['athena_ai_github_repo'] = sanitize_text_field(
-            $_POST['athena_ai_github_repo'] ?? ''
-        );
-
-        // Text AI Settings
-        // Spezielle Behandlung der API-Schlüssel
-        $openai_api_key = sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? '');
-        $openai_org_id = sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? '');
+        // Process OpenAI settings first
+        $openai_settings = [
+            'athena_ai_openai_api_key' => [
+                'value' => sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? ''),
+                'type' => 'string',
+                'sensitive' => true
+            ],
+            'athena_ai_openai_org_id' => [
+                'value' => sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? ''),
+                'type' => 'string',
+                'sensitive' => false
+            ],
+            'athena_ai_openai_default_model' => [
+                'value' => sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4'),
+                'type' => 'string',
+                'sensitive' => false
+            ],
+            'athena_ai_openai_temperature' => [
+                'value' => isset($_POST['athena_ai_openai_temperature']) ? 
+                    max(0, min(2, (float)$_POST['athena_ai_openai_temperature'])) : 0.7,
+                'type' => 'float',
+                'sensitive' => false
+            ]
+        ];
         
-        // Error-Logging aktivieren
-        ini_set('log_errors', 1);
-        ini_set('error_log', WP_CONTENT_DIR . '/debug.log');
-        error_log("======= ATHENA SETTINGS SAVE START =======\n");
-        error_log("POST-Daten: " . print_r($_POST, true));
+        // Process other settings
+        $other_settings = [
+            'athena_ai_github_token' => sanitize_text_field($_POST['athena_ai_github_token'] ?? ''),
+            'athena_ai_github_owner' => sanitize_text_field($_POST['athena_ai_github_owner'] ?? ''),
+            'athena_ai_github_repo' => sanitize_text_field($_POST['athena_ai_github_repo'] ?? ''),
+            'athena_ai_dalle_size' => sanitize_text_field($_POST['athena_ai_dalle_size'] ?? ''),
+            'athena_ai_dalle_quality' => sanitize_text_field($_POST['athena_ai_dalle_quality'] ?? ''),
+            'athena_ai_dalle_style' => sanitize_text_field($_POST['athena_ai_dalle_style'] ?? ''),
+            'athena_ai_midjourney_api_key' => sanitize_text_field($_POST['athena_ai_midjourney_api_key'] ?? ''),
+            'athena_ai_midjourney_version' => sanitize_text_field($_POST['athena_ai_midjourney_version'] ?? ''),
+            'athena_ai_midjourney_style' => sanitize_text_field($_POST['athena_ai_midjourney_style'] ?? ''),
+            'athena_ai_stablediffusion_api_key' => sanitize_text_field($_POST['athena_ai_stablediffusion_api_key'] ?? ''),
+            'athena_ai_stablediffusion_model' => sanitize_text_field($_POST['athena_ai_stablediffusion_model'] ?? ''),
+            'athena_ai_stablediffusion_steps' => intval($_POST['athena_ai_stablediffusion_steps'] ?? 30)
+        ];
         
-        // Direkte Speicherung in der Datenbank mit detailliertem Logging
-        $api_key_result = update_option('athena_ai_openai_api_key', $openai_api_key);
-        error_log("API Key Speichern [".($api_key_result ? 'ERFOLG' : 'FEHLER')."]: " . substr($openai_api_key, 0, 3) . "***" . (strlen($openai_api_key) > 3 ? substr($openai_api_key, -3) : ""));
+        // Save OpenAI settings with verification
+        foreach ($openai_settings as $key => $setting) {
+            $value = $setting['value'];
+            $log_value = $setting['sensitive'] ? 
+                (strlen($value) > 3 ? substr($value, 0, 3) . '...' . substr($value, -3) : '***') : 
+                $value;
+            
+            // Save using direct database access
+            global $wpdb;
+            $result = $wpdb->query($wpdb->prepare(
+                "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) 
+                VALUES (%s, %s, 'yes') 
+                ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
+                $key,
+                $value
+            ));
+            
+            // Clear cache
+            wp_cache_delete($key, 'options');
+            
+            // Verify the saved value
+            $saved_value = get_option($key, 'NOT_SAVED');
+            $is_saved = $saved_value !== 'NOT_SAVED';
+            
+            // Log the result
+            error_log(sprintf(
+                "Setting '%s': %s | Saved: %s | Verified: %s",
+                $key,
+                $log_value,
+                $result !== false ? 'YES' : 'NO',
+                $is_saved ? 'YES' : 'NO'
+            ));
+            
+            $results[$key] = $result !== false && $is_saved;
+            $settings[$key] = $value;
+        }
         
-        $org_id_result = update_option('athena_ai_openai_org_id', $openai_org_id);
-        error_log("Org ID Speichern [".($org_id_result ? 'ERFOLG' : 'FEHLER')."]: " . $openai_org_id);
+        // Save other settings
+        foreach ($other_settings as $key => $value) {
+            $result = update_option($key, $value);
+            $results[$key] = $result;
+            $settings[$key] = $value;
+            error_log(sprintf("Setting '%s' saved: %s", $key, $result ? 'SUCCESS' : 'FAILED'));
+        }
         
-        // Auch im settings Array speichern für Konsistenz
-        $settings['athena_ai_openai_api_key'] = $openai_api_key;
-        $settings['athena_ai_openai_org_id'] = $openai_org_id;
-
-        // Direkte Speicherung des Default Models mit Logging
-        $default_model = sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4');
-        $model_result = update_option('athena_ai_openai_default_model', $default_model);
-        error_log("Default Model Speichern [".($model_result ? 'ERFOLG' : 'FEHLER')."]: " . $default_model);
-        $settings['athena_ai_openai_default_model'] = $default_model;
-        
-        // Direkte Speicherung der Temperature mit Logging
-        $temperature = isset($_POST['athena_ai_openai_temperature']) ? (float)$_POST['athena_ai_openai_temperature'] : 0.7;
-        $temp_result = update_option('athena_ai_openai_temperature', $temperature);
-        error_log("Temperature Speichern [".($temp_result ? 'ERFOLG' : 'FEHLER')."]: " . $temperature);
-        $settings['athena_ai_openai_temperature'] = $temperature;
+        // Log final results
+        error_log('=== ATHENA AI SETTINGS SAVE RESULTS ===');
+        error_log('All settings saved successfully: ' . (in_array(false, $results, true) ? 'NO' : 'YES'));
+        error_log('======================================');
 
         // Image AI Settings
         $settings['athena_ai_dalle_size'] = sanitize_text_field(
