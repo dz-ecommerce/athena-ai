@@ -39,8 +39,21 @@ class Settings extends BaseAdmin {
      * Render the settings page
      */
     public function render_page() {
+        // Debug-Ausgabe vor der Verarbeitung
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Athena AI: Pre-processing - API Key in DB: ' . 
+                (empty(get_option('athena_ai_openai_api_key')) ? 'EMPTY' : 'SET (' . substr(get_option('athena_ai_openai_api_key'), 0, 5) . '...)'));
+            error_log('Athena AI: Pre-processing - Org ID in DB: ' . 
+                get_option('athena_ai_openai_org_id', 'NOT SET'));
+        }
+        
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
             $this->save_settings();
+            
+                // Nach dem Speichern sofort neu laden, um die aktuellen Werte anzuzeigen
+            // Dieser Ansatz verhindert Probleme mit veralteten Werten im Speicher
+            wp_safe_redirect(add_query_arg('settings-updated', 'true', $_SERVER['REQUEST_URI']));
+            exit;
         }
         
         // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde

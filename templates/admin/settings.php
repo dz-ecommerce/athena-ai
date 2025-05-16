@@ -117,13 +117,20 @@
                     </th>
                     <td>
                         <div class="api-key-input-container" style="position: relative;">
+                            <?php 
+                            // Debug: Direkt aus der Datenbank lesen
+                            $direct_api_key = get_option('athena_ai_openai_api_key', ''); 
+                            $has_key = !empty($direct_api_key); 
+                            $key_display = $has_key ? (substr($direct_api_key, 0, 3) . '...' . substr($direct_api_key, -3)) : '';
+                            ?>
                             <input type="password" 
                                    name="athena_ai_openai_api_key" 
                                    id="athena_ai_openai_api_key" 
-                                   value="<?php echo esc_attr($settings['openai_api_key']); ?>" 
+                                   placeholder="<?php echo $has_key ? 'API key is saved (hidden for security)' : 'Enter your OpenAI API key'; ?>" 
+                                   value="<?php echo esc_attr($direct_api_key); ?>" 
                                    class="regular-text">
-                            <?php if (!empty($settings['openai_api_key'])): ?>
-                            <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('API key is set', 'athena-ai'); ?>">
+                            <?php if ($has_key): ?>
+                            <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('API key is set: ' . $key_display, 'athena-ai'); ?>">
                                 <span class="dashicons dashicons-yes-alt"></span>
                             </span>
                             <?php endif; ?>
@@ -145,12 +152,18 @@
                     </th>
                     <td>
                         <div class="api-key-input-container" style="position: relative;">
+                            <?php 
+                            // Debug: Direkt aus der Datenbank lesen
+                            $direct_org_id = get_option('athena_ai_openai_org_id', ''); 
+                            $has_org_id = !empty($direct_org_id);
+                            ?>
                             <input type="text" 
                                    name="athena_ai_openai_org_id" 
                                    id="athena_ai_openai_org_id" 
-                                   value="<?php echo esc_attr($settings['openai_org_id']); ?>" 
+                                   placeholder="<?php echo $has_org_id ? '' : 'Optional: Enter your OpenAI organization ID'; ?>" 
+                                   value="<?php echo esc_attr($direct_org_id); ?>" 
                                    class="regular-text">
-                            <?php if (!empty($settings['openai_org_id'])): ?>
+                            <?php if ($has_org_id): ?>
                             <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('Organization ID is set', 'athena-ai'); ?>">
                                 <span class="dashicons dashicons-yes-alt"></span>
                             </span>
