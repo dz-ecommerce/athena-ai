@@ -115,12 +115,18 @@ class Settings extends BaseAdmin {
         );
 
         // Text AI Settings
-        $settings['athena_ai_openai_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_openai_api_key'] ?? ''
-        );
-        $settings['athena_ai_openai_org_id'] = sanitize_text_field(
-            $_POST['athena_ai_openai_org_id'] ?? ''
-        );
+        // Spezielle Behandlung der API-Schlüssel
+        $openai_api_key = sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? '');
+        $openai_org_id = sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? '');
+        
+        // Direkte Speicherung in der Datenbank für höhere Zuverlässigkeit
+        update_option('athena_ai_openai_api_key', $openai_api_key);
+        update_option('athena_ai_openai_org_id', $openai_org_id);
+        
+        // Auch im settings Array speichern für Konsistenz
+        $settings['athena_ai_openai_api_key'] = $openai_api_key;
+        $settings['athena_ai_openai_org_id'] = $openai_org_id;
+
         $settings['athena_ai_openai_default_model'] = sanitize_text_field(
             $_POST['athena_ai_openai_default_model'] ?? ''
         );
@@ -177,6 +183,12 @@ class Settings extends BaseAdmin {
         // Debug-Ausgabe
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Athena AI: Saving settings: ' . print_r($settings, true));
+            
+            // Spezifische Debug-Ausgabe für die problematischen Felder
+            error_log('Athena AI: API Key POST Value: ' . (isset($_POST['athena_ai_openai_api_key']) ? 'SET (length: ' . strlen($_POST['athena_ai_openai_api_key']) . ')' : 'NOT SET'));
+            error_log('Athena AI: Org ID POST Value: ' . (isset($_POST['athena_ai_openai_org_id']) ? 'SET (length: ' . strlen($_POST['athena_ai_openai_org_id']) . ')' : 'NOT SET'));
+            error_log('Athena AI: API Key to save: ' . $settings['athena_ai_openai_api_key']);
+            error_log('Athena AI: Org ID to save: ' . $settings['athena_ai_openai_org_id']);
         }
         
         // Alle Optionen speichern
@@ -256,8 +268,20 @@ class Settings extends BaseAdmin {
         );
 
         // Text AI Settings
-        $settings['openai_api_key'] = get_option('athena_ai_openai_api_key', '');
-        $settings['openai_org_id'] = get_option('athena_ai_openai_org_id', '');
+        // Verbesserte Abfrage für API-Schlüssel
+        $openai_api_key = get_option('athena_ai_openai_api_key', '');
+        $openai_org_id = get_option('athena_ai_openai_org_id', '');
+        
+        // Spezielles Debug-Logging für Diagnosezwecke
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Athena AI: Retrieved API Key from DB: ' . 
+                (empty($openai_api_key) ? 'EMPTY' : 'SET (length: ' . strlen($openai_api_key) . ')'));
+            error_log('Athena AI: Retrieved Org ID from DB: ' . 
+                (empty($openai_org_id) ? 'EMPTY' : 'SET (length: ' . strlen($openai_org_id) . ')'));
+        }
+        
+        $settings['openai_api_key'] = $openai_api_key;
+        $settings['openai_org_id'] = $openai_org_id;
         $settings['openai_default_model'] = get_option(
             'athena_ai_openai_default_model',
             $this->default_settings['openai_default_model']
