@@ -135,6 +135,16 @@
                             </span>
                             <?php endif; ?>
                         </div>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> 
+                            <?php 
+                                if ($has_key) {
+                                    echo "API key gespeichert: " . substr($direct_api_key, 0, 3) . '****' . substr($direct_api_key, -3);
+                                } else {
+                                    echo "<span style='color: #d63638;'>Kein API key gespeichert</span>";
+                                }
+                            ?>
+                        </div>
                         <p class="description">
                             <?php esc_html_e('Enter your OpenAI API key', 'athena-ai'); ?>
                             <br>
@@ -169,6 +179,16 @@
                             </span>
                             <?php endif; ?>
                         </div>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> 
+                            <?php 
+                                if ($has_org_id) {
+                                    echo "Organization ID gespeichert: " . $direct_org_id;
+                                } else {
+                                    echo "<span style='color: #d63638;'>Keine Organization ID gespeichert</span>";
+                                }
+                            ?>
+                        </div>
                         <p class="description">
                             <?php esc_html_e(
                                 'Optional: Enter your OpenAI organization ID',
@@ -184,17 +204,18 @@
                         </label>
                     </th>
                     <td>
+                        <?php $direct_model = get_option('athena_ai_openai_default_model', 'gpt-4'); ?>
                         <select name="athena_ai_openai_default_model" id="athena_ai_openai_default_model">
                             <?php foreach ($models['openai'] as $model_id => $model_name): ?>
                                 <option value="<?php echo esc_attr($model_id); ?>" 
-                                    <?php selected(
-                                        $settings['openai_default_model'],
-                                        $model_id
-                                    ); ?>>
+                                    <?php selected($direct_model, $model_id); ?>>
                                     <?php echo esc_html($model_name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> Default Model gespeichert: <?php echo esc_html($direct_model); ?>
+                        </div>
                     </td>
                 </tr>
                 <tr>
@@ -204,16 +225,18 @@
                         </label>
                     </th>
                     <td>
+                        <?php $direct_temperature = get_option('athena_ai_openai_temperature', '0.7'); ?>
                         <input type="range" 
                                name="athena_ai_openai_temperature" 
                                id="athena_ai_openai_temperature" 
                                min="0" 
                                max="2" 
                                step="0.1" 
-                               value="<?php echo esc_attr($settings['openai_temperature']); ?>">
-                        <span class="temperature-value"><?php echo esc_html(
-                            $settings['openai_temperature']
-                        ); ?></span>
+                               value="<?php echo esc_attr($direct_temperature); ?>">
+                        <span class="temperature-value"><?php echo esc_html($direct_temperature); ?></span>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> Temperature gespeichert: <?php echo esc_html($direct_temperature); ?>
+                        </div>
                         <p class="description">
                             <?php esc_html_e(
                                 'Controls randomness: 0 is focused, 2 is more creative',
