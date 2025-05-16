@@ -116,11 +116,18 @@
                         </label>
                     </th>
                     <td>
-                        <input type="password" 
-                               name="athena_ai_openai_api_key" 
-                               id="athena_ai_openai_api_key" 
-                               value="<?php echo esc_attr($settings['openai_api_key']); ?>" 
-                               class="regular-text">
+                        <div class="api-key-input-container" style="position: relative;">
+                            <input type="password" 
+                                   name="athena_ai_openai_api_key" 
+                                   id="athena_ai_openai_api_key" 
+                                   value="<?php echo esc_attr($settings['openai_api_key']); ?>" 
+                                   class="regular-text">
+                            <?php if (!empty($settings['openai_api_key'])): ?>
+                            <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('API key is set', 'athena-ai'); ?>">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                            </span>
+                            <?php endif; ?>
+                        </div>
                         <p class="description">
                             <?php esc_html_e('Enter your OpenAI API key', 'athena-ai'); ?>
                             <br>
@@ -137,11 +144,18 @@
                         </label>
                     </th>
                     <td>
-                        <input type="text" 
-                               name="athena_ai_openai_org_id" 
-                               id="athena_ai_openai_org_id" 
-                               value="<?php echo esc_attr($settings['openai_org_id']); ?>" 
-                               class="regular-text">
+                        <div class="api-key-input-container" style="position: relative;">
+                            <input type="text" 
+                                   name="athena_ai_openai_org_id" 
+                                   id="athena_ai_openai_org_id" 
+                                   value="<?php echo esc_attr($settings['openai_org_id']); ?>" 
+                                   class="regular-text">
+                            <?php if (!empty($settings['openai_org_id'])): ?>
+                            <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('Organization ID is set', 'athena-ai'); ?>">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                            </span>
+                            <?php endif; ?>
+                        </div>
                         <p class="description">
                             <?php esc_html_e(
                                 'Optional: Enter your OpenAI organization ID',
