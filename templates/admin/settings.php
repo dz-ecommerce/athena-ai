@@ -725,7 +725,10 @@
             </table>
         </div>
 
-        <?php submit_button($this->__('Save Settings')); ?>
+        <div class="submit-buttons-row" style="display: flex; gap: 10px;">
+            <?php submit_button($this->__('Save Settings')); ?>
+            <?php submit_button($this->__('Reset to Defaults'), 'secondary', 'reset_defaults', false, array('onclick' => 'return confirm(\'' . esc_js($this->__('Are you sure you want to reset all settings to their default values? This cannot be undone.', 'athena-ai')) . '\');')); ?>
+        </div>
     </form>
 </div>
 

@@ -42,6 +42,11 @@ class Settings extends BaseAdmin {
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
             $this->save_settings();
         }
+        
+        // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde
+        if (isset($_POST['reset_defaults']) && $this->verify_nonce('athena_ai_settings')) {
+            $this->reset_to_defaults();
+        }
 
         // Führe Maintenance-Aktionen aus, wenn angefordert
         if (isset($_POST['fix_cron']) && $this->verify_nonce('athena_ai_maintenance')) {
@@ -66,8 +71,13 @@ class Settings extends BaseAdmin {
             'maintenance' => $maintenance_data,
             'models' => [
                 'openai' => [
+                    'gpt-4o' => 'GPT-4o',
+                    'gpt-4-turbo' => 'GPT-4 Turbo',
                     'gpt-4' => 'GPT-4',
+                    'gpt-4-1106-preview' => 'GPT-4 (Version 1106)',
+                    'gpt-4-vision-preview' => 'GPT-4 Vision',
                     'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
+                    'gpt-3.5-turbo-16k' => 'GPT-3.5 Turbo (16K)',
                 ],
                 'dalle' => [
                     'sizes' => ['256x256', '512x512', '1024x1024'],
@@ -89,6 +99,9 @@ class Settings extends BaseAdmin {
      */
     private function save_settings() {
         $settings = [];
+        
+        // Validiere die API-Schlüssel vor dem Speichern
+        $validation_errors = $this->validate_api_keys();
 
         // GitHub Settings
         $settings['athena_ai_github_token'] = sanitize_text_field(
@@ -161,8 +174,19 @@ class Settings extends BaseAdmin {
             error_log("Athena AI: Saving feed cron interval: {$feed_cron_interval}");
         }
 
+        // Debug-Ausgabe
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Athena AI: Saving settings: ' . print_r($settings, true));
+        }
+        
+        // Alle Optionen speichern
         foreach ($settings as $key => $value) {
-            update_option($key, $value);
+            $result = update_option($key, $value);
+            
+            // Bei Bedarf Debug-Informationen ausgeben
+            if (defined('WP_DEBUG') && WP_DEBUG && !$result) {
+                error_log("Athena AI: Failed to save setting: {$key}");
+            }
         }
 
         // Wenn sich das Cron-Intervall geändert hat, den Cron-Job neu planen
@@ -191,12 +215,25 @@ class Settings extends BaseAdmin {
             );
         }
 
-        add_settings_error(
-            'athena_ai_messages',
-            'athena_ai_message',
-            $this->__('Settings Saved', 'athena-ai'),
-            'updated'
-        );
+        // Prüfen, ob Validierungsfehler vorliegen
+        if (!empty($validation_errors)) {
+            foreach ($validation_errors as $error) {
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_validation_error',
+                    $error,
+                    'error'
+                );
+            }
+        } else {
+            // Erfolgsmeldung für den Benutzer anzeigen
+            add_settings_error(
+                'athena_ai_messages',
+                'athena_ai_message',
+                $this->__('All settings have been successfully saved.', 'athena-ai'),
+                'updated'
+            );
+        }
     }
 
     /**
@@ -361,8 +398,65 @@ class Settings extends BaseAdmin {
     }
 
     /**
-     * Erstellt die erforderlichen Datenbanktabellen für das Feed-System
+     * Validiert die API-Schlüssel und gibt etwaige Fehler zurück
+     * 
+     * @return array Liste der Validierungsfehler
      */
+    private function validate_api_keys() {
+        $errors = [];
+        
+        // OpenAI API-Key (minimal 30 Zeichen, beginnt mit 'sk-')
+        $openai_key = sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? '');
+        if (!empty($openai_key) && (strlen($openai_key) < 30 || strpos($openai_key, 'sk-') !== 0)) {
+            $errors[] = $this->__(
+                'The OpenAI API key appears to be invalid. It should begin with "sk-" and be at least 30 characters long.',
+                'athena-ai'
+            );
+        }
+        
+        // Midjourney API-Key (mindestens 20 Zeichen)
+        $midjourney_key = sanitize_text_field($_POST['athena_ai_midjourney_api_key'] ?? '');
+        if (!empty($midjourney_key) && strlen($midjourney_key) < 20) {
+            $errors[] = $this->__(
+                'The Midjourney API key appears to be too short. Please check if it is valid.',
+                'athena-ai'
+            );
+        }
+        
+        // Stable Diffusion API-Key (mindestens 20 Zeichen)
+        $stable_key = sanitize_text_field($_POST['athena_ai_stablediffusion_api_key'] ?? '');
+        if (!empty($stable_key) && strlen($stable_key) < 20) {
+            $errors[] = $this->__(
+                'The Stable Diffusion API key appears to be too short. Please check if it is valid.',
+                'athena-ai'
+            );
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * Setzt alle Einstellungen auf die Standardwerte zurück
+     */
+    public function reset_to_defaults() {
+        // Bestehende Einstellungen löschen
+        $settings = $this->get_settings();
+        
+        // Alle Optionen auf Standardwerte zurücksetzen
+        foreach ($this->default_settings as $key => $value) {
+            $option_name = 'athena_ai_' . $key;
+            update_option($option_name, $value);
+        }
+        
+        // Erfolgsmeldung anzeigen
+        add_settings_error(
+            'athena_ai_messages',
+            'athena_ai_reset',
+            $this->__('All settings have been reset to default values.', 'athena-ai'),
+            'updated'
+        );
+    }
+    
     private function create_database_tables() {
         // Verwende die SchemaManager-Klasse, um die Tabellen zu erstellen
         $result = \AthenaAI\Repositories\SchemaManager::setup_tables();
