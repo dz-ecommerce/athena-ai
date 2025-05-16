@@ -45,12 +45,20 @@ class Settings extends BaseAdmin {
                 (empty(get_option('athena_ai_openai_api_key')) ? 'EMPTY' : 'SET (' . substr(get_option('athena_ai_openai_api_key'), 0, 5) . '...)'));
             error_log('Athena AI: Pre-processing - Org ID in DB: ' . 
                 get_option('athena_ai_openai_org_id', 'NOT SET'));
+            error_log('Athena AI: Pre-processing - Default Model in DB: ' . 
+                get_option('athena_ai_openai_default_model', 'NOT SET'));
+            error_log('Athena AI: Pre-processing - Temperature in DB: ' . 
+                get_option('athena_ai_openai_temperature', 'NOT SET'));
         }
         
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
+            // Versuch mit der regulären Speichermethode
             $this->save_settings();
             
-                // Nach dem Speichern sofort neu laden, um die aktuellen Werte anzuzeigen
+            // Zusätzlich den direkten Force-Save-Mechanismus verwenden
+            $this->force_save_settings();
+            
+            // Nach dem Speichern sofort neu laden, um die aktuellen Werte anzuzeigen
             // Dieser Ansatz verhindert Probleme mit veralteten Werten im Speicher
             wp_safe_redirect(add_query_arg('settings-updated', 'true', $_SERVER['REQUEST_URI']));
             exit;
@@ -132,20 +140,34 @@ class Settings extends BaseAdmin {
         $openai_api_key = sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? '');
         $openai_org_id = sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? '');
         
-        // Direkte Speicherung in der Datenbank für höhere Zuverlässigkeit
-        update_option('athena_ai_openai_api_key', $openai_api_key);
-        update_option('athena_ai_openai_org_id', $openai_org_id);
+        // Error-Logging aktivieren
+        ini_set('log_errors', 1);
+        ini_set('error_log', WP_CONTENT_DIR . '/debug.log');
+        error_log("======= ATHENA SETTINGS SAVE START =======\n");
+        error_log("POST-Daten: " . print_r($_POST, true));
+        
+        // Direkte Speicherung in der Datenbank mit detailliertem Logging
+        $api_key_result = update_option('athena_ai_openai_api_key', $openai_api_key);
+        error_log("API Key Speichern [".($api_key_result ? 'ERFOLG' : 'FEHLER')."]: " . substr($openai_api_key, 0, 3) . "***" . (strlen($openai_api_key) > 3 ? substr($openai_api_key, -3) : ""));
+        
+        $org_id_result = update_option('athena_ai_openai_org_id', $openai_org_id);
+        error_log("Org ID Speichern [".($org_id_result ? 'ERFOLG' : 'FEHLER')."]: " . $openai_org_id);
         
         // Auch im settings Array speichern für Konsistenz
         $settings['athena_ai_openai_api_key'] = $openai_api_key;
         $settings['athena_ai_openai_org_id'] = $openai_org_id;
 
-        $settings['athena_ai_openai_default_model'] = sanitize_text_field(
-            $_POST['athena_ai_openai_default_model'] ?? ''
-        );
-        $settings['athena_ai_openai_temperature'] = floatval(
-            $_POST['athena_ai_openai_temperature'] ?? 0.7
-        );
+        // Direkte Speicherung des Default Models mit Logging
+        $default_model = sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4');
+        $model_result = update_option('athena_ai_openai_default_model', $default_model);
+        error_log("Default Model Speichern [".($model_result ? 'ERFOLG' : 'FEHLER')."]: " . $default_model);
+        $settings['athena_ai_openai_default_model'] = $default_model;
+        
+        // Direkte Speicherung der Temperature mit Logging
+        $temperature = isset($_POST['athena_ai_openai_temperature']) ? (float)$_POST['athena_ai_openai_temperature'] : 0.7;
+        $temp_result = update_option('athena_ai_openai_temperature', $temperature);
+        error_log("Temperature Speichern [".($temp_result ? 'ERFOLG' : 'FEHLER')."]: " . $temperature);
+        $settings['athena_ai_openai_temperature'] = $temperature;
 
         // Image AI Settings
         $settings['athena_ai_dalle_size'] = sanitize_text_field(
@@ -193,24 +215,30 @@ class Settings extends BaseAdmin {
             error_log("Athena AI: Saving feed cron interval: {$feed_cron_interval}");
         }
 
-        // Debug-Ausgabe
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Athena AI: Saving settings: ' . print_r($settings, true));
-            
-            // Spezifische Debug-Ausgabe für die problematischen Felder
-            error_log('Athena AI: API Key POST Value: ' . (isset($_POST['athena_ai_openai_api_key']) ? 'SET (length: ' . strlen($_POST['athena_ai_openai_api_key']) . ')' : 'NOT SET'));
-            error_log('Athena AI: Org ID POST Value: ' . (isset($_POST['athena_ai_openai_org_id']) ? 'SET (length: ' . strlen($_POST['athena_ai_openai_org_id']) . ')' : 'NOT SET'));
-            error_log('Athena AI: API Key to save: ' . $settings['athena_ai_openai_api_key']);
-            error_log('Athena AI: Org ID to save: ' . $settings['athena_ai_openai_org_id']);
-        }
+            error_log("Logging der update_option Aufrufe in save_settings:");
         
-        // Alle Optionen speichern
+        // Die update_option Aufrufe für die restlichen Optionen überspringen, diese werden direkt gespeichert
+        $skip_options = [
+            'athena_ai_openai_api_key', 
+            'athena_ai_openai_org_id', 
+            'athena_ai_openai_default_model',
+            'athena_ai_openai_temperature'
+        ];
+        
+        // Überprüfen der gespeicherten Werte nach der Speicherung
+        error_log("======= ATHENA SETTINGS VERIFICATION =======\n");
+        error_log("API Key nach Speicherung: " . (empty(get_option('athena_ai_openai_api_key')) ? 'LEER' : 'WERT GESETZT'));
+        error_log("Org ID nach Speicherung: " . get_option('athena_ai_openai_org_id', 'NICHT GESETZT'));
+        error_log("Default Model nach Speicherung: " . get_option('athena_ai_openai_default_model', 'NICHT GESETZT'));
+        error_log("Temperature nach Speicherung: " . get_option('athena_ai_openai_temperature', 'NICHT GESETZT'));
+
+        // Nur die Optionen speichern, die nicht bereits direkt gespeichert wurden
         foreach ($settings as $key => $value) {
-            $result = update_option($key, $value);
-            
-            // Bei Bedarf Debug-Informationen ausgeben
-            if (defined('WP_DEBUG') && WP_DEBUG && !$result) {
-                error_log("Athena AI: Failed to save setting: {$key}");
+            if (!in_array($key, $skip_options)) {
+                $result = update_option($key, $value);
+                error_log("Option speichern [{$key}]: " . ($result ? 'ERFOLG' : 'FEHLER') . " - Wert: {$value}");
+            } else {
+                error_log("Option überspringen [{$key}]: Wurde bereits direkt gespeichert.");
             }
         }
 
@@ -434,6 +462,75 @@ class Settings extends BaseAdmin {
         );
     }
 
+    /**
+     * Garantiert das Speichern der wichtigen Einstellungen durch direkte Datenbankzugriffe
+     * Wird als Fallback verwendet, wenn die reguläre Speichermethode fehlschlägt
+     */
+    private function force_save_settings() {
+        global $wpdb;
+        
+        error_log("======= ATHENA FORCE SAVE SETTINGS =======\n");
+        
+        // Kritische Einstellungen direkt mit dem $wpdb-Objekt speichern
+        $api_key = sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? '');
+        $org_id = sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? '');
+        $default_model = sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4');
+        $temperature = isset($_POST['athena_ai_openai_temperature']) ? (float)$_POST['athena_ai_openai_temperature'] : 0.7;
+        
+        // Direkte SQL-Abfragen zur Aktualisierung oder Erstellung der Optionen
+        $this->force_save_option('athena_ai_openai_api_key', $api_key);
+        $this->force_save_option('athena_ai_openai_org_id', $org_id);
+        $this->force_save_option('athena_ai_openai_default_model', $default_model);
+        $this->force_save_option('athena_ai_openai_temperature', $temperature);
+        
+        error_log("Force Save Verifizierung: API Key: " . (empty(get_option('athena_ai_openai_api_key')) ? 'FEHLER' : 'ERFOLG'));
+        error_log("Force Save Verifizierung: Org ID: " . (empty(get_option('athena_ai_openai_org_id')) ? (empty($org_id) ? 'OK (leer)' : 'FEHLER') : 'ERFOLG'));
+        error_log("Force Save Verifizierung: Default Model: " . (empty(get_option('athena_ai_openai_default_model')) ? 'FEHLER' : 'ERFOLG'));
+        error_log("Force Save Verifizierung: Temperature: " . (get_option('athena_ai_openai_temperature', '') === '' ? 'FEHLER' : 'ERFOLG'));
+    }
+    
+    /**
+     * Hilfsmethod für direktes Speichern einer Option in der Datenbank
+     */
+    private function force_save_option($option_name, $option_value) {
+        global $wpdb;
+        
+        // Option-Wert serialisieren, wenn es kein einfacher Datentyp ist
+        if (!is_scalar($option_value)) {
+            $option_value = maybe_serialize($option_value);
+        }
+        
+        // Prüfen, ob die Option bereits existiert
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name = %s",
+            $option_name
+        ));
+        
+        if ($exists) {
+            // Option aktualisieren
+            $result = $wpdb->update(
+                $wpdb->options,
+                ['option_value' => $option_value],
+                ['option_name' => $option_name]
+            );
+            error_log("Force Update Option [{$option_name}]: " . ($result !== false ? 'ERFOLG' : 'FEHLER') . " - Wert: {$option_value}");
+        } else {
+            // Option erstellen
+            $result = $wpdb->insert(
+                $wpdb->options,
+                [
+                    'option_name' => $option_name,
+                    'option_value' => $option_value,
+                    'autoload' => 'yes'
+                ]
+            );
+            error_log("Force Insert Option [{$option_name}]: " . ($result !== false ? 'ERFOLG' : 'FEHLER') . " - Wert: {$option_value}");
+        }
+        
+        // Cache leeren, damit die Änderungen sofort wirksam werden
+        wp_cache_delete($option_name, 'options');
+    }
+    
     /**
      * Validiert die API-Schlüssel und gibt etwaige Fehler zurück
      * 
