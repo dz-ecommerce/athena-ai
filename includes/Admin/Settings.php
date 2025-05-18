@@ -39,8 +39,6 @@ class Settings extends BaseAdmin {
      * Konstruktor - Registriert AJAX-Endpunkte
      */
     public function __construct() {
-        parent::__construct();
-        
         // AJAX-Endpoint zum Leeren des Optionen-Caches
         add_action('wp_ajax_athena_flush_options_cache', [$this, 'ajax_flush_options_cache']);
     }
