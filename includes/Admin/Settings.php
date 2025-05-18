@@ -47,18 +47,6 @@ class Settings extends BaseAdmin {
             exit;
         }
 
-        // Generiere einen neuen Verschlüsselungs-Schlüssel, wenn der Button geklickt wurde
-        if (isset($_POST['generate_encryption_key']) && isset($_POST['_wpnonce_athena_ai_settings']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
-            $new_key = bin2hex(random_bytes(32));
-            update_option('athena_ai_encryption_key', $new_key);
-            add_settings_error(
-                'athena_ai_messages',
-                'athena_ai_key_generated',
-                __('New encryption key generated. Please copy it to your wp-config.php file.', 'athena-ai'),
-                'updated'
-            );
-        }
-
         // Lese die aktuellen Einstellungen aus der Datenbank
         $settings = $this->get_settings();
 
@@ -77,8 +65,6 @@ class Settings extends BaseAdmin {
                     'gpt-3.5-turbo-16k' => 'GPT-3.5 Turbo (16K)',
                 ],
             ],
-            'show_generate_key_button' => !defined('ATHENA_AI_KEY_ENCRYPTION_SECRET') || !ATHENA_AI_KEY_ENCRYPTION_SECRET,
-            'encryption_key' => get_option('athena_ai_encryption_key', ''),
         ]);
     }
 
@@ -250,14 +236,8 @@ class Settings extends BaseAdmin {
         exit;
     }
 
-    // Holt den Verschlüsselungs-Schlüssel: erst Konstante, dann Option
+    // Holt den Verschlüsselungs-Schlüssel aus der Datenbank
     private function get_encryption_key() {
-        if (defined('ATHENA_AI_KEY_ENCRYPTION_SECRET') && ATHENA_AI_KEY_ENCRYPTION_SECRET) {
-            // Optional: Lösche alten DB-Key, wenn Konstante gesetzt ist
-            delete_option('athena_ai_encryption_key');
-            return ATHENA_AI_KEY_ENCRYPTION_SECRET;
-        }
-        // Fallback: Option aus DB (für Migration/Kompatibilität)
         $option_name = 'athena_ai_encryption_key';
         $key = get_option($option_name, '');
         if (empty($key)) {
