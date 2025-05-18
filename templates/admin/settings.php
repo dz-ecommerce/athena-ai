@@ -9,24 +9,17 @@
     <?php settings_errors('athena_ai_messages'); ?>
 
     <h2 class="nav-tab-wrapper">
-        <a href="#" class="nav-tab nav-tab-active" data-tab="github-settings">
-            <?php esc_html_e('GitHub Settings', 'athena-ai'); ?>
-        </a>
-        <a href="#" class="nav-tab" data-tab="text-ai-settings">
-            <?php esc_html_e('Text AI Settings', 'athena-ai'); ?>
-        </a>
-        <a href="#" class="nav-tab" data-tab="image-ai-settings">
-            <?php esc_html_e('Image AI Settings', 'athena-ai'); ?>
-        </a>
-        <a href="#" class="nav-tab" data-tab="maintenance-settings">
-            <?php esc_html_e('Maintenance', 'athena-ai'); ?>
-        </a>
+        <a href="#" data-tab="github-settings" class="nav-tab <?php echo $active_tab === 'github-settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('GitHub Settings', 'athena-ai'); ?></a>
+        <a href="#" data-tab="text-ai-settings" class="nav-tab <?php echo $active_tab === 'text-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Text AI Settings', 'athena-ai'); ?></a>
+        <a href="#" data-tab="image-ai-settings" class="nav-tab <?php echo $active_tab === 'image-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Image AI Settings', 'athena-ai'); ?></a>
+        <a href="#" data-tab="maintenance-settings" class="nav-tab <?php echo $active_tab === 'maintenance-settings' ? 'nav-tab-active' : ''; ?>"><?php esc_html_e('Maintenance', 'athena-ai'); ?></a>
     </h2>
 
     <form method="post" action="">
         <?php echo $nonce_field; ?>
+        <input type="hidden" name="active_tab" id="active_tab" value="<?php echo esc_attr($active_tab); ?>">
 
-        <div id="github-settings" class="tab-content active">
+        <div id="github-settings" class="tab-content <?php echo $active_tab === 'github-settings' ? 'active' : ''; ?>">
             <h2><?php esc_html_e('GitHub Repository Settings', 'athena-ai'); ?></h2>
             <p class="description">
                 <?php esc_html_e(
@@ -100,7 +93,7 @@
             </table>
         </div>
 
-        <div id="text-ai-settings" class="tab-content">
+        <div id="text-ai-settings" class="tab-content <?php echo $active_tab === 'text-ai-settings' ? 'active' : ''; ?>">
             <h2><?php esc_html_e('Text AI Settings', 'athena-ai'); ?></h2>
             <p class="description">
                 <?php esc_html_e('Configure settings for text-based AI services.', 'athena-ai'); ?>
@@ -248,7 +241,7 @@
             </table>
         </div>
 
-        <div id="image-ai-settings" class="tab-content">
+        <div id="image-ai-settings" class="tab-content <?php echo $active_tab === 'image-ai-settings' ? 'active' : ''; ?>">
             <h2><?php esc_html_e('Image AI Settings', 'athena-ai'); ?></h2>
             <p class="description">
                 <?php esc_html_e(
@@ -447,7 +440,7 @@
         </div>
 
         <!-- Maintenance Tab Content -->
-        <div id="maintenance-settings" class="tab-content">
+        <div id="maintenance-settings" class="tab-content <?php echo $active_tab === 'maintenance-settings' ? 'active' : ''; ?>">
             <h2><?php esc_html_e('System Maintenance', 'athena-ai'); ?></h2>
             <p class="description">
                 <?php esc_html_e(

@@ -46,13 +46,36 @@ class Settings extends BaseAdmin {
         
         // Verarbeite Formular-Submission
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
-            // Speichere die Einstellungen
-            $this->save_settings();
-            
-            // Nach dem Speichern sofort neu laden, um die aktuellen Werte anzuzeigen
-            // und Caching-Probleme zu vermeiden
-            wp_redirect(remove_query_arg('settings-updated', add_query_arg('settings-updated', 'true')));
-            exit;
+            try {
+                // Speichere die Einstellungen mit der verbesserten Methode
+                $save_result = $this->save_settings();
+                
+                // Erzwinge eine Neuladen der Seite nach dem Speichern
+                // mit einem eindeutigen Parameter, um Cache-Probleme zu vermeiden
+                $redirect_url = add_query_arg(
+                    [
+                        'settings-updated' => 'true',
+                        'ts' => time() // Timestamp als Cache-Buster
+                    ],
+                    remove_query_arg('settings-updated')
+                );
+                
+                if (isset($_POST['active_tab'])) {
+                    $redirect_url = add_query_arg('tab', sanitize_text_field($_POST['active_tab']), $redirect_url);
+                }
+                
+                wp_redirect($redirect_url);
+                exit;
+            } catch (Exception $e) {
+                // Fehlerbehandlung
+                error_log('Athena Settings Error: ' . $e->getMessage());
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_error',
+                    sprintf($this->__('Error saving settings: %s', 'athena-ai'), $e->getMessage()),
+                    'error'
+                );
+            }
         }
         
         // Wenn die Einstellungen aktualisiert wurden, zeige eine Erfolgsmeldung an
@@ -73,6 +96,10 @@ class Settings extends BaseAdmin {
         // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde
         if (isset($_POST['reset_defaults']) && $this->verify_nonce('athena_ai_settings')) {
             $this->reset_to_defaults();
+            
+            // Auch hier Redirect zum Aktualisieren der Ansicht
+            wp_redirect(add_query_arg('settings-reset', 'true'));
+            exit;
         }
 
         // Führe Maintenance-Aktionen aus, wenn angefordert
@@ -85,10 +112,14 @@ class Settings extends BaseAdmin {
             $this->create_database_tables();
         }
 
+        // Lese die aktuellen Einstellungen aus der Datenbank
         $settings = $this->get_settings();
 
         // Sammle Maintenance-Daten
         $maintenance_data = $this->get_maintenance_data();
+        
+        // Bestimme den aktiven Tab
+        $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'github-settings';
 
         $this->render_template('settings', [
             'title' => $this->__('Athena AI Settings', 'athena-ai'),
@@ -96,6 +127,7 @@ class Settings extends BaseAdmin {
             'nonce_field' => $this->get_nonce_field('athena_ai_settings'),
             'maintenance_nonce_field' => $this->get_nonce_field('athena_ai_maintenance'),
             'maintenance' => $maintenance_data,
+            'active_tab' => $active_tab,
             'models' => [
                 'openai' => [
                     'gpt-4o' => 'GPT-4o',
@@ -141,30 +173,26 @@ class Settings extends BaseAdmin {
         $settings = [];
         $results = [];
         
-        // Process OpenAI settings first
+        // Process OpenAI settings first - using direct DB access for these critical settings
         $openai_settings = [
-            'athena_ai_openai_api_key' => [
-                'value' => sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? ''),
-                'type' => 'string',
-                'sensitive' => true
-            ],
-            'athena_ai_openai_org_id' => [
-                'value' => sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? ''),
-                'type' => 'string',
-                'sensitive' => false
-            ],
-            'athena_ai_openai_default_model' => [
-                'value' => sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4'),
-                'type' => 'string',
-                'sensitive' => false
-            ],
-            'athena_ai_openai_temperature' => [
-                'value' => isset($_POST['athena_ai_openai_temperature']) ? 
-                    max(0, min(2, (float)$_POST['athena_ai_openai_temperature'])) : 0.7,
-                'type' => 'float',
-                'sensitive' => false
-            ]
+            'athena_ai_openai_api_key' => sanitize_text_field($_POST['athena_ai_openai_api_key'] ?? ''),
+            'athena_ai_openai_org_id' => sanitize_text_field($_POST['athena_ai_openai_org_id'] ?? ''),
+            'athena_ai_openai_default_model' => sanitize_text_field($_POST['athena_ai_openai_default_model'] ?? 'gpt-4'),
+            'athena_ai_openai_temperature' => isset($_POST['athena_ai_openai_temperature']) ? 
+                max(0, min(2, (float)$_POST['athena_ai_openai_temperature'])) : 0.7
         ];
+        
+        // Save OpenAI settings with direct DB access to ensure they are saved
+        foreach ($openai_settings as $key => $value) {
+            $this->force_save_option($key, $value);
+            
+            // Verify saved value
+            $saved_value = get_option($key, null);
+            error_log("Verification for {$key}: " . (isset($saved_value) ? "Successfully saved: {$saved_value}" : "FAILED TO SAVE"));
+            
+            $results[$key] = isset($saved_value);
+            $settings[$key] = $value;
+        }
         
         // Process other settings
         $other_settings = [
@@ -179,177 +207,30 @@ class Settings extends BaseAdmin {
             'athena_ai_midjourney_style' => sanitize_text_field($_POST['athena_ai_midjourney_style'] ?? ''),
             'athena_ai_stablediffusion_api_key' => sanitize_text_field($_POST['athena_ai_stablediffusion_api_key'] ?? ''),
             'athena_ai_stablediffusion_model' => sanitize_text_field($_POST['athena_ai_stablediffusion_model'] ?? ''),
-            'athena_ai_stablediffusion_steps' => intval($_POST['athena_ai_stablediffusion_steps'] ?? 30)
+            'athena_ai_stablediffusion_steps' => intval($_POST['athena_ai_stablediffusion_steps'] ?? 30),
+            'athena_ai_enable_debug_mode' => isset($_POST['athena_ai_enable_debug_mode']) ? '1' : '0',
+            'athena_ai_feed_cron_interval' => sanitize_text_field($_POST['athena_ai_feed_cron_interval'] ?? 'hourly')
         ];
         
-        // Save OpenAI settings with verification
-        foreach ($openai_settings as $key => $setting) {
-            $value = $setting['value'];
-            $log_value = $setting['sensitive'] ? 
-                (strlen($value) > 3 ? substr($value, 0, 3) . '...' . substr($value, -3) : '***') : 
-                $value;
-            
-            // Save using direct database access
-            global $wpdb;
-            $result = $wpdb->query($wpdb->prepare(
-                "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) 
-                VALUES (%s, %s, 'yes') 
-                ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
-                $key,
-                $value
-            ));
-            
-            // Clear cache
-            wp_cache_delete($key, 'options');
-            
-            // Verify the saved value
-            $saved_value = get_option($key, 'NOT_SAVED');
-            $is_saved = $saved_value !== 'NOT_SAVED';
-            
-            // Log the result
-            error_log(sprintf(
-                "Setting '%s': %s | Saved: %s | Verified: %s",
-                $key,
-                $log_value,
-                $result !== false ? 'YES' : 'NO',
-                $is_saved ? 'YES' : 'NO'
-            ));
-            
-            $results[$key] = $result !== false && $is_saved;
-            $settings[$key] = $value;
-        }
-        
-        // Save other settings
+        // Save other settings also using direct DB access for consistency
         foreach ($other_settings as $key => $value) {
-            $result = update_option($key, $value);
-            $results[$key] = $result;
+            $this->force_save_option($key, $value);
+            $saved_value = get_option($key, null);
+            error_log("Other setting {$key}: " . (isset($saved_value) ? "Successfully saved" : "FAILED TO SAVE"));
+            
+            $results[$key] = isset($saved_value);
             $settings[$key] = $value;
-            error_log(sprintf("Setting '%s' saved: %s", $key, $result ? 'SUCCESS' : 'FAILED'));
         }
         
         // Log final results
         error_log('=== ATHENA AI SETTINGS SAVE RESULTS ===');
         error_log('All settings saved successfully: ' . (in_array(false, $results, true) ? 'NO' : 'YES'));
         error_log('======================================');
-
-        // Image AI Settings
-        $settings['athena_ai_dalle_size'] = sanitize_text_field(
-            $_POST['athena_ai_dalle_size'] ?? ''
-        );
-        $settings['athena_ai_dalle_quality'] = sanitize_text_field(
-            $_POST['athena_ai_dalle_quality'] ?? ''
-        );
-        $settings['athena_ai_dalle_style'] = sanitize_text_field(
-            $_POST['athena_ai_dalle_style'] ?? ''
-        );
-
-        $settings['athena_ai_midjourney_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_midjourney_api_key'] ?? ''
-        );
-        $settings['athena_ai_midjourney_version'] = sanitize_text_field(
-            $_POST['athena_ai_midjourney_version'] ?? ''
-        );
-        $settings['athena_ai_midjourney_style'] = sanitize_text_field(
-            $_POST['athena_ai_midjourney_style'] ?? ''
-        );
-
-        $settings['athena_ai_stablediffusion_api_key'] = sanitize_text_field(
-            $_POST['athena_ai_stablediffusion_api_key'] ?? ''
-        );
-        $settings['athena_ai_stablediffusion_model'] = sanitize_text_field(
-            $_POST['athena_ai_stablediffusion_model'] ?? ''
-        );
-        $settings['athena_ai_stablediffusion_steps'] = intval(
-            $_POST['athena_ai_stablediffusion_steps'] ?? 30
-        );
-
-        // Maintenance Settings
-        $settings['athena_ai_enable_debug_mode'] = isset($_POST['athena_ai_enable_debug_mode'])
-            ? '1'
-            : '0';
-
-        // Feed-Abrufintervall korrekt speichern
-        $feed_cron_interval = sanitize_text_field(
-            $_POST['athena_ai_feed_cron_interval'] ?? 'hourly'
-        );
-        $settings['athena_ai_feed_cron_interval'] = $feed_cron_interval;
-
-        if (WP_DEBUG) {
-            error_log("Athena AI: Saving feed cron interval: {$feed_cron_interval}");
-        }
-
-            error_log("Logging der update_option Aufrufe in save_settings:");
         
-        // Die update_option Aufrufe für die restlichen Optionen überspringen, diese werden direkt gespeichert
-        $skip_options = [
-            'athena_ai_openai_api_key', 
-            'athena_ai_openai_org_id', 
-            'athena_ai_openai_default_model',
-            'athena_ai_openai_temperature'
-        ];
+        // Force clear all cache to make sure new values are used
+        wp_cache_flush();
         
-        // Überprüfen der gespeicherten Werte nach der Speicherung
-        error_log("======= ATHENA SETTINGS VERIFICATION =======\n");
-        error_log("API Key nach Speicherung: " . (empty(get_option('athena_ai_openai_api_key')) ? 'LEER' : 'WERT GESETZT'));
-        error_log("Org ID nach Speicherung: " . get_option('athena_ai_openai_org_id', 'NICHT GESETZT'));
-        error_log("Default Model nach Speicherung: " . get_option('athena_ai_openai_default_model', 'NICHT GESETZT'));
-        error_log("Temperature nach Speicherung: " . get_option('athena_ai_openai_temperature', 'NICHT GESETZT'));
-
-        // Nur die Optionen speichern, die nicht bereits direkt gespeichert wurden
-        foreach ($settings as $key => $value) {
-            if (!in_array($key, $skip_options)) {
-                $result = update_option($key, $value);
-                error_log("Option speichern [{$key}]: " . ($result ? 'ERFOLG' : 'FEHLER') . " - Wert: {$value}");
-            } else {
-                error_log("Option überspringen [{$key}]: Wurde bereits direkt gespeichert.");
-            }
-        }
-
-        // Wenn sich das Cron-Intervall geändert hat, den Cron-Job neu planen
-        $old_interval = get_option('athena_ai_feed_cron_interval', 'hourly');
-        $new_interval = $settings['athena_ai_feed_cron_interval'];
-
-        if ($old_interval !== $new_interval) {
-            // Bestehenden Cron-Job entfernen
-            $timestamp = wp_next_scheduled('athena_fetch_feeds');
-            if ($timestamp) {
-                wp_unschedule_event($timestamp, 'athena_fetch_feeds');
-            }
-
-            // Neuen Cron-Job mit dem neuen Intervall planen
-            wp_schedule_event(time(), $new_interval, 'athena_fetch_feeds');
-
-            // Erfolgsmeldung hinzufügen
-            add_settings_error(
-                'athena_ai_messages',
-                'athena_ai_cron_rescheduled',
-                $this->__(
-                    'Feed fetch cron job has been rescheduled with new interval.',
-                    'athena-ai'
-                ),
-                'updated'
-            );
-        }
-
-        // Prüfen, ob Validierungsfehler vorliegen
-        if (!empty($validation_errors)) {
-            foreach ($validation_errors as $error) {
-                add_settings_error(
-                    'athena_ai_messages',
-                    'athena_ai_validation_error',
-                    $error,
-                    'error'
-                );
-            }
-        } else {
-            // Erfolgsmeldung für den Benutzer anzeigen
-            add_settings_error(
-                'athena_ai_messages',
-                'athena_ai_message',
-                $this->__('All settings have been successfully saved.', 'athena-ai'),
-                'updated'
-            );
-        }
+        return !in_array(false, $results, true);
     }
 
     /**
@@ -630,35 +511,35 @@ class Settings extends BaseAdmin {
             $option_value = maybe_serialize($option_value);
         }
         
-        // Prüfen, ob die Option bereits existiert
-        $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name = %s",
+        // Direkte Abfrage für maximale Zuverlässigkeit
+        $result = $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) 
+            VALUES (%s, %s, 'yes') 
+            ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
+            $option_name,
+            $option_value
+        ));
+        
+        // Cache explizit leeren, damit die Änderungen sofort wirksam werden
+        wp_cache_delete($option_name, 'options');
+        
+        // Prüfen, ob die Option jetzt gesetzt ist
+        $saved_value = $wpdb->get_var($wpdb->prepare(
+            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
             $option_name
         ));
         
-        if ($exists) {
-            // Option aktualisieren
-            $result = $wpdb->update(
-                $wpdb->options,
-                ['option_value' => $option_value],
-                ['option_name' => $option_name]
-            );
-            error_log("Force Update Option [{$option_name}]: " . ($result !== false ? 'ERFOLG' : 'FEHLER') . " - Wert: {$option_value}");
-        } else {
-            // Option erstellen
-            $result = $wpdb->insert(
-                $wpdb->options,
-                [
-                    'option_name' => $option_name,
-                    'option_value' => $option_value,
-                    'autoload' => 'yes'
-                ]
-            );
-            error_log("Force Insert Option [{$option_name}]: " . ($result !== false ? 'ERFOLG' : 'FEHLER') . " - Wert: {$option_value}");
-        }
+        // Log the result - respect privacy for API keys
+        $log_value = $option_name === 'athena_ai_openai_api_key' && !empty($option_value) 
+            ? substr($option_value, 0, 3) . '...' . substr($option_value, -3)
+            : $option_value;
+            
+        error_log("Force Save Option [{$option_name}]: " . 
+            ($result !== false ? 'SUCCESS' : 'FAILED') . 
+            " - Value: {$log_value}" .
+            " - Verified: " . (!empty($saved_value) ? 'YES' : 'NO'));
         
-        // Cache leeren, damit die Änderungen sofort wirksam werden
-        wp_cache_delete($option_name, 'options');
+        return $result !== false && !empty($saved_value);
     }
     
     /**
