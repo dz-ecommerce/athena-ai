@@ -608,12 +608,48 @@ class Settings extends BaseAdmin {
 
     // Die verify_db_settings Methode wurde entfernt, da wir nun die Standard-WordPress-Funktionen verwenden.
 
+    // Prüft, ob der OpenAI API Key gültig ist
+    private function is_openai_api_key_valid($api_key) {
+        $ch = curl_init('https://api.openai.com/v1/models');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $api_key,
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return $http_code === 200;
+    }
+
     // Neue Methode für admin_post Verarbeitung
     public function handle_save_settings() {
         if (!isset($_POST['_wpnonce_athena_ai_settings']) || !wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
             wp_die(__('Security check failed.', 'athena-ai'));
         }
         $this->save_settings();
+
+        $api_key = isset($_POST['athena_ai_openai_api_key']) ? trim($_POST['athena_ai_openai_api_key']) : '';
+        if ($api_key) {
+            if ($this->is_openai_api_key_valid($api_key)) {
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_api_key_valid',
+                    __('OpenAI API Key is valid.', 'athena-ai'),
+                    'updated'
+                );
+            } else {
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_api_key_invalid',
+                    __('OpenAI API Key is invalid or has insufficient permissions.', 'athena-ai'),
+                    'error'
+                );
+            }
+        }
+
         $redirect_url = admin_url('edit.php?post_type=athena-feed&page=athena-ai-settings&settings-updated=true');
         wp_redirect($redirect_url);
         exit;
