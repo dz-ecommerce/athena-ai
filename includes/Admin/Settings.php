@@ -41,43 +41,16 @@ class Settings extends BaseAdmin {
     public function __construct() {
         // AJAX-Endpoint zum Leeren des Optionen-Caches
         add_action('wp_ajax_athena_flush_options_cache', [$this, 'ajax_flush_options_cache']);
+        // Admin-Post Hook für Settings-Speichern
+        add_action('admin_post_athena_save_settings', [$this, 'handle_save_settings']);
     }
 
     /**
      * Render the settings page
      */
     public function render_page() {
-        // Verarbeite Formular-Submission mit einem einzigen Nonce-Check
-        if (isset($_POST['submit']) && isset($_POST['_wpnonce_athena_ai_settings']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
-            try {
-                // Speichere die Einstellungen mit der vereinfachten Methode
-                $save_result = $this->save_settings();
-                
-                // Einfacher Redirect ohne Cache-Buster Parameter
-                $redirect_url = add_query_arg(
-                    'settings-updated', 'true',
-                    remove_query_arg('settings-updated')
-                );
-                
-                if (isset($_POST['active_tab'])) {
-                    $redirect_url = add_query_arg('tab', sanitize_text_field($_POST['active_tab']), $redirect_url);
-                }
-                
-                wp_redirect($redirect_url);
-                exit;
-            } catch (Exception $e) {
-                // Fehlerbehandlung
-                error_log('Athena Settings Error: ' . $e->getMessage());
-                add_settings_error(
-                    'athena_ai_messages',
-                    'athena_ai_error',
-                    sprintf($this->__('Error saving settings: %s', 'athena-ai'), $e->getMessage()),
-                    'error'
-                );
-            }
-        }
-        
-        // Wenn die Einstellungen aktualisiert wurden, zeige eine Erfolgsmeldung an
+        // KEINE POST-Verarbeitung mehr hier!
+        // Erfolgsmeldung anzeigen, falls vorhanden
         if (isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true') {
             add_settings_error(
                 'athena_ai_messages',
@@ -85,11 +58,6 @@ class Settings extends BaseAdmin {
                 __('Settings saved successfully!', 'athena-ai'),
                 'updated'
             );
-            
-            // Logge den aktuellen Zustand nach dem Speichern
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                $this->log_current_settings_state('Post-save settings state');
-            }
         }
         
         // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde
@@ -639,4 +607,15 @@ class Settings extends BaseAdmin {
     }
 
     // Die verify_db_settings Methode wurde entfernt, da wir nun die Standard-WordPress-Funktionen verwenden.
+
+    // Neue Methode für admin_post Verarbeitung
+    public function handle_save_settings() {
+        if (!isset($_POST['_wpnonce_athena_ai_settings']) || !wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
+            wp_die(__('Security check failed.', 'athena-ai'));
+        }
+        $this->save_settings();
+        $redirect_url = admin_url('edit.php?post_type=athena-feed&page=athena-ai-settings&settings-updated=true');
+        wp_redirect($redirect_url);
+        exit;
+    }
 }

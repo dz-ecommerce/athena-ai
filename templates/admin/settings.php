@@ -8,7 +8,8 @@
     
     <?php settings_errors('athena_ai_messages'); ?>
 
-    <form method="post" action="">
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="athena_save_settings">
         <?php echo $nonce_field; ?>
         <input type="hidden" name="active_tab" id="active_tab" value="text-ai-settings">
 
