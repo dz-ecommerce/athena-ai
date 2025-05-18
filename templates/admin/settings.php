@@ -23,19 +23,11 @@
         </div>
     <?php endif; ?>
 
-    <h2 class="nav-tab-wrapper">
-        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=github-settings" class="nav-tab <?php echo $active_tab === 'github-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('GitHub Settings', 'athena-ai'); ?></a>
-        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=text-ai-settings" class="nav-tab <?php echo $active_tab === 'text-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Text AI Settings', 'athena-ai'); ?></a>
-        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=image-ai-settings" class="nav-tab <?php echo $active_tab === 'image-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Image AI Settings', 'athena-ai'); ?></a>
-        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=maintenance" class="nav-tab <?php echo $active_tab === 'maintenance' ? 'nav-tab-active' : ''; ?>"><?php _e('Maintenance', 'athena-ai'); ?></a>
-    </h2>
-
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="athena_save_settings">
         <?php echo $nonce_field; ?>
-        <input type="hidden" name="active_tab" id="active_tab" value="text-ai-settings">
 
-        <div id="text-ai-settings" class="tab-content active">
+        <div class="settings-section">
             <h2><?php esc_html_e('Text AI Settings', 'athena-ai'); ?></h2>
             <p class="description">
                 <?php esc_html_e('Configure settings for text-based AI services.', 'athena-ai'); ?>

@@ -96,9 +96,6 @@ class Settings extends BaseAdmin {
 
         // Sammle Maintenance-Daten
         $maintenance_data = $this->get_maintenance_data();
-        
-        // Bestimme den aktiven Tab
-        $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'github-settings';
 
         $this->render_template('settings', [
             'title' => $this->__('Athena AI Settings', 'athena-ai'),
@@ -106,7 +103,6 @@ class Settings extends BaseAdmin {
             'nonce_field' => $this->get_nonce_field('athena_ai_settings', '_wpnonce_athena_ai_settings'),
             'maintenance_nonce_field' => $this->get_nonce_field('athena_ai_maintenance', '_wpnonce_athena_ai_maintenance'),
             'maintenance' => $maintenance_data,
-            'active_tab' => $active_tab,
             'models' => [
                 'openai' => [
                     'gpt-4o' => 'GPT-4o',
