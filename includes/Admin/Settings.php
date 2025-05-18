@@ -47,20 +47,6 @@ class Settings extends BaseAdmin {
      * Render the settings page
      */
     public function render_page() {
-        // Debug-Ausgabe der POST-Daten (nur in Debug-Modus)
-        if (defined('WP_DEBUG') && WP_DEBUG && !empty($_POST)) {
-            echo '<div class="notice notice-info is-dismissible">';
-            echo '<h3>DEBUG: POST-Daten</h3>';
-            echo '<pre style="background: #f8f8f8; padding: 10px; max-height: 300px; overflow: auto; font-size: 12px;">';
-            print_r($_POST);
-            echo '</pre>';
-            echo '</div>';
-            
-            // Debug-Log
-            error_log("=== ATHENA AI SETTINGS STATE: Pre-render settings state ===");
-            error_log("POST data: " . print_r($_POST, true));
-        }
-        
         // Verarbeite Formular-Submission mit einem einzigen Nonce-Check
         if (isset($_POST['submit']) && isset($_POST['_wpnonce_athena_ai_settings']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
             try {
