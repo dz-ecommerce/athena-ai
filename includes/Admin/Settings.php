@@ -180,11 +180,44 @@ class Settings extends BaseAdmin {
         add_settings_error(
             'athena_ai_messages',
             'athena_ai_post_debug',
-            'POST-Daten: <pre style="max-height: 200px; overflow: auto; font-size: 12px; background: #f5f5f5; padding: 10px; border: 1px solid #ddd;">' . 
+            'POST-Daten: <pre style="max-height: 300px; overflow: auto; font-size: 12px; background: #f5f5f5; padding: 10px; border: 1px solid #ddd;">' . 
             htmlspecialchars(print_r($_POST, true)) . 
             '</pre>',
             'info'
         );
+        
+        // Ausführlicher POST-Debug
+        echo '<div class="wrap"><h2>POST-Daten Detailansicht</h2>';
+        echo '<div style="background: #fff; padding: 15px; border: 1px solid #ccc; margin-bottom: 20px;">';
+        echo '<h3>$_POST</h3>';
+        echo '<pre style="max-height: 400px; overflow: auto;">';
+        print_r($_POST);
+        echo '</pre>';
+        
+        echo '<h3>$_REQUEST</h3>';
+        echo '<pre style="max-height: 400px; overflow: auto;">';
+        print_r($_REQUEST);
+        echo '</pre>';
+        
+        echo '<h3>Formular-Daten Analyse</h3>';
+        echo '<table class="widefat" style="margin-top: 10px;">';
+        echo '<thead><tr><th>Schlüssel</th><th>Wert</th><th>Typ</th><th>Länge</th></tr></thead><tbody>';
+        
+        foreach ($_POST as $key => $value) {
+            $type = gettype($value);
+            $length = is_string($value) ? strlen($value) : (is_array($value) ? count($value) : '-');
+            $display_value = is_string($value) ? htmlspecialchars($value) : htmlspecialchars(print_r($value, true));
+            
+            // Bei API-Keys nur Teilinformationen anzeigen
+            if (strpos($key, 'api_key') !== false && is_string($value) && !empty($value)) {
+                $display_value = substr($value, 0, 3) . '...' . substr($value, -3) . ' (Länge: ' . $length . ')';
+            }
+            
+            echo "<tr><td>{$key}</td><td>{$display_value}</td><td>{$type}</td><td>{$length}</td></tr>";
+        }
+        
+        echo '</tbody></table>';
+        echo '</div></div>';
         
         // Überprüfe DB-Status vor dem Speichern
         $this->verify_db_settings('Vor dem Speichern');
