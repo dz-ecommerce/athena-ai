@@ -137,6 +137,14 @@ class Settings extends BaseAdmin {
             // Validate and sanitize all settings before saving
             $settings = $this->validate_and_sanitize_settings($_POST);
             
+            // OpenAI API Key verschlüsselt speichern
+            if (isset($_POST['athena_ai_openai_api_key'])) {
+                $plain_key = sanitize_text_field($_POST['athena_ai_openai_api_key']);
+                $encrypted_key = $this->encrypt_api_key($plain_key);
+                update_option('athena_ai_openai_api_key', $encrypted_key);
+                unset($settings['openai_api_key']); // Nicht nochmal speichern
+            }
+            
             // Save each setting individually
             foreach ($settings as $key => $value) {
                 $option_name = 'athena_ai_' . $key;
@@ -288,7 +296,8 @@ class Settings extends BaseAdmin {
         $settings['github_repo'] = get_option('athena_ai_github_repo', $this->default_settings['github_repo']);
         
         // Text AI Settings
-        $settings['openai_api_key'] = get_option('athena_ai_openai_api_key', $this->default_settings['openai_api_key']);
+        $encrypted_key = get_option('athena_ai_openai_api_key', '');
+        $settings['openai_api_key'] = $encrypted_key ? $this->decrypt_api_key($encrypted_key) : '';
         $settings['openai_org_id'] = get_option('athena_ai_openai_org_id', $this->default_settings['openai_org_id']);
         $settings['openai_default_model'] = get_option('athena_ai_openai_default_model', $this->default_settings['openai_default_model']);
         $settings['openai_temperature'] = get_option('athena_ai_openai_temperature', $this->default_settings['openai_temperature']);
@@ -655,5 +664,33 @@ class Settings extends BaseAdmin {
         $redirect_url = admin_url('edit.php?post_type=athena-feed&page=athena-ai-settings&settings-updated=true');
         wp_redirect($redirect_url);
         exit;
+    }
+
+    // Holt oder generiert den Verschlüsselungs-Schlüssel
+    private function get_encryption_key() {
+        $option_name = 'athena_ai_encryption_key';
+        $key = get_option($option_name, '');
+        if (empty($key)) {
+            $key = bin2hex(random_bytes(32)); // 64 hex-Zeichen = 32 Byte
+            update_option($option_name, $key);
+        }
+        return $key;
+    }
+
+    // Verschlüsselt den API Key
+    private function encrypt_api_key($plain_text) {
+        $key = $this->get_encryption_key();
+        $iv = openssl_random_pseudo_bytes(16);
+        $encrypted = openssl_encrypt($plain_text, 'AES-256-CBC', $key, 0, $iv);
+        return base64_encode($iv . $encrypted);
+    }
+
+    // Entschlüsselt den API Key
+    private function decrypt_api_key($encrypted_text) {
+        $key = $this->get_encryption_key();
+        $data = base64_decode($encrypted_text);
+        $iv = substr($data, 0, 16);
+        $encrypted = substr($data, 16);
+        return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
     }
 }
