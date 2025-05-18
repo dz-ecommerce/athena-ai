@@ -666,12 +666,18 @@ class Settings extends BaseAdmin {
         exit;
     }
 
-    // Holt oder generiert den Verschlüsselungs-Schlüssel
+    // Holt den Verschlüsselungs-Schlüssel: erst Konstante, dann Option
     private function get_encryption_key() {
+        if (defined('ATHENA_AI_KEY_ENCRYPTION_SECRET') && ATHENA_AI_KEY_ENCRYPTION_SECRET) {
+            // Optional: Lösche alten DB-Key, wenn Konstante gesetzt ist
+            delete_option('athena_ai_encryption_key');
+            return ATHENA_AI_KEY_ENCRYPTION_SECRET;
+        }
+        // Fallback: Option aus DB (für Migration/Kompatibilität)
         $option_name = 'athena_ai_encryption_key';
         $key = get_option($option_name, '');
         if (empty($key)) {
-            $key = bin2hex(random_bytes(32)); // 64 hex-Zeichen = 32 Byte
+            $key = bin2hex(random_bytes(32));
             update_option($option_name, $key);
         }
         return $key;
