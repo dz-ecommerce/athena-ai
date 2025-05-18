@@ -97,56 +97,36 @@ class Feed {
     }
 
     /**
-     * Aktualisiert die Fehlermeldung im Objekt und in der Datenbank
+     * Update feed error information
      *
-     * @param string|null $error Die Fehlermeldung
+     * @param string $error_message The error message
      * @return self
      */
-    public function update_feed_error(?string $error): self {
-        $this->set_last_error($error ?? 'Unbekannter Fehler');
+    public function update_feed_error(string $error_message): self {
+        global $wpdb;
 
-        // Wenn eine Post-ID vorhanden ist, aktualisiere den Fehler in der Datenbank
-        if ($this->post_id) {
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'feed_metadata';
-
-            // Prüfe, ob die Tabelle existiert
-            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
-
-            if ($table_exists) {
-                // Prüfe, ob bereits ein Eintrag für diesen Feed existiert
-                $exists = $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$table_name} WHERE feed_id = %d",
-                        $this->post_id
-                    )
-                );
-
-                if ($exists) {
-                    // Aktualisiere den bestehenden Eintrag
-                    $wpdb->update(
-                        $table_name,
-                        ['last_error' => $error],
-                        ['feed_id' => $this->post_id],
-                        ['%s'],
-                        ['%d']
-                    );
-                } else {
-                    // Erstelle einen neuen Eintrag
-                    $wpdb->insert(
-                        $table_name,
-                        [
-                            'feed_id' => $this->post_id,
-                            'last_error' => $error,
-                            'last_fetched' => \current_time('mysql'),
-                            'fetch_count' => 0,
-                        ],
-                        ['%d', '%s', '%s', '%d']
-                    );
-                }
-            }
+        if (!$this->post_id) {
+            return $this;
         }
 
+        $metadata_table = $wpdb->prefix . 'feed_metadata';
+        $now = current_time('mysql');
+
+        // Update the metadata
+        $wpdb->update(
+            $metadata_table,
+            [
+                'last_error' => $error_message,
+                'last_error_message' => $error_message,
+                'last_error_date' => $now,
+                'updated_at' => $now
+            ],
+            ['feed_id' => $this->post_id],
+            ['%s', '%s', '%s', '%s'],
+            ['%d']
+        );
+
+        $this->last_error = $error_message;
         return $this;
     }
 

@@ -73,6 +73,7 @@ class DatabaseSetup {
             fetch_count INT DEFAULT 0,
             last_error_date DATETIME DEFAULT NULL,
             last_error_message TEXT,
+            last_error TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) $charset_collate;";

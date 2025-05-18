@@ -251,10 +251,15 @@ class FeedRepository {
             [
                 'feed_id' => $feed_id,
                 'last_fetched' => null,
-                'error' => false,
                 'last_error' => '',
+                'last_error_message' => '',
+                'last_error_date' => null,
+                'fetch_count' => 0,
+                'fetch_interval' => 3600,
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
             ],
-            ['%d', '%s', '%d', '%s']
+            ['%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
         );
 
         return $result !== false;

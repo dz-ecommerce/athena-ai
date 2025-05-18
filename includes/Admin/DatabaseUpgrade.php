@@ -172,93 +172,81 @@ class DatabaseUpgrade {
      *
      * @return true|string True on success, error message on failure
      */
-    public static function upgrade_database() {
-        global $wpdb;
-
-        // Unterdrücke Warnungen und Fehler, die durch Ausgaben verursacht werden
-        ob_start();
-
-        // Erzwinge ein Update des Datenbankschemas
-        \delete_option('athena_ai_db_version');
-
-        // Führe das Datenbankschema-Setup aus
-        require_once \ABSPATH . 'wp-admin/includes/upgrade.php';
-
+    public static function upgrade_database(): bool|string {
         try {
-            // Feed Metadata Tabelle aktualisieren
+            global $wpdb;
+            
+            // Start transaction
+            $wpdb->query('START TRANSACTION');
+            
+            // Feed Metadata Table
             $metadata_table = $wpdb->prefix . 'feed_metadata';
-
-            // Prüfe, ob die Tabelle existiert
-            $table_exists =
-                $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $metadata_table)) ===
-                $metadata_table;
-
+            
+            // Check if table exists
+            $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $metadata_table)) === $metadata_table;
+            
             if ($table_exists) {
-                // Prüfe, ob die Spalte 'last_error' existiert
-                $column_exists = $wpdb->get_results(
-                    $wpdb->prepare("SHOW COLUMNS FROM {$metadata_table} LIKE %s", 'last_error')
-                );
-
-                if (empty($column_exists)) {
-                    // Füge die Spalte hinzu
-                    $wpdb->query(
-                        "ALTER TABLE {$metadata_table} ADD COLUMN last_error TEXT AFTER last_error_message"
-                    );
+                // Add missing columns
+                $columns = $wpdb->get_results("SHOW COLUMNS FROM {$metadata_table}");
+                $column_names = array_map(function($col) { return $col->Field; }, $columns);
+                
+                // Add last_error column if missing
+                if (!in_array('last_error', $column_names)) {
+                    $wpdb->query("ALTER TABLE {$metadata_table} ADD COLUMN last_error TEXT AFTER last_error_message");
+                }
+                
+                // Add indexes if missing
+                $indexes = $wpdb->get_results("SHOW INDEX FROM {$metadata_table}");
+                $index_names = array_map(function($idx) { return $idx->Key_name; }, $indexes);
+                
+                if (!in_array('last_fetched', $index_names)) {
+                    $wpdb->query("ALTER TABLE {$metadata_table} ADD INDEX (last_fetched)");
+                }
+                
+                if (!in_array('last_error_date', $index_names)) {
+                    $wpdb->query("ALTER TABLE {$metadata_table} ADD INDEX (last_error_date)");
                 }
             }
-
-            // Feed Raw Items Tabelle aktualisieren
+            
+            // Feed Raw Items Table
             $items_table = $wpdb->prefix . 'feed_raw_items';
-
-            // Prüfe, ob die Tabelle existiert
-            $table_exists =
-                $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $items_table)) ===
-                $items_table;
-
+            
+            // Check if table exists
+            $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $items_table)) === $items_table;
+            
             if ($table_exists) {
-                // Prüfe, ob die Spalte 'item_hash' existiert
-                $column_exists = $wpdb->get_results(
-                    $wpdb->prepare("SHOW COLUMNS FROM {$items_table} LIKE %s", 'item_hash')
-                );
-
-                if (empty($column_exists)) {
-                    // Füge die Spalte hinzu
-                    $wpdb->query(
-                        "ALTER TABLE {$items_table} ADD COLUMN item_hash CHAR(32) NOT NULL AFTER id"
-                    );
-                    $wpdb->query("ALTER TABLE {$items_table} ADD INDEX (item_hash)");
-
-                    // Aktualisiere bestehende Einträge mit Hash-Werten
-                    $wpdb->query(
-                        "UPDATE {$items_table} SET item_hash = MD5(guid) WHERE guid IS NOT NULL AND guid != ''"
-                    );
-                }
-
-                // Prüfe, ob die Spalte 'id' existiert
-                $column_exists = $wpdb->get_results(
-                    $wpdb->prepare("SHOW COLUMNS FROM {$items_table} LIKE %s", 'id')
-                );
-
-                if (empty($column_exists)) {
-                    // Füge die ID-Spalte hinzu und ändere den Primärschlüssel
-                    $wpdb->query("ALTER TABLE {$items_table} DROP PRIMARY KEY");
-                    $wpdb->query(
-                        "ALTER TABLE {$items_table} ADD COLUMN id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY FIRST"
-                    );
+                // Add missing columns
+                $columns = $wpdb->get_results("SHOW COLUMNS FROM {$items_table}");
+                $column_names = array_map(function($col) { return $col->Field; }, $columns);
+                
+                // Add item_hash column if missing
+                if (!in_array('item_hash', $column_names)) {
+                    $wpdb->query("ALTER TABLE {$items_table} ADD COLUMN item_hash CHAR(32) NOT NULL AFTER id");
+                    
+                    // Generate hashes for existing items
+                    $wpdb->query("UPDATE {$items_table} SET item_hash = MD5(CONCAT(feed_id, '-', guid)) WHERE item_hash = ''");
+                    
+                    // Add unique index
                     $wpdb->query("ALTER TABLE {$items_table} ADD UNIQUE KEY (item_hash, feed_id)");
                 }
+                
+                // Add id column if missing
+                if (!in_array('id', $column_names)) {
+                    $wpdb->query("ALTER TABLE {$items_table} ADD COLUMN id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY FIRST");
+                }
             }
-
-            // Aktualisiere die Schemaversion
-            \update_option('athena_ai_db_version', '1.0.1'); // Verwende die aktuelle Schemaversion direkt
-
-            // Verwerfe gepufferte Ausgabe
-            ob_end_clean();
-
+            
+            // Commit transaction
+            $wpdb->query('COMMIT');
+            
+            // Update schema version
+            update_option('athena_ai_db_version', '1.0.1');
+            
             return true;
-        } catch (\Exception $e) {
-            // Verwerfe gepufferte Ausgabe
-            ob_end_clean();
+            
+        } catch (Exception $e) {
+            // Rollback transaction
+            $wpdb->query('ROLLBACK');
             return $e->getMessage();
         }
     }

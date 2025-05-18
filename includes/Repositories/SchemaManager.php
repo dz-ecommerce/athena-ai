@@ -88,7 +88,9 @@ class SchemaManager {
             last_error_message TEXT,
             last_error TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX (last_fetched),
+            INDEX (last_error_date)
         ) $charset_collate;");
 
         // Raw Items

@@ -169,7 +169,7 @@ class Settings extends BaseAdmin {
     /**
      * Save settings using standard WordPress functions
      */
-    private function save_settings() {
+    public function save_settings() {
         // Enable error logging
         if (!defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
             @ini_set('log_errors', 1);
@@ -180,113 +180,28 @@ class Settings extends BaseAdmin {
         error_log('[ATHENA AI] ==================== SETTINGS SAVE PROCESS STARTED ====================');
         
         try {
-            // Standard WordPress Funktionen für das Speichern der Einstellungen verwenden
+            // Validate and sanitize all settings before saving
+            $settings = $this->validate_and_sanitize_settings($_POST);
             
-            // 1. OpenAI Einstellungen
-            if (isset($_POST['athena_ai_openai_api_key'])) {
-                update_option('athena_ai_openai_api_key', sanitize_text_field($_POST['athena_ai_openai_api_key']));
-            }
-            
-            if (isset($_POST['athena_ai_openai_org_id'])) {
-                update_option('athena_ai_openai_org_id', sanitize_text_field($_POST['athena_ai_openai_org_id']));
-            }
-            
-            if (isset($_POST['athena_ai_openai_default_model'])) {
-                update_option('athena_ai_openai_default_model', sanitize_text_field($_POST['athena_ai_openai_default_model']));
-            }
-            
-            if (isset($_POST['athena_ai_openai_temperature'])) {
-                $temp = max(0, min(2, (float)$_POST['athena_ai_openai_temperature']));
-                update_option('athena_ai_openai_temperature', $temp);
-            }
-            
-            // 2. GitHub Einstellungen
-            if (isset($_POST['athena_ai_github_token'])) {
-                update_option('athena_ai_github_token', sanitize_text_field($_POST['athena_ai_github_token']));
-            }
-            
-            if (isset($_POST['athena_ai_github_owner'])) {
-                update_option('athena_ai_github_owner', sanitize_text_field($_POST['athena_ai_github_owner']));
-            }
-            
-            if (isset($_POST['athena_ai_github_repo'])) {
-                update_option('athena_ai_github_repo', sanitize_text_field($_POST['athena_ai_github_repo']));
-            }
-            
-            // 3. Image AI Einstellungen
-            if (isset($_POST['athena_ai_dalle_size'])) {
-                update_option('athena_ai_dalle_size', sanitize_text_field($_POST['athena_ai_dalle_size']));
-            }
-            
-            if (isset($_POST['athena_ai_dalle_quality'])) {
-                update_option('athena_ai_dalle_quality', sanitize_text_field($_POST['athena_ai_dalle_quality']));
-            }
-            
-            if (isset($_POST['athena_ai_dalle_style'])) {
-                update_option('athena_ai_dalle_style', sanitize_text_field($_POST['athena_ai_dalle_style']));
-            }
-            
-            if (isset($_POST['athena_ai_midjourney_api_key'])) {
-                update_option('athena_ai_midjourney_api_key', sanitize_text_field($_POST['athena_ai_midjourney_api_key']));
-            }
-            
-            if (isset($_POST['athena_ai_midjourney_version'])) {
-                update_option('athena_ai_midjourney_version', sanitize_text_field($_POST['athena_ai_midjourney_version']));
-            }
-            
-            if (isset($_POST['athena_ai_midjourney_style'])) {
-                update_option('athena_ai_midjourney_style', sanitize_text_field($_POST['athena_ai_midjourney_style']));
-            }
-            
-            if (isset($_POST['athena_ai_stablediffusion_api_key'])) {
-                update_option('athena_ai_stablediffusion_api_key', sanitize_text_field($_POST['athena_ai_stablediffusion_api_key']));
-            }
-            
-            if (isset($_POST['athena_ai_stablediffusion_model'])) {
-                update_option('athena_ai_stablediffusion_model', sanitize_text_field($_POST['athena_ai_stablediffusion_model']));
-            }
-            
-            if (isset($_POST['athena_ai_stablediffusion_steps'])) {
-                update_option('athena_ai_stablediffusion_steps', intval($_POST['athena_ai_stablediffusion_steps']));
-            }
-            
-            // 4. Maintenance Einstellungen
-            update_option('athena_ai_enable_debug_mode', isset($_POST['athena_ai_enable_debug_mode']) ? '1' : '0');
-            
-            if (isset($_POST['athena_ai_feed_cron_interval'])) {
-                $old_interval = get_option('athena_ai_feed_cron_interval', 'hourly');
-                $new_interval = sanitize_text_field($_POST['athena_ai_feed_cron_interval']);
+            // Save each setting individually
+            foreach ($settings as $key => $value) {
+                $option_name = 'athena_ai_' . $key;
+                $result = update_option($option_name, $value);
                 
-                update_option('athena_ai_feed_cron_interval', $new_interval);
-                
-                // Aktualisiere Cron-Job, wenn sich das Intervall geändert hat
-                if ($old_interval !== $new_interval) {
-                    error_log("[ATHENA AI] Cron-Intervall wurde geändert: {$old_interval} -> {$new_interval}");
-                    
-                    // Bestehenden Cron-Job entfernen
-                    $timestamp = wp_next_scheduled('athena_fetch_feeds');
-                    if ($timestamp) {
-                        wp_unschedule_event($timestamp, 'athena_fetch_feeds');
-                        error_log('[ATHENA AI] Bestehender Cron-Job wurde entfernt.');
-                    }
-                    
-                    // Neuen Cron-Job planen
-                    $schedule_result = wp_schedule_event(time(), $new_interval, 'athena_fetch_feeds');
-                    error_log('[ATHENA AI] Neuer Cron-Job wurde geplant: ' . ($schedule_result ? 'ERFOLG' : 'FEHLER'));
-                    
-                    // Erfolgsmeldung hinzufügen
-                    add_settings_error(
-                        'athena_ai_messages',
-                        'athena_ai_cron_rescheduled',
-                        $this->__('Feed fetch cron job has been rescheduled with new interval.', 'athena-ai'),
-                        'updated'
-                    );
+                if ($result === false) {
+                    error_log("[ATHENA AI] Failed to save setting: {$option_name}");
                 }
             }
             
-            // Überprüfe, ob die wichtigsten Einstellungen gespeichert wurden
-            $api_key_saved = get_option('athena_ai_openai_api_key');
-            error_log('[ATHENA AI] API Key nach dem Speichern: ' . (!empty($api_key_saved) ? 'VORHANDEN' : 'FEHLT'));
+            // Update cron schedule if needed
+            if (isset($settings['feed_cron_interval'])) {
+                $old_interval = get_option('athena_ai_feed_cron_interval', 'hourly');
+                $new_interval = $settings['feed_cron_interval'];
+                
+                if ($old_interval !== $new_interval) {
+                    $this->update_cron_schedule($new_interval);
+                }
+            }
             
             return true;
             
@@ -297,6 +212,105 @@ class Settings extends BaseAdmin {
         } finally {
             error_log('[ATHENA AI] ==================== SETTINGS SAVE PROCESS COMPLETED ====================');
         }
+    }
+    
+    /**
+     * Validate and sanitize all settings
+     */
+    private function validate_and_sanitize_settings(array $input): array {
+        $settings = [];
+        
+        // OpenAI Settings
+        if (isset($input['athena_ai_openai_api_key'])) {
+            $settings['openai_api_key'] = sanitize_text_field($input['athena_ai_openai_api_key']);
+        }
+        
+        if (isset($input['athena_ai_openai_org_id'])) {
+            $settings['openai_org_id'] = sanitize_text_field($input['athena_ai_openai_org_id']);
+        }
+        
+        if (isset($input['athena_ai_openai_default_model'])) {
+            $settings['openai_default_model'] = sanitize_text_field($input['athena_ai_openai_default_model']);
+        }
+        
+        if (isset($input['athena_ai_openai_temperature'])) {
+            $settings['openai_temperature'] = max(0, min(2, (float)$input['athena_ai_openai_temperature']));
+        }
+        
+        // GitHub Settings
+        if (isset($input['athena_ai_github_token'])) {
+            $settings['github_token'] = sanitize_text_field($input['athena_ai_github_token']);
+        }
+        
+        if (isset($input['athena_ai_github_owner'])) {
+            $settings['github_owner'] = sanitize_text_field($input['athena_ai_github_owner']);
+        }
+        
+        if (isset($input['athena_ai_github_repo'])) {
+            $settings['github_repo'] = sanitize_text_field($input['athena_ai_github_repo']);
+        }
+        
+        // Image AI Settings
+        if (isset($input['athena_ai_dalle_size'])) {
+            $settings['dalle_size'] = sanitize_text_field($input['athena_ai_dalle_size']);
+        }
+        
+        if (isset($input['athena_ai_dalle_quality'])) {
+            $settings['dalle_quality'] = sanitize_text_field($input['athena_ai_dalle_quality']);
+        }
+        
+        if (isset($input['athena_ai_dalle_style'])) {
+            $settings['dalle_style'] = sanitize_text_field($input['athena_ai_dalle_style']);
+        }
+        
+        if (isset($input['athena_ai_midjourney_api_key'])) {
+            $settings['midjourney_api_key'] = sanitize_text_field($input['athena_ai_midjourney_api_key']);
+        }
+        
+        if (isset($input['athena_ai_midjourney_version'])) {
+            $settings['midjourney_version'] = sanitize_text_field($input['athena_ai_midjourney_version']);
+        }
+        
+        if (isset($input['athena_ai_midjourney_style'])) {
+            $settings['midjourney_style'] = sanitize_text_field($input['athena_ai_midjourney_style']);
+        }
+        
+        if (isset($input['athena_ai_stablediffusion_api_key'])) {
+            $settings['stablediffusion_api_key'] = sanitize_text_field($input['athena_ai_stablediffusion_api_key']);
+        }
+        
+        if (isset($input['athena_ai_stablediffusion_model'])) {
+            $settings['stablediffusion_model'] = sanitize_text_field($input['athena_ai_stablediffusion_model']);
+        }
+        
+        if (isset($input['athena_ai_stablediffusion_steps'])) {
+            $settings['stablediffusion_steps'] = intval($input['athena_ai_stablediffusion_steps']);
+        }
+        
+        // Maintenance Settings
+        $settings['enable_debug_mode'] = isset($input['athena_ai_enable_debug_mode']) ? '1' : '0';
+        
+        if (isset($input['athena_ai_feed_cron_interval'])) {
+            $settings['feed_cron_interval'] = sanitize_text_field($input['athena_ai_feed_cron_interval']);
+        }
+        
+        return $settings;
+    }
+    
+    /**
+     * Update the cron schedule
+     */
+    private function update_cron_schedule(string $new_interval): void {
+        // Remove existing cron job
+        $timestamp = wp_next_scheduled('athena_fetch_feeds');
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, 'athena_fetch_feeds');
+        }
+        
+        // Schedule new cron job
+        wp_schedule_event(time(), $new_interval, 'athena_fetch_feeds');
+        
+        error_log("[ATHENA AI] Cron schedule updated to: {$new_interval}");
     }
 
     /**

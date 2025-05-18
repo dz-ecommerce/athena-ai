@@ -1217,24 +1217,7 @@ class FeedService {
 
         // Handle null or empty content
         if ($content === null || empty($content)) {
-            $error_message =
-                $this->http_client->get_last_error() ?:
-                __('Failed to fetch feed content (empty response)', 'athena-ai');
-
-            // Allgemeine Fehlermeldung für problematische Feeds
-            if (
-                method_exists($this->http_client, 'isProblemURL') &&
-                $this->http_client->isProblemURL($url)
-            ) {
-                $error_message .=
-                    '. ' .
-                    __(
-                        'This feed may be blocking automated access. We\'ve implemented special handling to try and access it.',
-                        'athena-ai'
-                    );
-                $this->logger->info('Special handling for feed at ' . $url . ': ' . $error_message);
-            }
-
+            $error_message = $this->http_client->get_last_error() ?: __('Failed to fetch feed content (empty response)', 'athena-ai');
             $feed->update_feed_error($error_message);
             return false;
         }
