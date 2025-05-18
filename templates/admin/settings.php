@@ -362,10 +362,10 @@
                 echo '<li><strong>WP_DEBUG_LOG:</strong> ' . (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG ? 'Enabled' : 'Disabled') . '</li>';
                 echo '</ul>';
                 
-                // Add cache reset button
-                echo '<button type="button" id="flush-settings-cache" class="button button-secondary" style="margin-top: 15px;">';
+                // Add refresh button
+                echo '<button type="button" id="refresh-settings-view" class="button button-secondary" style="margin-top: 15px;">';
                 echo '<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> ';
-                echo 'Flush Options Cache';
+                echo 'Refresh DB Values';
                 echo '</button>';
                 ?>
             </div>
@@ -945,12 +945,12 @@ jQuery(document).ready(function($) {
         $('#athena-settings-debug-panel').slideToggle();
     });
     
-    // Cache flush functionality
-    $('#flush-settings-cache').on('click', function() {
+    // Refresh DB values functionality
+    $('#refresh-settings-view').on('click', function() {
         var $button = $(this);
-        $button.prop('disabled', true).html('<span class="dashicons dashicons-update" style="margin-top: 3px; animation: spin 2s linear infinite;"></span> Flushing...');
+        $button.prop('disabled', true).html('<span class="dashicons dashicons-update" style="margin-top: 3px; animation: spin 2s linear infinite;"></span> Refreshing...');
         
-        // AJAX call to flush the options cache
+        // AJAX call to get fresh DB values
         $.ajax({
             url: ajaxurl,
             type: 'POST',
@@ -960,21 +960,21 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    $button.html('<span class="dashicons dashicons-yes" style="margin-top: 3px;"></span> Cache Flushed');
+                    $button.html('<span class="dashicons dashicons-yes" style="margin-top: 3px;"></span> Refreshed');
                     setTimeout(function() {
                         location.reload();
                     }, 1000);
                 } else {
                     $button.html('<span class="dashicons dashicons-no" style="margin-top: 3px;"></span> Error');
                     setTimeout(function() {
-                        $button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Flush Options Cache');
+                        $button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Refresh DB Values');
                     }, 2000);
                 }
             },
             error: function() {
                 $button.html('<span class="dashicons dashicons-no" style="margin-top: 3px;"></span> Error');
                 setTimeout(function() {
-                    $button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Flush Options Cache');
+                    $button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Refresh DB Values');
                 }, 2000);
             }
         });

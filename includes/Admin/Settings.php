@@ -61,19 +61,15 @@ class Settings extends BaseAdmin {
             error_log("POST data: " . print_r($_POST, true));
         }
         
-        // Verarbeite Formular-Submission
-        if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
+        // Verarbeite Formular-Submission mit einem einzigen Nonce-Check
+        if (isset($_POST['submit']) && isset($_POST['_wpnonce']) && wp_verify_nonce($_POST['_wpnonce'], 'athena_ai_settings')) {
             try {
-                // Speichere die Einstellungen mit der verbesserten Methode
+                // Speichere die Einstellungen mit der vereinfachten Methode
                 $save_result = $this->save_settings();
                 
-                // Erzwinge eine Neuladen der Seite nach dem Speichern
-                // mit einem eindeutigen Parameter, um Cache-Probleme zu vermeiden
+                // Einfacher Redirect ohne Cache-Buster Parameter
                 $redirect_url = add_query_arg(
-                    [
-                        'settings-updated' => 'true',
-                        'ts' => time() // Timestamp als Cache-Buster
-                    ],
+                    'settings-updated', 'true',
                     remove_query_arg('settings-updated')
                 );
                 
@@ -291,9 +287,6 @@ class Settings extends BaseAdmin {
             // Überprüfe, ob die wichtigsten Einstellungen gespeichert wurden
             $api_key_saved = get_option('athena_ai_openai_api_key');
             error_log('[ATHENA AI] API Key nach dem Speichern: ' . (!empty($api_key_saved) ? 'VORHANDEN' : 'FEHLT'));
-            
-            // Cache leeren
-            wp_cache_flush();
             
             return true;
             
@@ -575,9 +568,6 @@ class Settings extends BaseAdmin {
      * Setzt alle Einstellungen auf die Standardwerte zurück
      */
     public function reset_to_defaults() {
-        // Bestehende Einstellungen löschen
-        $settings = $this->get_settings();
-        
         // Alle Optionen auf Standardwerte zurücksetzen
         foreach ($this->default_settings as $key => $value) {
             $option_name = 'athena_ai_' . $key;
@@ -620,7 +610,7 @@ class Settings extends BaseAdmin {
     }
 
     /**
-     * AJAX-Handler zum Leeren des WordPress-Options-Caches
+     * AJAX-Handler zum Aktualisieren der DB-Ansicht ohne Cache
      */
     public function ajax_flush_options_cache() {
         // Überprüfe Nonce für Sicherheit
@@ -635,31 +625,15 @@ class Settings extends BaseAdmin {
             return;
         }
         
+        // Direkte Datenbankabfrage ohne Verwendung des Caches
         global $wpdb;
-        $critical_options = [
-            'athena_ai_openai_api_key',
-            'athena_ai_openai_org_id',
-            'athena_ai_openai_default_model',
-            'athena_ai_openai_temperature'
-        ];
-        
-        // Leere den Cache für alle kritischen Optionen
-        foreach ($critical_options as $option) {
-            wp_cache_delete($option, 'options');
-            error_log("[ATHENA] Cache for {$option} flushed via AJAX");
-        }
-        
-        // Globaler Cache-Flush
-        wp_cache_flush();
-        
-        // Verifiziere, dass Optionen nun direkt aus der Datenbank gelesen werden
         $api_key = $wpdb->get_var($wpdb->prepare(
             "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
             'athena_ai_openai_api_key'
         ));
         
         wp_send_json_success([
-            'message' => 'Options cache successfully flushed',
+            'message' => 'Settings view refreshed with direct database values',
             'api_key_length' => empty($api_key) ? 0 : strlen($api_key)
         ]);
     }
