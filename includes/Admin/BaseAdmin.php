@@ -28,10 +28,14 @@ abstract class BaseAdmin {
      * Get a nonce field
      *
      * @param string $action The nonce action
+     * @param string|null $field_name The nonce field name/id (optional)
      * @return string The nonce field HTML
      */
-    protected function get_nonce_field($action) {
-        return wp_nonce_field($action, '_wpnonce', true, false);
+    protected function get_nonce_field($action, $field_name = null) {
+        if ($field_name === null) {
+            $field_name = '_wpnonce_' . $action;
+        }
+        return wp_nonce_field($action, $field_name, true, false);
     }
 
     /**

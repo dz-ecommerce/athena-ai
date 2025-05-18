@@ -62,7 +62,7 @@ class Settings extends BaseAdmin {
         }
         
         // Verarbeite Formular-Submission mit einem einzigen Nonce-Check
-        if (isset($_POST['submit']) && isset($_POST['_wpnonce']) && wp_verify_nonce($_POST['_wpnonce'], 'athena_ai_settings')) {
+        if (isset($_POST['submit']) && isset($_POST['_wpnonce_athena_ai_settings']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
             try {
                 // Speichere die Einstellungen mit der vereinfachten Methode
                 $save_result = $this->save_settings();
@@ -107,7 +107,7 @@ class Settings extends BaseAdmin {
         }
         
         // Einstellungen auf Standardwerte zurücksetzen, wenn der Reset-Button geklickt wurde
-        if (isset($_POST['reset_defaults']) && $this->verify_nonce('athena_ai_settings')) {
+        if (isset($_POST['reset_defaults']) && isset($_POST['_wpnonce_athena_ai_settings']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
             $this->reset_to_defaults();
             
             // Auch hier Redirect zum Aktualisieren der Ansicht
@@ -116,12 +116,12 @@ class Settings extends BaseAdmin {
         }
 
         // Führe Maintenance-Aktionen aus, wenn angefordert
-        if (isset($_POST['fix_cron']) && $this->verify_nonce('athena_ai_maintenance')) {
+        if (isset($_POST['fix_cron']) && isset($_POST['_wpnonce_athena_ai_maintenance']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_maintenance'], 'athena_ai_maintenance')) {
             $this->fix_cron_schedule();
         }
 
         // Erstelle Datenbanktabellen, wenn angefordert
-        if (isset($_POST['create_tables']) && $this->verify_nonce('athena_ai_maintenance')) {
+        if (isset($_POST['create_tables']) && isset($_POST['_wpnonce_athena_ai_maintenance']) && wp_verify_nonce($_POST['_wpnonce_athena_ai_maintenance'], 'athena_ai_maintenance')) {
             $this->create_database_tables();
         }
 
@@ -137,8 +137,8 @@ class Settings extends BaseAdmin {
         $this->render_template('settings', [
             'title' => $this->__('Athena AI Settings', 'athena-ai'),
             'settings' => $settings,
-            'nonce_field' => $this->get_nonce_field('athena_ai_settings'),
-            'maintenance_nonce_field' => $this->get_nonce_field('athena_ai_maintenance'),
+            'nonce_field' => $this->get_nonce_field('athena_ai_settings', '_wpnonce_athena_ai_settings'),
+            'maintenance_nonce_field' => $this->get_nonce_field('athena_ai_maintenance', '_wpnonce_athena_ai_maintenance'),
             'maintenance' => $maintenance_data,
             'active_tab' => $active_tab,
             'models' => [
