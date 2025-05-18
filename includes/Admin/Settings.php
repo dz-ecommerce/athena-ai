@@ -634,6 +634,7 @@ class Settings extends BaseAdmin {
         $api_key = isset($_POST['athena_ai_openai_api_key']) ? trim($_POST['athena_ai_openai_api_key']) : '';
         if ($api_key) {
             if ($this->is_openai_api_key_valid($api_key)) {
+                update_option('athena_ai_openai_api_key_status', 'valid');
                 add_settings_error(
                     'athena_ai_messages',
                     'athena_ai_api_key_valid',
@@ -641,6 +642,7 @@ class Settings extends BaseAdmin {
                     'updated'
                 );
             } else {
+                update_option('athena_ai_openai_api_key_status', 'invalid');
                 add_settings_error(
                     'athena_ai_messages',
                     'athena_ai_api_key_invalid',

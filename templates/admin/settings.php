@@ -49,11 +49,15 @@
                                    value="<?php echo esc_attr($direct_api_key); ?>" 
                                    class="regular-text"
                                    autocomplete="off">
-                            <?php if ($has_key): ?>
-                            <span class="api-key-indicator" style="position: absolute; right: 10px; top: 5px; color: green;" title="<?php esc_attr_e('API key is set: ' . $key_display, 'athena-ai'); ?>">
-                                <span class="dashicons dashicons-yes-alt"></span>
-                            </span>
-                            <?php endif; ?>
+                            <?php
+                            // Statuspunkt anzeigen
+                            $status = get_option('athena_ai_openai_api_key_status', '');
+                            if ($status === 'valid') {
+                                echo '<span class="api-key-status-dot" style="color:green; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key gültig">&#9679;</span>';
+                            } elseif ($status === 'invalid') {
+                                echo '<span class="api-key-status-dot" style="color:red; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key ungültig">&#9679;</span>';
+                            }
+                            ?>
                         </div>
                         <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
                             <strong>DB Value:</strong> 
