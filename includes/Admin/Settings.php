@@ -51,7 +51,16 @@ class Settings extends BaseAdmin {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             $this->log_current_settings_state('Pre-render settings state');
         }
-        print_r($_POST);
+        
+        // DEBUG: POST-Daten formatiert ausgeben
+        if (!empty($_POST)) {
+            echo '<div class="notice notice-info is-dismissible">';
+            echo '<h3>DEBUG: POST-Daten</h3>';
+            echo '<pre style="background: #f8f8f8; padding: 10px; max-height: 300px; overflow: auto; font-size: 12px;">';
+            print_r($_POST);
+            echo '</pre>';
+            echo '</div>';
+        }
         
         // Verarbeite Formular-Submission
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
@@ -621,34 +630,13 @@ class Settings extends BaseAdmin {
         // Vorab Cache leeren
         wp_cache_delete($option_name, 'options');
         
-        // Existenzprüfung der Option
-        $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT option_id FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
-            $option_name
+        // Direkte Ersetzung mit REPLACE-Anweisung (funktioniert sowohl für INSERT als auch UPDATE)
+        $success = $wpdb->query($wpdb->prepare(
+            "REPLACE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, %s)",
+            $option_name,
+            $option_value,
+            'yes'
         ));
-        
-        // Ausführung mit Fehlerprüfung
-        if ($exists) {
-            // Update
-            $success = $wpdb->update(
-                $wpdb->options,
-                ['option_value' => $option_value, 'autoload' => 'yes'],
-                ['option_name' => $option_name],
-                ['%s', '%s'],
-                ['%s']
-            );
-        } else {
-            // Insert
-            $success = $wpdb->insert(
-                $wpdb->options,
-                [
-                    'option_name' => $option_name,
-                    'option_value' => $option_value,
-                    'autoload' => 'yes'
-                ],
-                ['%s', '%s', '%s']
-            );
-        }
         
         // Erneut Cache leeren nach Operation
         wp_cache_delete($option_name, 'options');
@@ -675,24 +663,67 @@ class Settings extends BaseAdmin {
             strlen($option_value)
         ));
         
-        // Wenn die Direktabfrage fehlschlägt, versuche es mit WordPress-Funktionen
+        // Wenn die Direktabfrage fehlschlägt, versuche einen alternativen Ansatz
         if (!$is_saved) {
-            error_log("[ATHENA] Direktes Speichern fehlgeschlagen. Versuche Fallback mit update_option()");
-            $wp_success = update_option($option_name, $option_value, true);
+            error_log("[ATHENA] REPLACE fehlgeschlagen, versuche direktes INSERT/UPDATE");
+            
+            // Existenzprüfung der Option
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT option_id FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
+                $option_name
+            ));
+            
+            if ($exists) {
+                // Update mit escapten Werten
+                $query = $wpdb->prepare(
+                    "UPDATE {$wpdb->options} SET option_value = %s, autoload = 'yes' WHERE option_name = %s",
+                    $option_value,
+                    $option_name
+                );
+            } else {
+                // Insert mit escapten Werten
+                $query = $wpdb->prepare(
+                    "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'yes')",
+                    $option_name,
+                    $option_value
+                );
+            }
+            
+            $alt_success = $wpdb->query($query);
+            error_log("[ATHENA] Alternativer Ansatz Ergebnis: " . ($alt_success !== false ? 'SUCCESS' : 'FAILED'));
             
             // Cache erneut leeren
             wp_cache_delete($option_name, 'options');
             
-            // Verifizieren nach Fallback
-            $saved_wp_value = $wpdb->get_var($wpdb->prepare(
+            // Verifizieren nach alternativem Ansatz
+            $saved_alt_value = $wpdb->get_var($wpdb->prepare(
                 "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
                 $option_name
             ));
             
-            $is_saved_wp = ($saved_wp_value !== null);
-            error_log("[ATHENA] Fallback Ergebnis: " . ($wp_success ? 'SUCCESS' : 'FAILED') . " | Verified: " . ($is_saved_wp ? 'YES' : 'NO'));
+            $is_saved_alt = ($saved_alt_value !== null);
             
-            return $is_saved_wp;
+            // Als letzten Ausweg: WP-Funktionen
+            if (!$is_saved_alt) {
+                error_log("[ATHENA] Direktes Speichern fehlgeschlagen. Versuche Fallback mit update_option()");
+                $wp_success = update_option($option_name, $option_value, true);
+                
+                // Cache erneut leeren
+                wp_cache_delete($option_name, 'options');
+                
+                // Verifizieren nach Fallback
+                $saved_wp_value = $wpdb->get_var($wpdb->prepare(
+                    "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
+                    $option_name
+                ));
+                
+                $is_saved_wp = ($saved_wp_value !== null);
+                error_log("[ATHENA] Fallback Ergebnis: " . ($wp_success ? 'SUCCESS' : 'FAILED') . " | Verified: " . ($is_saved_wp ? 'YES' : 'NO'));
+                
+                return $is_saved_wp;
+            }
+            
+            return $is_saved_alt;
         }
         
         return $is_saved;
