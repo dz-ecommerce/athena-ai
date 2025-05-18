@@ -51,6 +51,7 @@ class Settings extends BaseAdmin {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             $this->log_current_settings_state('Pre-render settings state');
         }
+        print_r($_POST);
         
         // Verarbeite Formular-Submission
         if (isset($_POST['submit']) && $this->verify_nonce('athena_ai_settings')) {
