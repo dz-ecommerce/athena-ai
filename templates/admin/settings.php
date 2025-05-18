@@ -8,6 +8,28 @@
     
     <?php settings_errors('athena_ai_messages'); ?>
 
+    <?php if ($show_generate_key_button): ?>
+        <div class="notice notice-info">
+            <p><?php _e('For maximum security, please generate an encryption key and add it to your wp-config.php file.', 'athena-ai'); ?></p>
+            <form method="post" action="">
+                <?php echo $nonce_field; ?>
+                <input type="submit" name="generate_encryption_key" class="button button-primary" value="<?php _e('Generate Encryption Key', 'athena-ai'); ?>">
+            </form>
+            <?php if ($encryption_key): ?>
+                <p><strong><?php _e('Your encryption key:', 'athena-ai'); ?></strong> <code><?php echo esc_html($encryption_key); ?></code></p>
+                <p><?php _e('Add this line to your wp-config.php file:', 'athena-ai'); ?></p>
+                <pre><code>define('ATHENA_AI_KEY_ENCRYPTION_SECRET', '<?php echo esc_html($encryption_key); ?>');</code></pre>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+    <h2 class="nav-tab-wrapper">
+        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=github-settings" class="nav-tab <?php echo $active_tab === 'github-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('GitHub Settings', 'athena-ai'); ?></a>
+        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=text-ai-settings" class="nav-tab <?php echo $active_tab === 'text-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Text AI Settings', 'athena-ai'); ?></a>
+        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=image-ai-settings" class="nav-tab <?php echo $active_tab === 'image-ai-settings' ? 'nav-tab-active' : ''; ?>"><?php _e('Image AI Settings', 'athena-ai'); ?></a>
+        <a href="?post_type=athena-feed&page=athena-ai-settings&tab=maintenance" class="nav-tab <?php echo $active_tab === 'maintenance' ? 'nav-tab-active' : ''; ?>"><?php _e('Maintenance', 'athena-ai'); ?></a>
+    </h2>
+
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="athena_save_settings">
         <?php echo $nonce_field; ?>
