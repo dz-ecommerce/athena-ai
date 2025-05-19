@@ -172,6 +172,92 @@
                     </td>
                 </tr>
             </table>
+            
+            <!-- Google Gemini Settings -->
+            <h3><?php esc_html_e('Google Gemini Settings', 'athena-ai'); ?></h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="athena_ai_gemini_api_key">
+                            <?php esc_html_e('API Key', 'athena-ai'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <div class="api-key-input-container" style="position: relative;">
+                            <?php 
+                            $gemini_api_key = $settings['gemini_api_key'];
+                            $has_gemini_key = !empty($gemini_api_key); 
+                            $gemini_key_display = $has_gemini_key ? (substr($gemini_api_key, 0, 3) . '...' . substr($gemini_api_key, -3)) : '';
+                            ?>
+                            <?php if ($has_gemini_key): ?>
+                            <input type="hidden" name="previous_gemini_api_key" value="<?php echo esc_attr($gemini_api_key); ?>">
+                            <?php endif; ?>
+                            <input type="password" 
+                                   name="athena_ai_gemini_api_key" 
+                                   id="athena_ai_gemini_api_key" 
+                                   placeholder="<?php echo $has_gemini_key ? 'API key is saved (hidden for security)' : 'Enter your Google Gemini API key'; ?>" 
+                                   value="<?php echo esc_attr($gemini_api_key); ?>" 
+                                   class="regular-text"
+                                   autocomplete="off">
+                            <?php
+                            // Statuspunkt anzeigen
+                            $gemini_status = get_option('athena_ai_gemini_api_key_status', '');
+                            if ($gemini_status === 'valid') {
+                                echo '<span class="api-key-status-dot" style="color:green; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key gültig">&#9679;</span>';
+                            } elseif ($gemini_status === 'invalid') {
+                                echo '<span class="api-key-status-dot" style="color:red; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key ungültig">&#9679;</span>';
+                            }
+                            ?>
+                        </div>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> 
+                            <?php 
+                                if ($has_gemini_key) {
+                                    echo "API key gespeichert: " . substr($gemini_api_key, 0, 3) . '****' . substr($gemini_api_key, -3) . ' (' . strlen($gemini_api_key) . ' Zeichen)';
+                                } else {
+                                    echo "<span style='color: #d63638;'>Kein API key gespeichert</span>";
+                                }
+                            ?>
+                        </div>
+                        <p class="description">
+                            <?php esc_html_e('Enter your Google Gemini API key', 'athena-ai'); ?>
+                            <br>
+                            <a href="https://ai.google.dev/tutorials/setup" target="_blank" rel="noopener noreferrer">
+                                <?php esc_html_e('Get your API key', 'athena-ai'); ?> ↗
+                            </a>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="athena_ai_gemini_temperature">
+                            <?php esc_html_e('Temperature', 'athena-ai'); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <?php 
+                        $gemini_temperature = $settings['gemini_temperature'] ?: '0.7';
+                        ?>
+                        <input type="range" 
+                               name="athena_ai_gemini_temperature" 
+                               id="athena_ai_gemini_temperature" 
+                               min="0" 
+                               max="1" 
+                               step="0.1" 
+                               value="<?php echo esc_attr($gemini_temperature); ?>">
+                        <span class="temperature-value"><?php echo esc_html($gemini_temperature); ?></span>
+                        <div class="debug-value" style="margin-top: 5px; padding: 5px; background: #f0f0f0; border-left: 4px solid #007cba;">
+                            <strong>DB Value:</strong> Temperature gespeichert: <?php echo esc_html($gemini_temperature); ?>
+                        </div>
+                        <p class="description">
+                            <?php esc_html_e(
+                                'Controls randomness: 0 is focused, 1 is more creative',
+                                'athena-ai'
+                            ); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
         </div>
         <div class="submit-buttons-row" style="display: flex; gap: 10px;">
             <?php submit_button($this->__('Save Settings')); ?>
@@ -183,6 +269,11 @@
 jQuery(document).ready(function($) {
     // Temperature slider value display
     $('#athena_ai_openai_temperature').on('input', function() {
+        $(this).next('.temperature-value').text($(this).val());
+    });
+    
+    // Temperature slider value display for Gemini
+    $('#athena_ai_gemini_temperature').on('input', function() {
         $(this).next('.temperature-value').text($(this).val());
     });
 });

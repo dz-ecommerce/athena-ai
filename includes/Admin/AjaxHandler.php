@@ -3,6 +3,7 @@
 namespace AthenaAI\Admin;
 
 use AthenaAI\Services\OpenAIService;
+use AthenaAI\Services\GeminiService;
 
 class AjaxHandler {
     /**
@@ -12,18 +13,27 @@ class AjaxHandler {
      */
     private $openai_service;
     
+    /**
+     * Google Gemini Service instance
+     * 
+     * @var GeminiService
+     */
+    private $gemini_service;
+    
     public function __construct() {
         add_action('wp_ajax_athena_ai_modal_debug', [$this, 'handleModalDebug']);
         add_action('wp_ajax_nopriv_athena_ai_modal_debug', [$this, 'handleModalDebug']);
         
-        // Initialisiere den OpenAI Service
+        // Initialisiere die Services
         $this->openai_service = new OpenAIService();
+        $this->gemini_service = new GeminiService();
     }
 
     public function handleModalDebug() {
         header('Content-Type: text/plain; charset=utf-8');
         $page_id = $_POST['page_id'] ?? null;
         $extra_info = $_POST['extra_info'] ?? null;
+        $model_provider = $_POST['model_provider'] ?? 'openai'; // Default ist OpenAI
         $page_content = null;
         $ai_response = null;
 
@@ -32,29 +42,47 @@ class AjaxHandler {
             if ($post && $post->post_type === 'page') {
                 $page_content = $post->post_content;
                 
-                // Erstelle den Prompt für OpenAI
+                // Erstelle den Prompt für die KI
                 $prompt = "Du bist ein Assistent für WordPress-Inhalte. ";
                 $prompt .= "Basierend auf dem folgenden Seiteninhalt und zusätzlichen Informationen, ";
                 $prompt .= "erstelle eine optimierte Version des Inhalts. ";
                 $prompt .= "Zusätzliche Informationen: " . $extra_info . "\n\n";
                 $prompt .= "Seiteninhalt:\n" . $page_content;
                 
-                // Kommunikation mit OpenAI
-                $ai_result = $this->openai_service->generate_content($prompt);
-                
-                if (!is_wp_error($ai_result)) {
-                    // Extrahiere die Antwort
-                    if (isset($ai_result['choices'][0]['message']['content'])) {
-                        $ai_response = $ai_result['choices'][0]['message']['content'];
+                // Wähle den richtigen Service basierend auf model_provider
+                if ($model_provider === 'gemini') {
+                    // Kommunikation mit Google Gemini
+                    $ai_result = $this->gemini_service->generate_content($prompt);
+                    
+                    if (!is_wp_error($ai_result)) {
+                        // Extrahiere die Antwort aus dem Gemini-Format
+                        $ai_response = $this->gemini_service->extract_content($ai_result);
                     } else {
-                        $ai_response = "Fehler bei der Verarbeitung der AI-Antwort: Unerwartetes Antwortformat";
+                        // Prüfe, ob es sich um einen speziellen Fehler handelt
+                        if ($ai_result->get_error_code() === 'api_key_error') {
+                            $ai_response = "### " . $ai_result->get_error_message();
+                        } else {
+                            $ai_response = "Fehler bei der Google Gemini-Kommunikation: " . $ai_result->get_error_message();
+                        }
                     }
                 } else {
-                    // Prüfe, ob es sich um den speziellen Quota-Fehler handelt
-                    if ($ai_result->get_error_code() === 'quota_exceeded') {
-                        $ai_response = "### " . $ai_result->get_error_message();
+                    // Kommunikation mit OpenAI (Standard)
+                    $ai_result = $this->openai_service->generate_content($prompt);
+                    
+                    if (!is_wp_error($ai_result)) {
+                        // Extrahiere die Antwort aus dem OpenAI-Format
+                        if (isset($ai_result['choices'][0]['message']['content'])) {
+                            $ai_response = $ai_result['choices'][0]['message']['content'];
+                        } else {
+                            $ai_response = "Fehler bei der Verarbeitung der AI-Antwort: Unerwartetes Antwortformat";
+                        }
                     } else {
-                        $ai_response = "Fehler bei der OpenAI-Kommunikation: " . $ai_result->get_error_message();
+                        // Prüfe, ob es sich um den speziellen Quota-Fehler handelt
+                        if ($ai_result->get_error_code() === 'quota_exceeded') {
+                            $ai_response = "### " . $ai_result->get_error_message();
+                        } else {
+                            $ai_response = "Fehler bei der OpenAI-Kommunikation: " . $ai_result->get_error_message();
+                        }
                     }
                 }
             }
@@ -67,9 +95,10 @@ class AjaxHandler {
         print_r($_REQUEST);
         echo "\nGefilterte Felder:\n";
         print_r([
-            'page_id'      => $page_id,
-            'extra_info'   => $extra_info,
-            'page_content' => $page_content,
+            'page_id'        => $page_id,
+            'extra_info'     => $extra_info,
+            'model_provider' => $model_provider,
+            'page_content'   => $page_content,
         ]);
         
         if ($ai_response) {

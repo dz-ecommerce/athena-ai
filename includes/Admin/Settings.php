@@ -11,6 +11,9 @@ class Settings extends BaseAdmin {
         'openai_org_id' => '',
         'openai_default_model' => 'gpt-4',
         'openai_temperature' => '0.7',
+        // Google Gemini Settings
+        'gemini_api_key' => '',
+        'gemini_temperature' => '0.7',
     ];
 
     /**
@@ -84,6 +87,14 @@ class Settings extends BaseAdmin {
                 unset($settings['openai_api_key']); // Nicht nochmal speichern
             }
             
+            // Google Gemini API Key verschlüsselt speichern
+            if (isset($_POST['athena_ai_gemini_api_key'])) {
+                $gemini_plain_key = sanitize_text_field($_POST['athena_ai_gemini_api_key']);
+                $gemini_encrypted_key = $this->encrypt_api_key($gemini_plain_key);
+                update_option('athena_ai_gemini_api_key', $gemini_encrypted_key);
+                unset($settings['gemini_api_key']); // Nicht nochmal speichern
+            }
+            
             // Save each setting individually
             foreach ($settings as $key => $value) {
                 $option_name = 'athena_ai_' . $key;
@@ -120,6 +131,15 @@ class Settings extends BaseAdmin {
             $settings['openai_temperature'] = max(0, min(2, (float)$input['athena_ai_openai_temperature']));
         }
         
+        // Google Gemini Settings
+        if (isset($input['athena_ai_gemini_api_key'])) {
+            $settings['gemini_api_key'] = sanitize_text_field($input['athena_ai_gemini_api_key']);
+        }
+        
+        if (isset($input['athena_ai_gemini_temperature'])) {
+            $settings['gemini_temperature'] = max(0, min(1, (float)$input['athena_ai_gemini_temperature']));
+        }
+        
         return $settings;
     }
 
@@ -129,12 +149,17 @@ class Settings extends BaseAdmin {
     private function get_settings() {
         $settings = [];
         
-        // Text AI Settings
+        // OpenAI Settings
         $encrypted_key = get_option('athena_ai_openai_api_key', '');
         $settings['openai_api_key'] = $encrypted_key ? $this->decrypt_api_key($encrypted_key) : '';
         $settings['openai_org_id'] = get_option('athena_ai_openai_org_id', $this->default_settings['openai_org_id']);
         $settings['openai_default_model'] = get_option('athena_ai_openai_default_model', $this->default_settings['openai_default_model']);
         $settings['openai_temperature'] = get_option('athena_ai_openai_temperature', $this->default_settings['openai_temperature']);
+        
+        // Google Gemini Settings
+        $encrypted_gemini_key = get_option('athena_ai_gemini_api_key', '');
+        $settings['gemini_api_key'] = $encrypted_gemini_key ? $this->decrypt_api_key($encrypted_gemini_key) : '';
+        $settings['gemini_temperature'] = get_option('athena_ai_gemini_temperature', $this->default_settings['gemini_temperature']);
         
         return $settings;
     }
@@ -203,6 +228,19 @@ class Settings extends BaseAdmin {
         return $http_code === 200;
     }
 
+    // Prüft, ob der Google Gemini API Key gültig ist
+    private function is_gemini_api_key_valid($api_key) {
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro?key=' . $api_key;
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return $http_code === 200;
+    }
+
     // Neue Methode für admin_post Verarbeitung
     public function handle_save_settings() {
         if (!isset($_POST['_wpnonce_athena_ai_settings']) || !wp_verify_nonce($_POST['_wpnonce_athena_ai_settings'], 'athena_ai_settings')) {
@@ -210,6 +248,7 @@ class Settings extends BaseAdmin {
         }
         $this->save_settings();
 
+        // OpenAI API Key überprüfen
         $api_key = isset($_POST['athena_ai_openai_api_key']) ? trim($_POST['athena_ai_openai_api_key']) : '';
         if ($api_key) {
             if ($this->is_openai_api_key_valid($api_key)) {
@@ -226,6 +265,28 @@ class Settings extends BaseAdmin {
                     'athena_ai_messages',
                     'athena_ai_api_key_invalid',
                     __('OpenAI API Key is invalid or has insufficient permissions.', 'athena-ai'),
+                    'error'
+                );
+            }
+        }
+        
+        // Google Gemini API Key überprüfen
+        $gemini_api_key = isset($_POST['athena_ai_gemini_api_key']) ? trim($_POST['athena_ai_gemini_api_key']) : '';
+        if ($gemini_api_key) {
+            if ($this->is_gemini_api_key_valid($gemini_api_key)) {
+                update_option('athena_ai_gemini_api_key_status', 'valid');
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_gemini_api_key_valid',
+                    __('Google Gemini API Key is valid.', 'athena-ai'),
+                    'updated'
+                );
+            } else {
+                update_option('athena_ai_gemini_api_key_status', 'invalid');
+                add_settings_error(
+                    'athena_ai_messages',
+                    'athena_ai_gemini_api_key_invalid',
+                    __('Google Gemini API Key is invalid or has insufficient permissions.', 'athena-ai'),
                     'error'
                 );
             }

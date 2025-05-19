@@ -475,6 +475,22 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
     <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
         <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
         <h2 class="text-lg font-semibold mb-4">Athena AI Assistent</h2>
+        
+        <!-- KI-Anbieter auswählen -->
+        <div class="mb-4">
+            <label for="athena-ai-model-provider" class="block mb-2 font-medium">KI-Anbieter auswählen</label>
+            <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider" value="openai" class="form-radio h-4 w-4 text-blue-600" checked>
+                    <span class="ml-2">OpenAI</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider" value="gemini" class="form-radio h-4 w-4 text-blue-600">
+                    <span class="ml-2">Google Gemini</span>
+                </label>
+            </div>
+        </div>
+        
         <label for="athena-ai-page-select" class="block mb-2 font-medium">Seite auswählen</label>
         <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4">
             <option value="">-- Seite wählen --</option>
@@ -509,6 +525,7 @@ jQuery(function($) {
     $('#athena-ai-create-content').on('click', function() {
         var pageId = $('#athena-ai-page-select').val();
         var extraInfo = $('#athena-ai-modal-extra-info').val();
+        var modelProvider = $('input[name="athena-ai-model-provider"]:checked').val();
         var debugField = $('#athena-ai-modal-debug');
         
         if (!pageId) {
@@ -521,7 +538,8 @@ jQuery(function($) {
         $.post(ajaxurl, {
             action: 'athena_ai_modal_debug',
             page_id: pageId,
-            extra_info: extraInfo
+            extra_info: extraInfo,
+            model_provider: modelProvider
         }, function(response) {
             // Teile die Antwort auf, um den Debug-Teil vom OpenAI-Teil zu trennen
             var parts = response.split('--- OPENAI ANTWORT ---');
