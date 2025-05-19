@@ -46,7 +46,7 @@ class OpenAIService {
      * 
      * @var string
      */
-    private string $default_model = 'gpt-4';
+    private string $default_model = 'gpt-3.5-turbo';
     
     /**
      * Default temperature
@@ -94,7 +94,7 @@ class OpenAIService {
             $this->org_id = ''; // Explizit leer setzen
         }
         
-        $this->default_model = get_option('athena_ai_openai_default_model', 'gpt-4');
+        $this->default_model = get_option('athena_ai_openai_default_model', 'gpt-3.5-turbo');
         $this->temperature = (float) get_option('athena_ai_openai_temperature', 0.7);
     }
     
@@ -130,6 +130,7 @@ class OpenAIService {
         
         $model = $options['model'] ?? $this->default_model;
         $temperature = $options['temperature'] ?? $this->temperature;
+        $fallback_attempted = isset($options['fallback_attempted']) ? $options['fallback_attempted'] : false;
         
         $headers = [
             'Authorization' => 'Bearer ' . $this->api_key,
@@ -186,6 +187,17 @@ class OpenAIService {
             
             error_log('OpenAI API Error: ' . $this->last_error);
             
+            // Fallback-Strategie für nicht verfügbare Modelle
+            if (strpos($error_message, 'does not exist or you do not have access to it') !== false && !$fallback_attempted) {
+                error_log('Falling back to gpt-3.5-turbo model');
+                // Versuche es mit gpt-3.5-turbo als Fallback
+                return $this->generate_content($prompt, [
+                    'model' => 'gpt-3.5-turbo',
+                    'temperature' => $temperature,
+                    'fallback_attempted' => true
+                ]);
+            }
+            
             // Spezialfall: 401 mit Hinweis auf Organization 
             if ($status_code === 401 && strpos($error_message, 'Organization') !== false && $use_org_id) {
                 error_log('Retrying OpenAI request without organization ID');
@@ -220,6 +232,17 @@ class OpenAIService {
                 // Auch der erneute Versuch schlug fehl
                 $retry_error_message = isset($retry_data['error']['message']) ? $retry_data['error']['message'] : 'Unknown error';
                 $this->last_error .= " (Retry failed: {$retry_error_message})";
+                
+                // Fallback nach fehlgeschlagenem Retry
+                if (strpos($retry_error_message, 'does not exist or you do not have access to it') !== false && !$fallback_attempted) {
+                    error_log('Falling back to gpt-3.5-turbo model after retry failed');
+                    // Versuche es mit gpt-3.5-turbo als Fallback
+                    return $this->generate_content($prompt, [
+                        'model' => 'gpt-3.5-turbo',
+                        'temperature' => $temperature,
+                        'fallback_attempted' => true
+                    ]);
+                }
             }
             
             return new \WP_Error('api_error', $this->last_error);
