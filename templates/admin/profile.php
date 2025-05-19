@@ -487,6 +487,9 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
 </div>
+<script type="text/javascript">
+var ajaxurl = "<?php echo admin_url('admin-ajax.php'); ?>";
+</script>
 <script>
 jQuery(function($) {
     $('#athena-ai-assistant-btn').on('click', function() {
