@@ -30,22 +30,18 @@
                     <td>
                         <div class="api-key-input-container" style="position: relative;">
                             <?php 
-                            global $wpdb;
-                            $direct_api_key = $wpdb->get_var($wpdb->prepare(
-                                "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
-                                'athena_ai_openai_api_key'
-                            ));
-                            $has_key = !empty($direct_api_key); 
-                            $key_display = $has_key ? (substr($direct_api_key, 0, 3) . '...' . substr($direct_api_key, -3)) : '';
+                            $api_key = $settings['openai_api_key'];
+                            $has_key = !empty($api_key); 
+                            $key_display = $has_key ? (substr($api_key, 0, 3) . '...' . substr($api_key, -3)) : '';
                             ?>
                             <?php if ($has_key): ?>
-                            <input type="hidden" name="previous_api_key" value="<?php echo esc_attr($direct_api_key); ?>">
+                            <input type="hidden" name="previous_api_key" value="<?php echo esc_attr($api_key); ?>">
                             <?php endif; ?>
                             <input type="password" 
                                    name="athena_ai_openai_api_key" 
                                    id="athena_ai_openai_api_key" 
                                    placeholder="<?php echo $has_key ? 'API key is saved (hidden for security)' : 'Enter your OpenAI API key'; ?>" 
-                                   value="<?php echo esc_attr($direct_api_key); ?>" 
+                                   value="<?php echo esc_attr($api_key); ?>" 
                                    class="regular-text"
                                    autocomplete="off">
                             <?php
@@ -62,7 +58,7 @@
                             <strong>DB Value:</strong> 
                             <?php 
                                 if ($has_key) {
-                                    echo "API key gespeichert: " . substr($direct_api_key, 0, 3) . '****' . substr($direct_api_key, -3) . ' (' . strlen($direct_api_key) . ' Zeichen)';
+                                    echo "API key gespeichert: " . substr($api_key, 0, 3) . '****' . substr($api_key, -3) . ' (' . strlen($api_key) . ' Zeichen)';
                                 } else {
                                     echo "<span style='color: #d63638;'>Kein API key gespeichert</span>";
                                 }
@@ -86,20 +82,17 @@
                     <td>
                         <div class="api-key-input-container" style="position: relative;">
                             <?php 
-                            $direct_org_id = $wpdb->get_var($wpdb->prepare(
-                                "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
-                                'athena_ai_openai_org_id'
-                            ));
-                            $has_org_id = !empty($direct_org_id);
+                            $org_id = $settings['openai_org_id'];
+                            $has_org_id = !empty($org_id);
                             ?>
                             <?php if ($has_org_id): ?>
-                            <input type="hidden" name="previous_org_id" value="<?php echo esc_attr($direct_org_id); ?>">
+                            <input type="hidden" name="previous_org_id" value="<?php echo esc_attr($org_id); ?>">
                             <?php endif; ?>
                             <input type="text" 
                                    name="athena_ai_openai_org_id" 
                                    id="athena_ai_openai_org_id" 
                                    placeholder="<?php echo $has_org_id ? '' : 'Optional: Enter your OpenAI organization ID'; ?>" 
-                                   value="<?php echo esc_attr($direct_org_id); ?>" 
+                                   value="<?php echo esc_attr($org_id); ?>" 
                                    class="regular-text"
                                    autocomplete="off">
                             <?php if ($has_org_id): ?>
@@ -112,7 +105,7 @@
                             <strong>DB Value:</strong> 
                             <?php 
                                 if ($has_org_id) {
-                                    echo "Organization ID gespeichert: " . $direct_org_id;
+                                    echo "Organization ID gespeichert: " . esc_html($org_id);
                                 } else {
                                     echo "<span style='color: #d63638;'>Keine Organization ID gespeichert</span>";
                                 }
@@ -134,10 +127,7 @@
                     </th>
                     <td>
                         <?php 
-                        $direct_model = $wpdb->get_var($wpdb->prepare(
-                            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
-                            'athena_ai_openai_default_model'
-                        )) ?: 'gpt-4';
+                        $direct_model = $settings['openai_default_model'] ?: 'gpt-4';
                         ?>
                         <select name="athena_ai_openai_default_model" id="athena_ai_openai_default_model">
                             <?php foreach ($models['openai'] as $model_id => $model_name): ?>
@@ -160,10 +150,7 @@
                     </th>
                     <td>
                         <?php 
-                        $direct_temperature = $wpdb->get_var($wpdb->prepare(
-                            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
-                            'athena_ai_openai_temperature'
-                        )) ?: '0.7';
+                        $direct_temperature = $settings['openai_temperature'] ?: '0.7';
                         ?>
                         <input type="range" 
                                name="athena_ai_openai_temperature" 
