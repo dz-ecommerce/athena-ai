@@ -466,3 +466,38 @@ if (!defined('ABSPATH')) {
         </form>
     </div>
 </div>
+
+<?php
+// Modal HTML am Ende der Seite einfügen
+$pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
+?>
+<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+        <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-lg font-semibold mb-4">Athena AI Assistent</h2>
+        <label for="athena-ai-page-select" class="block mb-2 font-medium">Seite auswählen</label>
+        <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4">
+            <option value="">-- Seite wählen --</option>
+            <?php foreach ($pages as $page): ?>
+                <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-full">Create Content</button>
+    </div>
+</div>
+<script>
+jQuery(function($) {
+    $('#athena-ai-assistant-btn').on('click', function() {
+        $('#athena-ai-modal').removeClass('hidden').addClass('flex');
+    });
+    $('#athena-ai-modal-close').on('click', function() {
+        $('#athena-ai-modal').addClass('hidden').removeClass('flex');
+    });
+    // Optional: Modal schließen bei Klick auf Hintergrund
+    $('#athena-ai-modal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).addClass('hidden').removeClass('flex');
+        }
+    });
+});
+</script>
