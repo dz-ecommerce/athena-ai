@@ -508,8 +508,8 @@ jQuery(function($) {
         var extraInfo = $('#athena-ai-modal-extra-info').val();
         var debugField = $('#athena-ai-modal-debug');
         debugField.hide().empty();
-        $.post(window.location.href, {
-            athena_ai_modal_action: 'debug',
+        $.post(ajaxurl, {
+            action: 'athena_ai_modal_debug',
             page_id: pageId,
             extra_info: extraInfo
         }, function(response) {
@@ -518,11 +518,3 @@ jQuery(function($) {
     });
 });
 </script>
-
-<?php
-// Debug-Ausgabe für Modal-POST
-if (isset($_POST['athena_ai_modal_action']) && $_POST['athena_ai_modal_action'] === 'debug') {
-    header('Content-Type: text/plain; charset=utf-8');
-    print_r($_POST);
-    exit;
-}
