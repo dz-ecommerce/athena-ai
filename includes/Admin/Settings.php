@@ -238,7 +238,46 @@ class Settings extends BaseAdmin {
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        return $http_code === 200;
+        
+        // Speichere die Antwort
+        $response_data = json_decode($response, true);
+        $error_message = '';
+        
+        if ($http_code === 200) {
+            // API-Key ist gültig
+            update_option('athena_ai_gemini_api_key_error', '');
+            return true;
+        } else {
+            // Fehlerbehandlung basierend auf Statuscode und Antwort
+            if ($http_code === 400) {
+                $error_message = 'Ungültiger API-Key oder API-Anfrage: ' . 
+                                ($response_data['error']['message'] ?? 'Unbekannter Fehler');
+            } else if ($http_code === 401 || $http_code === 403) {
+                // Prüfen ob API-Key-Format korrekt ist
+                if (!preg_match('/^AIza[0-9A-Za-z\-_]{35}$/', $api_key)) {
+                    $error_message = 'Das API-Key-Format scheint nicht korrekt zu sein. Google API-Keys beginnen in der Regel mit "AIza" gefolgt von 35 Zeichen.';
+                } else {
+                    $error_message = 'Autorisierungsfehler: ' . 
+                                    ($response_data['error']['message'] ?? 'API-Key hat keine Berechtigung auf Gemini zuzugreifen. Bitte überprüfe Billing und API-Aktivierung.');
+                }
+            } else if ($http_code === 404) {
+                $error_message = 'Gemini API nicht gefunden: Die API ist möglicherweise nicht aktiviert. Bitte aktiviere die Generative Language API in deinem Google Cloud Projekt.';
+            } else if ($http_code === 429) {
+                $error_message = 'Zu viele Anfragen: Das Kontingent für die Google Gemini API wurde überschritten. Bitte überprüfe deine Nutzungslimits oder aktiviere Billing.';
+            } else if ($http_code >= 500) {
+                $error_message = 'Server-Fehler bei Google Gemini: Bitte versuche es später erneut.';
+            } else {
+                $error_message = 'Unbekannter Fehler: HTTP-Code ' . $http_code;
+                if (isset($response_data['error']['message'])) {
+                    $error_message .= ' - ' . $response_data['error']['message'];
+                }
+            }
+            
+            // Speichere die Fehlermeldung
+            error_log('Gemini API Validierungsfehler: ' . $error_message);
+            update_option('athena_ai_gemini_api_key_error', $error_message);
+            return false;
+        }
     }
 
     // Neue Methode für admin_post Verarbeitung
@@ -283,10 +322,17 @@ class Settings extends BaseAdmin {
                 );
             } else {
                 update_option('athena_ai_gemini_api_key_status', 'invalid');
+                $error_message = get_option('athena_ai_gemini_api_key_error', '');
+                $display_message = __('Google Gemini API Key is invalid or has insufficient permissions.', 'athena-ai');
+                
+                if (!empty($error_message)) {
+                    $display_message .= ' ' . $error_message;
+                }
+                
                 add_settings_error(
                     'athena_ai_messages',
                     'athena_ai_gemini_api_key_invalid',
-                    __('Google Gemini API Key is invalid or has insufficient permissions.', 'athena-ai'),
+                    $display_message,
                     'error'
                 );
             }

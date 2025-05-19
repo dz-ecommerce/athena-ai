@@ -206,6 +206,13 @@
                                 echo '<span class="api-key-status-dot" style="color:green; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key gültig">&#9679;</span>';
                             } elseif ($gemini_status === 'invalid') {
                                 echo '<span class="api-key-status-dot" style="color:red; font-size: 1.5em; margin-left: 8px; vertical-align: middle;" title="API Key ungültig">&#9679;</span>';
+                                // Zeige detaillierte Fehlermeldung an
+                                $error_message = get_option('athena_ai_gemini_api_key_error', '');
+                                if (!empty($error_message)) {
+                                    echo '<div class="api-key-error" style="margin-top: 5px; padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-left: 4px solid #d63638; color: #721c24; border-radius: 3px;">';
+                                    echo '<strong>Fehler:</strong> ' . esc_html($error_message);
+                                    echo '</div>';
+                                }
                             }
                             ?>
                         </div>
