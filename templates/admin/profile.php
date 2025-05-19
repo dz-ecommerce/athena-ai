@@ -484,6 +484,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         </select>
         <input type="text" id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" placeholder="Zusätzliche Informationen hinterlegen">
         <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-full">Create Content</button>
+        <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
 </div>
 <script>
@@ -500,5 +501,28 @@ jQuery(function($) {
             $(this).addClass('hidden').removeClass('flex');
         }
     });
+
+    // Create Content Button: POST Daten und Debug-Ausgabe
+    $('#athena-ai-create-content').on('click', function() {
+        var pageId = $('#athena-ai-page-select').val();
+        var extraInfo = $('#athena-ai-modal-extra-info').val();
+        var debugField = $('#athena-ai-modal-debug');
+        debugField.hide().empty();
+        $.post(window.location.href, {
+            athena_ai_modal_action: 'debug',
+            page_id: pageId,
+            extra_info: extraInfo
+        }, function(response) {
+            debugField.text(response).show();
+        });
+    });
 });
 </script>
+
+<?php
+// Debug-Ausgabe für Modal-POST
+if (isset($_POST['athena_ai_modal_action']) && $_POST['athena_ai_modal_action'] === 'debug') {
+    header('Content-Type: text/plain; charset=utf-8');
+    print_r($_POST);
+    exit;
+}
