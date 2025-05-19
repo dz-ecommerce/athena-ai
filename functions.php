@@ -1,3 +1,4 @@
+error_log('ATHENA AI DEBUG: functions.php geladen');
 add_action('wp_ajax_athena_ai_modal_debug', function() {
     header('Content-Type: text/plain; charset=utf-8');
     echo "Handler reached!\n\n";
