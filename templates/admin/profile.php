@@ -482,6 +482,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
                 <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
             <?php endforeach; ?>
         </select>
+        <input type="text" id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" placeholder="Zusätzliche Informationen hinterlegen">
         <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-full">Create Content</button>
     </div>
 </div>
