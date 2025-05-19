@@ -510,13 +510,40 @@ jQuery(function($) {
         var pageId = $('#athena-ai-page-select').val();
         var extraInfo = $('#athena-ai-modal-extra-info').val();
         var debugField = $('#athena-ai-modal-debug');
-        debugField.hide().empty();
+        
+        if (!pageId) {
+            alert('Bitte wähle eine Seite aus');
+            return;
+        }
+        
+        debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
+        
         $.post(ajaxurl, {
             action: 'athena_ai_modal_debug',
             page_id: pageId,
             extra_info: extraInfo
         }, function(response) {
-            debugField.text(response).show();
+            // Teile die Antwort auf, um den Debug-Teil vom OpenAI-Teil zu trennen
+            var parts = response.split('--- OPENAI ANTWORT ---');
+            var debugInfo = parts[0];
+            var aiResponse = parts.length > 1 ? parts[1] : '';
+            
+            var htmlOutput = '<div class="debug-info bg-gray-100 p-3 mb-4 text-xs font-mono overflow-auto" style="max-height: 200px;">' + 
+                             '<strong>Debug-Informationen:</strong><pre>' + debugInfo + '</pre></div>';
+                             
+            if (aiResponse) {
+                htmlOutput += '<div class="ai-response">' +
+                              '<h3 class="text-xl font-bold mb-2">OpenAI Antwort:</h3>' +
+                              '<div class="bg-white p-4 border border-gray-300 rounded shadow-sm overflow-auto" style="max-height: 400px;">' +
+                              aiResponse.replace(/\n/g, '<br>') +
+                              '</div></div>';
+            }
+            
+            debugField.html(htmlOutput);
+        }).fail(function(xhr, textStatus, errorThrown) {
+            debugField.html('<div class="p-3 bg-red-100 text-red-800 border border-red-300 rounded">' +
+                           '<strong>Fehler:</strong> Die Anfrage konnte nicht verarbeitet werden. ' +
+                           textStatus + ' ' + errorThrown + '</div>');
         });
     });
 });
