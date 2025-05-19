@@ -76,12 +76,43 @@ class OpenAIService {
         // Get encrypted API key
         $encrypted_key = get_option('athena_ai_openai_api_key', '');
         if (!empty($encrypted_key)) {
-            $this->api_key = $this->decrypt_api_key($encrypted_key);
+            // Prüfen, ob der Key verschlüsselt ist (Base64-Decodierung sollte funktionieren)
+            if ($this->is_base64($encrypted_key)) {
+                // Key ist verschlüsselt
+                $this->api_key = $this->decrypt_api_key($encrypted_key);
+            } else {
+                // Key wurde unverschlüsselt gespeichert
+                $this->api_key = $encrypted_key;
+            }
         }
         
-        $this->org_id = get_option('athena_ai_openai_org_id', '');
+        // Org ID nur setzen, wenn wirklich ein Wert existiert
+        $org_id = get_option('athena_ai_openai_org_id', '');
+        if (!empty($org_id) && trim($org_id) !== '') {
+            $this->org_id = trim($org_id);
+        } else {
+            $this->org_id = ''; // Explizit leer setzen
+        }
+        
         $this->default_model = get_option('athena_ai_openai_default_model', 'gpt-4');
         $this->temperature = (float) get_option('athena_ai_openai_temperature', 0.7);
+    }
+    
+    /**
+     * Prüft, ob ein String base64-encoded ist
+     */
+    private function is_base64($string) {
+        if (!is_string($string)) return false;
+        
+        // Versuche Base64-Decodierung
+        $decoded = base64_decode($string, true);
+        if ($decoded === false) return false;
+        
+        // Additional check: Base64 strings have a length divisible by 4
+        if (strlen($string) % 4 !== 0) return false;
+        
+        // Base64 strings contain only these chars
+        return preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $string);
     }
     
     /**
@@ -105,9 +136,14 @@ class OpenAIService {
             'Content-Type' => 'application/json',
         ];
         
-        if (!empty($this->org_id)) {
+        // Nur wenn org_id explizit gesetzt wurde und nicht leer ist, senden wir den Header
+        $use_org_id = !empty($this->org_id);
+        if ($use_org_id) {
             $headers['OpenAI-Organization'] = $this->org_id;
         }
+        
+        // Debug-Log
+        error_log('OpenAI Request: API key length: ' . strlen($this->api_key) . ', Model: ' . $model . ', Using Org ID: ' . ($use_org_id ? 'yes' : 'no'));
         
         $payload = [
             'model' => $model,
@@ -136,6 +172,7 @@ class OpenAIService {
         
         if (is_wp_error($response)) {
             $this->last_error = $response->get_error_message();
+            error_log('OpenAI API WP Error: ' . $this->last_error);
             return $response;
         }
         
@@ -146,6 +183,45 @@ class OpenAIService {
         if ($status_code !== 200) {
             $error_message = isset($data['error']['message']) ? $data['error']['message'] : 'Unknown error';
             $this->last_error = "OpenAI API error ({$status_code}): {$error_message}";
+            
+            error_log('OpenAI API Error: ' . $this->last_error);
+            
+            // Spezialfall: 401 mit Hinweis auf Organization 
+            if ($status_code === 401 && strpos($error_message, 'Organization') !== false && $use_org_id) {
+                error_log('Retrying OpenAI request without organization ID');
+                
+                // Versuche erneut ohne Org ID
+                $headers_without_org = $headers;
+                unset($headers_without_org['OpenAI-Organization']);
+                
+                $retry_response = wp_remote_post(
+                    $this->api_endpoint,
+                    [
+                        'headers' => $headers_without_org,
+                        'body' => json_encode($payload),
+                        'timeout' => 60,
+                        'sslverify' => true,
+                    ]
+                );
+                
+                if (is_wp_error($retry_response)) {
+                    return $retry_response;
+                }
+                
+                $retry_status_code = wp_remote_retrieve_response_code($retry_response);
+                $retry_body = wp_remote_retrieve_body($retry_response);
+                $retry_data = json_decode($retry_body, true);
+                
+                if ($retry_status_code === 200) {
+                    error_log('OpenAI retry request succeeded without org ID');
+                    return $retry_data;
+                }
+                
+                // Auch der erneute Versuch schlug fehl
+                $retry_error_message = isset($retry_data['error']['message']) ? $retry_data['error']['message'] : 'Unknown error';
+                $this->last_error .= " (Retry failed: {$retry_error_message})";
+            }
+            
             return new \WP_Error('api_error', $this->last_error);
         }
         
