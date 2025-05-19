@@ -35,6 +35,9 @@ new AthenaAI\Autoloader();
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/Core/Bootstrap.php';
 AthenaAI\Core\Bootstrap::init();
 
+// AJAX-Handler initialisieren
+new AthenaAI\Admin\AjaxHandler();
+
 // Funktion für Abwärtskompatibilität
 function athena_ai_render_feed_items_page() {
     // Für Abwärtskompatibilität rufen wir nun die entsprechende Klassenmethode auf
