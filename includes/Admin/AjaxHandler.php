@@ -10,6 +10,17 @@ class AjaxHandler {
 
     public function handleModalDebug() {
         header('Content-Type: text/plain; charset=utf-8');
+        $page_id = $_POST['page_id'] ?? null;
+        $extra_info = $_POST['extra_info'] ?? null;
+        $page_content = null;
+
+        if ($page_id) {
+            $post = get_post($page_id);
+            if ($post && $post->post_type === 'page') {
+                $page_content = $post->post_content;
+            }
+        }
+
         echo "Handler reached!\n\n";
         echo "POST:\n";
         print_r($_POST);
@@ -17,8 +28,9 @@ class AjaxHandler {
         print_r($_REQUEST);
         echo "\nGefilterte Felder:\n";
         print_r([
-            'page_id'    => $_POST['page_id'] ?? null,
-            'extra_info' => $_POST['extra_info'] ?? null,
+            'page_id'      => $page_id,
+            'extra_info'   => $extra_info,
+            'page_content' => $page_content,
         ]);
         exit;
     }
