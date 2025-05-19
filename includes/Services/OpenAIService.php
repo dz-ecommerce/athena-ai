@@ -183,6 +183,17 @@ class OpenAIService {
         
         if ($status_code !== 200) {
             $error_message = isset($data['error']['message']) ? $data['error']['message'] : 'Unknown error';
+            
+            // Spezielle Fehlerbehandlung für Quota-Überschreitung
+            if (strpos($error_message, 'exceeded your current quota') !== false || 
+                strpos($error_message, 'billing details') !== false) {
+                
+                $this->last_error = "⚠️ OpenAI-Kontingent aufgebraucht: Ihr OpenAI-Konto hat keine verfügbaren Credits mehr. \n\nBitte aktualisieren Sie Ihr OpenAI-Konto:\n1. Gehen Sie zu https://platform.openai.com/account/usage\n2. Prüfen Sie Ihren Kontostatus\n3. Führen Sie ein Upgrade durch oder kaufen Sie weitere Credits unter https://platform.openai.com/account/billing";
+                error_log('OpenAI API Error: Quota exceeded');
+                
+                return new \WP_Error('quota_exceeded', $this->last_error);
+            }
+            
             $this->last_error = "OpenAI API error ({$status_code}): {$error_message}";
             
             error_log('OpenAI API Error: ' . $this->last_error);
@@ -231,6 +242,17 @@ class OpenAIService {
                 
                 // Auch der erneute Versuch schlug fehl
                 $retry_error_message = isset($retry_data['error']['message']) ? $retry_data['error']['message'] : 'Unknown error';
+                
+                // Spezielle Fehlerbehandlung für Quota-Überschreitung im Retry
+                if (strpos($retry_error_message, 'exceeded your current quota') !== false || 
+                    strpos($retry_error_message, 'billing details') !== false) {
+                    
+                    $this->last_error = "⚠️ OpenAI-Kontingent aufgebraucht: Ihr OpenAI-Konto hat keine verfügbaren Credits mehr. \n\nBitte aktualisieren Sie Ihr OpenAI-Konto:\n1. Gehen Sie zu https://platform.openai.com/account/usage\n2. Prüfen Sie Ihren Kontostatus\n3. Führen Sie ein Upgrade durch oder kaufen Sie weitere Credits unter https://platform.openai.com/account/billing";
+                    error_log('OpenAI API Error: Quota exceeded (retry)');
+                    
+                    return new \WP_Error('quota_exceeded', $this->last_error);
+                }
+                
                 $this->last_error .= " (Retry failed: {$retry_error_message})";
                 
                 // Fallback nach fehlgeschlagenem Retry

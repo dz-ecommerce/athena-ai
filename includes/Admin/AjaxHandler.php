@@ -50,7 +50,12 @@ class AjaxHandler {
                         $ai_response = "Fehler bei der Verarbeitung der AI-Antwort: Unerwartetes Antwortformat";
                     }
                 } else {
-                    $ai_response = "Fehler bei der OpenAI-Kommunikation: " . $ai_result->get_error_message();
+                    // Prüfe, ob es sich um den speziellen Quota-Fehler handelt
+                    if ($ai_result->get_error_code() === 'quota_exceeded') {
+                        $ai_response = "### " . $ai_result->get_error_message();
+                    } else {
+                        $ai_response = "Fehler bei der OpenAI-Kommunikation: " . $ai_result->get_error_message();
+                    }
                 }
             }
         }

@@ -532,11 +532,24 @@ jQuery(function($) {
                              '<strong>Debug-Informationen:</strong><pre>' + debugInfo + '</pre></div>';
                              
             if (aiResponse) {
-                htmlOutput += '<div class="ai-response">' +
-                              '<h3 class="text-xl font-bold mb-2">OpenAI Antwort:</h3>' +
-                              '<div class="bg-white p-4 border border-gray-300 rounded shadow-sm overflow-auto" style="max-height: 400px;">' +
-                              aiResponse.replace(/\n/g, '<br>') +
-                              '</div></div>';
+                // Prüfe, ob es sich um eine spezielle Fehlermeldung handelt (beginnt mit ###)
+                if (aiResponse.trim().startsWith('###')) {
+                    // Entferne die ### Markierung
+                    var errorText = aiResponse.trim().substring(3).trim();
+                    
+                    htmlOutput += '<div class="ai-response">' +
+                                  '<h3 class="text-xl font-bold mb-2 text-red-600">OpenAI Fehler:</h3>' +
+                                  '<div class="bg-red-50 p-4 border border-red-300 rounded shadow-sm overflow-auto text-red-700" style="max-height: 400px;">' +
+                                  errorText.replace(/\n/g, '<br>') +
+                                  '</div></div>';
+                } else {
+                    // Normale AI-Antwort
+                    htmlOutput += '<div class="ai-response">' +
+                                  '<h3 class="text-xl font-bold mb-2">OpenAI Antwort:</h3>' +
+                                  '<div class="bg-white p-4 border border-gray-300 rounded shadow-sm overflow-auto" style="max-height: 400px;">' +
+                                  aiResponse.replace(/\n/g, '<br>') +
+                                  '</div></div>';
+                }
             }
             
             debugField.html(htmlOutput);
