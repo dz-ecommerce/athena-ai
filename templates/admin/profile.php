@@ -471,8 +471,8 @@ if (!defined('ABSPATH')) {
 // Modal HTML am Ende der Seite einfügen
 $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
 ?>
-<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative max-h-[80vh] overflow-y-auto">
         <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
         <h2 class="text-lg font-semibold mb-4">Athena AI Assistent</h2>
         
@@ -496,6 +496,10 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
                 </label>
             </div>
         </div>
+        
+        <!-- Hidden Input Fields für Prompt-Teile -->
+        <input type="hidden" id="athena-ai-prompt-intro" value="Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.">
+        <input type="hidden" id="athena-ai-prompt-limit" value="Maximal 200 Wörter.">
         
         <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
             <option value="">-- Seite wählen (optional) --</option>
@@ -541,6 +545,11 @@ jQuery(function($) {
         
         debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
         
+        // Prompt zusammensetzen
+        var promptIntro = $('#athena-ai-prompt-intro').val();
+        var promptLimit = $('#athena-ai-prompt-limit').val();
+        var fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        
         // Prüfen, ob "Nur Output testen" aktiviert ist
         var testOnly = $('#athena-ai-test-only').is(':checked');
         
@@ -549,7 +558,8 @@ jQuery(function($) {
             var debugInfo = 'Test-Modus aktiviert. Keine API-Anfrage gesendet.\n\n' +
                            'Ausgewählte Seite: ' + (pageId ? 'ID: ' + pageId : 'Keine') + '\n' +
                            'Zusätzliche Informationen: ' + extraInfo + '\n' +
-                           'KI-Anbieter: ' + modelProvider;
+                           'KI-Anbieter: ' + modelProvider + '\n\n' +
+                           'Generierter Prompt:\n' + fullPrompt;
             
             var htmlOutput = '<div class="debug-info bg-gray-100 p-3 mb-4 text-xs font-mono overflow-auto" style="max-height: 200px;">' + 
                              '<strong>Debug-Informationen (Test-Modus):</strong><pre>' + debugInfo + '</pre></div>';
