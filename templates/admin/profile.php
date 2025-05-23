@@ -489,16 +489,22 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
                     <span class="ml-2">Google Gemini</span>
                 </label>
             </div>
+            <div class="mt-3">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="athena-ai-test-only" class="form-checkbox h-4 w-4 text-blue-600">
+                    <span class="ml-2">Nur Output testen</span>
+                </label>
+            </div>
         </div>
         
         <label for="athena-ai-page-select" class="block mb-2 font-medium">Seite auswählen</label>
         <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4">
-            <option value="">-- Seite wählen --</option>
+            <option value="">-- Seite wählen (optional) --</option>
             <?php foreach ($pages as $page): ?>
                 <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
             <?php endforeach; ?>
         </select>
-        <input type="text" id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" placeholder="Zusätzliche Informationen hinterlegen">
+        <textarea id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
         <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-full">Create Content</button>
         <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
@@ -528,12 +534,30 @@ jQuery(function($) {
         var modelProvider = $('input[name="athena-ai-model-provider"]:checked').val();
         var debugField = $('#athena-ai-modal-debug');
         
-        if (!pageId) {
-            alert('Bitte wähle eine Seite aus');
+        // Page selection is now optional, only check for extra info
+        if (!extraInfo.trim()) {
+            alert('Bitte gib zusätzliche Informationen ein');
             return;
         }
         
         debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
+        
+        // Prüfen, ob "Nur Output testen" aktiviert ist
+        var testOnly = $('#athena-ai-test-only').is(':checked');
+        
+        if (testOnly) {
+            // Nur Debug-Informationen anzeigen, keine API-Anfrage senden
+            var debugInfo = 'Test-Modus aktiviert. Keine API-Anfrage gesendet.\n\n' +
+                           'Ausgewählte Seite: ' + (pageId ? 'ID: ' + pageId : 'Keine') + '\n' +
+                           'Zusätzliche Informationen: ' + extraInfo + '\n' +
+                           'KI-Anbieter: ' + modelProvider;
+            
+            var htmlOutput = '<div class="debug-info bg-gray-100 p-3 mb-4 text-xs font-mono overflow-auto" style="max-height: 200px;">' + 
+                             '<strong>Debug-Informationen (Test-Modus):</strong><pre>' + debugInfo + '</pre></div>';
+            
+            debugField.html(htmlOutput);
+            return;
+        }
         
         $.post(ajaxurl, {
             action: 'athena_ai_modal_debug',
