@@ -169,7 +169,7 @@ if (!defined('ABSPATH')) {
                                 </button>
                             </div>
                             <textarea name="athena_ai_profiles[company_products]" id="company_products" rows="3" placeholder="<?php esc_attr_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"><?php echo esc_textarea($profile_data['company_products'] ?? ''); ?></textarea>
-                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Einträge, je ein Eintrag pro Zeile', 'athena-ai'); ?></p>
+                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Produkte und Dienstleistungen durch Komma und Leerzeichen getrennt', 'athena-ai'); ?></p>
                         </div>
                         <div>
                             <textarea name="athena_ai_profiles[company_usps]" id="company_usps" rows="3" placeholder="<?php esc_attr_e('Alleinstellungsmerkmale', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"><?php echo esc_textarea($profile_data['company_usps'] ?? ''); ?></textarea>
@@ -597,8 +597,8 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         </div>
         
         <!-- Hidden Input Fields für Prompt-Teile -->
-        <input type="hidden" id="athena-ai-prompt-intro-products" value="Erstelle einen professionellen SEO-Text für Produkte und Dienstleistungen. Du agierst als WordPress-SEO-Experte. Beschreibe die Produkte und Dienstleistungen anhand folgender Informationen so überzeugend wie möglich.">
-        <input type="hidden" id="athena-ai-prompt-limit-products" value="Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.">
+        <input type="hidden" id="athena-ai-prompt-intro-products" value="Analysiere den bereitgestellten Text und identifiziere alle darin genannten Produkte und Dienstleistungen. Liste diese in einer klaren, durch Komma und Leerzeichen getrennten Aufzählung auf. Füge keine zusätzlichen Informationen hinzu und fasse die Begriffe präzise zusammen.">
+        <input type="hidden" id="athena-ai-prompt-limit-products" value="Maximal 20 Proukte oder Dienstleistungen.">
         <input type="hidden" id="athena-ai-target-field-products" value="company_products">
         
         <select id="athena-ai-page-select-products" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
