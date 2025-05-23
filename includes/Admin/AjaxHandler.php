@@ -34,25 +34,44 @@ class AjaxHandler {
         $page_id = $_POST['page_id'] ?? null;
         $extra_info = $_POST['extra_info'] ?? null;
         $model_provider = $_POST['model_provider'] ?? 'openai'; // Default ist OpenAI
+        $custom_prompt = $_POST['custom_prompt'] ?? null;
         $page_content = null;
         $ai_response = null;
 
-        // Erstelle den Prompt für die KI
-        $prompt = "Du bist ein Assistent für WordPress-Inhalte. ";
+        // Keine automatische Sammlung von Informationen mehr
         
-        if ($page_id) {
-            $post = get_post($page_id);
-            if ($post && $post->post_type === 'page') {
-                $page_content = $post->post_content;
-                $prompt .= "Basierend auf dem folgenden Seiteninhalt und zusätzlichen Informationen, ";
-                $prompt .= "erstelle eine optimierte Version des Inhalts. ";
-                $prompt .= "Zusätzliche Informationen: " . $extra_info . "\n\n";
-                $prompt .= "Seiteninhalt:\n" . $page_content;
+        // Verwende den benutzerdefinierten Prompt, wenn vorhanden
+        if ($custom_prompt) {
+            $prompt = $custom_prompt;
+            
+            // Keine automatische Hinzufügung von Informationen mehr
+            
+            // Füge Seiteninhalt hinzu, wenn eine Seite ausgewählt wurde
+            if ($page_id) {
+                $post = get_post($page_id);
+                if ($post && $post->post_type === 'page') {
+                    $page_content = $post->post_content;
+                    $prompt .= "\n\nSeiteninhalt:\n" . $page_content;
+                }
             }
         } else {
-            // Wenn keine Seite ausgewählt wurde, nur die zusätzlichen Informationen verwenden
-            $prompt .= "Basierend auf den folgenden Informationen, erstelle einen optimierten Inhalt: ";
-            $prompt .= "\n\n" . $extra_info;
+            // Fallback auf den alten Prompt-Aufbau
+            $prompt = "Du bist ein Assistent für WordPress-Inhalte. ";
+            
+            if ($page_id) {
+                $post = get_post($page_id);
+                if ($post && $post->post_type === 'page') {
+                    $page_content = $post->post_content;
+                    $prompt .= "Basierend auf dem folgenden Seiteninhalt und zusätzlichen Informationen, ";
+                    $prompt .= "erstelle eine optimierte Version des Inhalts. ";
+                    $prompt .= "Zusätzliche Informationen: " . $extra_info . "\n\n";
+                    $prompt .= "Seiteninhalt:\n" . $page_content;
+                }
+            } else {
+                // Wenn keine Seite ausgewählt wurde, nur die zusätzlichen Informationen verwenden
+                $prompt .= "Basierend auf den folgenden Informationen, erstelle einen optimierten Inhalt: ";
+                $prompt .= "\n\n" . $extra_info;
+            }
         }
                 
         // Wähle den richtigen Service basierend auf model_provider
@@ -103,6 +122,7 @@ class AjaxHandler {
             'extra_info'     => $extra_info,
             'model_provider' => $model_provider,
             'page_content'   => $page_content,
+            'custom_prompt'  => $custom_prompt,
         ]);
         
         if ($ai_response) {

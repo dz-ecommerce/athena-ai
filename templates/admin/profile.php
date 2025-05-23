@@ -572,7 +572,8 @@ jQuery(function($) {
             action: 'athena_ai_modal_debug',
             page_id: pageId,
             extra_info: extraInfo,
-            model_provider: modelProvider
+            model_provider: modelProvider,
+            custom_prompt: fullPrompt
         }, function(response) {
             // Teile die Antwort auf, um den Debug-Teil vom OpenAI-Teil zu trennen
             var parts = response.split('--- OPENAI ANTWORT ---');
