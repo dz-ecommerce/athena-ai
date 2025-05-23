@@ -150,8 +150,8 @@ if (!defined('ABSPATH')) {
                                     Athena AI Assistent
                                 </button>
                             </div>
-                            <textarea name="athena_ai_profiles[company_description]" id="company_description" rows="3" maxlength="500" placeholder="<?php esc_attr_e('Kurzbeschreibung des Unternehmens', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"><?php echo esc_textarea($profile_data['company_description'] ?? ''); ?></textarea>
-                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 500 Zeichen', 'athena-ai'); ?></p>
+                            <textarea name="athena_ai_profiles[company_description]" id="company_description" rows="5" placeholder="<?php esc_attr_e('Kurzbeschreibung des Unternehmens', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"><?php echo esc_textarea($profile_data['company_description'] ?? ''); ?></textarea>
+                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 200 Wörter', 'athena-ai'); ?></p>
                         </div>
                     </div>
                 </fieldset>
@@ -631,7 +631,9 @@ jQuery(function($) {
             // Übertrage den Inhalt in das entsprechende Feld
             if (targetField) {
                 var fieldSelector = 'textarea[name="athena_ai_profiles[' + targetField + ']"]';
-                $(fieldSelector).val(window.athenaAiResponse);
+                // Bereinige die API-Ausgabe von leeren Absätzen am Anfang
+                var cleanedResponse = window.athenaAiResponse.replace(/^\s+/, '').trim();
+                $(fieldSelector).val(cleanedResponse);
                 
                 // Schließe das Modal
                 $('#athena-ai-modal').addClass('hidden').removeClass('flex');
