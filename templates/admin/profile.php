@@ -500,6 +500,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         <!-- Hidden Input Fields für Prompt-Teile -->
         <input type="hidden" id="athena-ai-prompt-intro" value="Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.">
         <input type="hidden" id="athena-ai-prompt-limit" value="Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.">
+        <input type="hidden" id="athena-ai-target-field" value="company_description">
         
         <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
             <option value="">-- Seite wählen (optional) --</option>
@@ -624,8 +625,20 @@ jQuery(function($) {
     // Transfer Content Button
     $('#athena-ai-transfer-content').on('click', function() {
         if (window.athenaAiResponse) {
-            // Hier kann später die Logik zum Übertragen des Inhalts implementiert werden
-            alert('Content würde übertragen werden: ' + window.athenaAiResponse.substring(0, 50) + '...');
+            // Hole das Zielfeld aus dem Hidden-Field
+            var targetField = $('#athena-ai-target-field').val();
+            
+            // Übertrage den Inhalt in das entsprechende Feld
+            if (targetField) {
+                var fieldSelector = 'textarea[name="athena_ai_profiles[' + targetField + ']"]';
+                $(fieldSelector).val(window.athenaAiResponse);
+                
+                // Schließe das Modal
+                $('#athena-ai-modal').addClass('hidden').removeClass('flex');
+                
+                // Zeige eine Erfolgsmeldung an
+                alert('Der Inhalt wurde erfolgreich in das Feld "' + targetField + '" übertragen.');
+            }
         }
     });
 });
