@@ -163,6 +163,11 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div>
+                            <div class="flex justify-end mb-2">
+                                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
+                                    Athena AI Produkte
+                                </button>
+                            </div>
                             <textarea name="athena_ai_profiles[company_products]" id="company_products" rows="3" placeholder="<?php esc_attr_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?>" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4"><?php echo esc_textarea($profile_data['company_products'] ?? ''); ?></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Einträge, je ein Eintrag pro Zeile', 'athena-ai'); ?></p>
                         </div>
@@ -516,6 +521,101 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
 </div>
+
+<!-- Unternehmensbeschreibung Modal -->
+<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden">
+    <div class="bg-white rounded-lg shadow-lg w-[50vw] p-6 relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
+        <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-lg font-semibold mb-4">Athena AI Assistent für Unternehmensbeschreibung</h2>
+        
+        <!-- KI-Anbieter auswählen -->
+        <div class="mb-4">
+            <label for="athena-ai-model-provider" class="block mb-2 font-medium">KI-Anbieter auswählen</label>
+            <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider" value="openai" class="form-radio h-4 w-4 text-blue-600" checked>
+                    <span class="ml-2">OpenAI</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider" value="gemini" class="form-radio h-4 w-4 text-blue-600">
+                    <span class="ml-2">Google Gemini</span>
+                </label>
+            </div>
+            <div class="mt-3">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="athena-ai-test-only" class="form-checkbox h-4 w-4 text-blue-600">
+                    <span class="ml-2">Nur Output testen</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Hidden Input Fields für Prompt-Teile -->
+        <input type="hidden" id="athena-ai-prompt-intro" value="Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.">
+        <input type="hidden" id="athena-ai-prompt-limit" value="Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.">
+        <input type="hidden" id="athena-ai-target-field" value="company_description">
+        
+        <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
+            <option value="">-- Seite wählen (optional) --</option>
+            <?php foreach ($pages as $page): ?>
+                <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <textarea id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
+        <div class="flex space-x-2">
+            <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2">Create Content</button>
+            <button type="button" id="athena-ai-transfer-content" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled>Transfer Content</button>
+        </div>
+        <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- Produkte und Dienstleistungen Modal -->
+<div id="athena-ai-products-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden">
+    <div class="bg-white rounded-lg shadow-lg w-[50vw] p-6 relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
+        <button type="button" id="athena-ai-products-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-lg font-semibold mb-4">Athena AI Assistent für Produkte und Dienstleistungen</h2>
+        
+        <!-- KI-Anbieter auswählen -->
+        <div class="mb-4">
+            <label for="athena-ai-model-provider-products" class="block mb-2 font-medium">KI-Anbieter auswählen</label>
+            <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider-products" value="openai" class="form-radio h-4 w-4 text-blue-600" checked>
+                    <span class="ml-2">OpenAI</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="athena-ai-model-provider-products" value="gemini" class="form-radio h-4 w-4 text-blue-600">
+                    <span class="ml-2">Google Gemini</span>
+                </label>
+            </div>
+            <div class="mt-3">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="athena-ai-test-only-products" class="form-checkbox h-4 w-4 text-blue-600">
+                    <span class="ml-2">Nur Output testen</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Hidden Input Fields für Prompt-Teile -->
+        <input type="hidden" id="athena-ai-prompt-intro-products" value="Erstelle einen professionellen SEO-Text für Produkte und Dienstleistungen. Du agierst als WordPress-SEO-Experte. Beschreibe die Produkte und Dienstleistungen anhand folgender Informationen so überzeugend wie möglich.">
+        <input type="hidden" id="athena-ai-prompt-limit-products" value="Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.">
+        <input type="hidden" id="athena-ai-target-field-products" value="company_products">
+        
+        <select id="athena-ai-page-select-products" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
+            <option value="">-- Seite wählen (optional) --</option>
+            <?php foreach ($pages as $page): ?>
+                <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <textarea id="athena-ai-modal-extra-info-products" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
+        <div class="flex space-x-2">
+            <button type="button" id="athena-ai-create-content-products" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2">Create Content</button>
+            <button type="button" id="athena-ai-transfer-content-products" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled>Transfer Content</button>
+        </div>
+        <div id="athena-ai-modal-debug-products" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
+    </div>
+</div>
+
 <script type="text/javascript">
 var ajaxurl = "<?php echo admin_url('admin-ajax.php'); ?>";
 </script>
@@ -637,6 +737,130 @@ jQuery(function($) {
                 
                 // Schließe das Modal
                 $('#athena-ai-modal').addClass('hidden').removeClass('flex');
+                
+                // Zeige eine Erfolgsmeldung an
+                alert('Der Inhalt wurde erfolgreich in das Feld "' + targetField + '" übertragen.');
+            }
+        }
+    });
+    
+    // Produkte und Dienstleistungen Modal
+    $('#athena-ai-products-assistant-btn').on('click', function() {
+        $('#athena-ai-products-modal').removeClass('hidden').addClass('flex');
+    });
+    $('#athena-ai-products-modal-close').on('click', function() {
+        $('#athena-ai-products-modal').addClass('hidden').removeClass('flex');
+    });
+    // Optional: Modal schließen bei Klick auf Hintergrund
+    $('#athena-ai-products-modal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).addClass('hidden').removeClass('flex');
+        }
+    });
+
+    // Create Content Button für Produkte und Dienstleistungen: POST Daten und Debug-Ausgabe
+    $('#athena-ai-create-content-products').on('click', function() {
+        var pageId = $('#athena-ai-page-select-products').val();
+        var extraInfo = $('#athena-ai-modal-extra-info-products').val();
+        var modelProvider = $('input[name="athena-ai-model-provider-products"]:checked').val();
+        var debugField = $('#athena-ai-modal-debug-products');
+        
+        // Page selection is now optional, only check for extra info
+        if (!extraInfo.trim()) {
+            alert('Bitte gib zusätzliche Informationen ein');
+            return;
+        }
+        
+        debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
+        
+        // Prompt zusammensetzen
+        var promptIntro = $('#athena-ai-prompt-intro-products').val();
+        var promptLimit = $('#athena-ai-prompt-limit-products').val();
+        var fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        
+        // Prüfen, ob "Nur Output testen" aktiviert ist
+        var testOnly = $('#athena-ai-test-only-products').is(':checked');
+        
+        if (testOnly) {
+            // Nur Debug-Informationen anzeigen, keine API-Anfrage senden
+            var debugInfo = 'Test-Modus aktiviert. Keine API-Anfrage gesendet.\n\n' +
+                           'Ausgewählte Seite: ' + (pageId ? 'ID: ' + pageId : 'Keine') + '\n' +
+                           'Zusätzliche Informationen: ' + extraInfo + '\n' +
+                           'KI-Anbieter: ' + modelProvider + '\n\n' +
+                           'Generierter Prompt:\n' + fullPrompt;
+            
+            var htmlOutput = '<div class="debug-info bg-gray-100 p-3 mb-4 text-xs font-mono overflow-auto" style="max-height: 200px;">' + 
+                             '<strong>Debug-Informationen (Test-Modus):</strong><pre>' + debugInfo + '</pre></div>';
+            
+            debugField.html(htmlOutput);
+            return;
+        }
+        
+        $.post(ajaxurl, {
+            action: 'athena_ai_modal_debug_products',
+            page_id: pageId,
+            extra_info: extraInfo,
+            model_provider: modelProvider,
+            custom_prompt: fullPrompt
+        }, function(response) {
+            // Teile die Antwort auf, um den Debug-Teil vom OpenAI-Teil zu trennen
+            var parts = response.split('--- OPENAI ANTWORT ---');
+            var debugInfo = parts[0];
+            var aiResponse = parts.length > 1 ? parts[1] : '';
+            
+            var htmlOutput = '<div class="debug-info bg-gray-100 p-3 mb-4 text-xs font-mono overflow-auto" style="max-height: 200px;">' + 
+                             '<strong>Debug-Informationen:</strong><pre>' + debugInfo + '</pre></div>';
+                             
+            if (aiResponse) {
+                // Prüfe, ob es sich um eine spezielle Fehlermeldung handelt (beginnt mit ###)
+                if (aiResponse.trim().startsWith('###')) {
+                    // Entferne die ### Markierung
+                    var errorText = aiResponse.trim().substring(3).trim();
+                    
+                    htmlOutput += '<div class="ai-response">' +
+                                  '<h3 class="text-xl font-bold mb-2 text-red-600">OpenAI Fehler:</h3>' +
+                                  '<div class="bg-red-50 p-4 border border-red-300 rounded shadow-sm overflow-auto text-red-700" style="max-height: 400px;">' +
+                                  errorText.replace(/\n/g, '<br>') +
+                                  '</div></div>';
+                } else {
+                    // Normale AI-Antwort
+                    htmlOutput += '<div class="ai-response">' +
+                                  '<h3 class="text-xl font-bold mb-2">OpenAI Antwort:</h3>' +
+                                  '<div class="bg-white p-4 border border-gray-300 rounded shadow-sm overflow-auto" style="max-height: 400px;">' +
+                                  aiResponse.replace(/\n/g, '<br>') +
+                                  '</div></div>';
+                    
+                    // Aktiviere den Transfer Content Button
+                    $('#athena-ai-transfer-content-products').removeClass('opacity-50 cursor-not-allowed').addClass('bg-green-600 hover:bg-green-700').prop('disabled', false);
+                    
+                    // Speichere die Antwort für die Übertragung
+                    window.athenaAiResponseProducts = aiResponse;
+                }
+            }
+            
+            debugField.html(htmlOutput);
+        }).fail(function(xhr, textStatus, errorThrown) {
+            debugField.html('<div class="p-3 bg-red-100 text-red-800 border border-red-300 rounded">' +
+                           '<strong>Fehler:</strong> Die Anfrage konnte nicht verarbeitet werden. ' +
+                           textStatus + ' ' + errorThrown + '</div>');
+        });
+    });
+    
+    // Transfer Content Button für Produkte und Dienstleistungen
+    $('#athena-ai-transfer-content-products').on('click', function() {
+        if (window.athenaAiResponseProducts) {
+            // Hole das Zielfeld aus dem Hidden-Field
+            var targetField = $('#athena-ai-target-field-products').val();
+            
+            // Übertrage den Inhalt in das entsprechende Feld
+            if (targetField) {
+                var fieldSelector = 'textarea[name="athena_ai_profiles[' + targetField + ']"]';
+                // Bereinige die API-Ausgabe von leeren Absätzen am Anfang
+                var cleanedResponse = window.athenaAiResponseProducts.replace(/^\s+/, '').trim();
+                $(fieldSelector).val(cleanedResponse);
+                
+                // Schließe das Modal
+                $('#athena-ai-products-modal').addClass('hidden').removeClass('flex');
                 
                 // Zeige eine Erfolgsmeldung an
                 alert('Der Inhalt wurde erfolgreich in das Feld "' + targetField + '" übertragen.');
