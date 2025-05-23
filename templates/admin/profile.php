@@ -471,8 +471,8 @@ if (!defined('ABSPATH')) {
 // Modal HTML am Ende der Seite einfügen
 $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
 ?>
-<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto">
-    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative max-h-[80vh] overflow-y-auto">
+<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden">
+    <div class="bg-white rounded-lg shadow-lg w-[50vw] p-6 relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
         <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
         <h2 class="text-lg font-semibold mb-4">Athena AI Assistent</h2>
         
@@ -508,7 +508,10 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
             <?php endforeach; ?>
         </select>
         <textarea id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
-        <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-full">Create Content</button>
+        <div class="flex space-x-2">
+            <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2">Create Content</button>
+            <button type="button" id="athena-ai-transfer-content" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled>Transfer Content</button>
+        </div>
         <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
 </div>
@@ -601,6 +604,12 @@ jQuery(function($) {
                                   '<div class="bg-white p-4 border border-gray-300 rounded shadow-sm overflow-auto" style="max-height: 400px;">' +
                                   aiResponse.replace(/\n/g, '<br>') +
                                   '</div></div>';
+                    
+                    // Aktiviere den Transfer Content Button
+                    $('#athena-ai-transfer-content').removeClass('opacity-50 cursor-not-allowed').addClass('bg-green-600 hover:bg-green-700').prop('disabled', false);
+                    
+                    // Speichere die Antwort für die Übertragung
+                    window.athenaAiResponse = aiResponse;
                 }
             }
             
@@ -610,6 +619,14 @@ jQuery(function($) {
                            '<strong>Fehler:</strong> Die Anfrage konnte nicht verarbeitet werden. ' +
                            textStatus + ' ' + errorThrown + '</div>');
         });
+    });
+    
+    // Transfer Content Button
+    $('#athena-ai-transfer-content').on('click', function() {
+        if (window.athenaAiResponse) {
+            // Hier kann später die Logik zum Übertragen des Inhalts implementiert werden
+            alert('Content würde übertragen werden: ' + window.athenaAiResponse.substring(0, 50) + '...');
+        }
     });
 });
 </script>
