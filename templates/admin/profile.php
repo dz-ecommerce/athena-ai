@@ -499,7 +499,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         
         <!-- Hidden Input Fields für Prompt-Teile -->
         <input type="hidden" id="athena-ai-prompt-intro" value="Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.">
-        <input type="hidden" id="athena-ai-prompt-limit" value="Maximal 200 Wörter. Reiner Absatztext ohne Kommentare.">
+        <input type="hidden" id="athena-ai-prompt-limit" value="Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.">
         
         <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
             <option value="">-- Seite wählen (optional) --</option>
