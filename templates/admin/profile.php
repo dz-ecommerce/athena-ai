@@ -497,8 +497,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
             </div>
         </div>
         
-        <label for="athena-ai-page-select" class="block mb-2 font-medium">Seite auswählen</label>
-        <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4">
+        <select id="athena-ai-page-select" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
             <option value="">-- Seite wählen (optional) --</option>
             <?php foreach ($pages as $page): ?>
                 <option value="<?php echo esc_attr($page->ID); ?>"><?php echo esc_html($page->post_title); ?></option>
