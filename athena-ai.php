@@ -3,7 +3,7 @@
  * Plugin Name:       Athena AI
  * Plugin URI:        https://example.com/plugins/athena-ai
  * Description:       A powerful AI assistant for WordPress that helps you create and manage content.
- * Version:           1.2.1
+ * Version:           1.2.2
  * Author:            Your Name
  * Author URI:        https://example.com
  * License:           GPL-2.0+
