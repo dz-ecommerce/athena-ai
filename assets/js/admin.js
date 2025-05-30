@@ -1,15 +1,24 @@
 (function ($) {
     'use strict';
 
+    // Update input state for floating labels
+    function updateInputState(input) {
+        const parent = input.parentElement;
+        if (input.value) {
+            input.setAttribute('data-filled', 'true');
+            parent.classList.add('has-value');
+        } else {
+            input.removeAttribute('data-filled');
+            parent.classList.remove('has-value');
+        }
+    }
+
     // Initialize floating labels
     function initFloatingLabels() {
         // Handle input events
         document.querySelectorAll('.form-group input, .form-group textarea, .form-group select').forEach(input => {
             // Check if the input has a value on page load
-            if (input.value) {
-                input.setAttribute('data-filled', 'true');
-                input.parentElement.classList.add('has-value');
-            }
+            updateInputState(input);
 
             // Add event listeners
             input.addEventListener('focus', function() {
@@ -18,13 +27,12 @@
 
             input.addEventListener('blur', function() {
                 this.parentElement.classList.remove('focused');
-                if (this.value) {
-                    this.setAttribute('data-filled', 'true');
-                    this.parentElement.classList.add('has-value');
-                } else {
-                    this.removeAttribute('data-filled');
-                    this.parentElement.classList.remove('has-value');
-                }
+                updateInputState(this);
+            });
+
+            // Handle input changes in real-time
+            input.addEventListener('input', function() {
+                updateInputState(this);
             });
         });
     }

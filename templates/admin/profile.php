@@ -168,12 +168,12 @@ if (!defined('ABSPATH')) {
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
                         <div class="form-group">
+                            <label for="company_products"><?php esc_html_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?></label>
                             <div class="flex justify-end mb-2">
                                 <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
                                     Athena AI Produkte
                                 </button>
                             </div>
-                            <label for="company_products"><?php esc_html_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?></label>
                             <textarea name="athena_ai_profiles[company_products]" id="company_products" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_products']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_products'] ?? ''); ?></textarea>
                             <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Produkte und Dienstleistungen durch Komma und Leerzeichen getrennt', 'athena-ai'); ?></p>
                         </div>
