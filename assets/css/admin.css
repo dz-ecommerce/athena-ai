@@ -47,15 +47,23 @@
     opacity: 1;
 }
 
-/* Hide the static label when floating label is present */
-.form-group .floating-label + .text-sm {
-    display: none;
+/* Show the floating label when input is focused or has value */
+.form-group .floating-label {
+    opacity: 1;
 }
 
-/* Show the floating label when input is focused or has value */
 .form-group.focused .floating-label,
 .form-group.has-value .floating-label {
-    opacity: 1;
+    transform: translateY(-1.1rem) scale(0.85);
+    color: #4f46e5;
+    background-color: white;
+    padding: 0 0.5rem;
+    left: 0.75rem;
+}
+
+/* Hide the static label when the floating label is present */
+.form-group .floating-label + .text-sm {
+    display: none;
 }
 
 .form-group input[type="text"],

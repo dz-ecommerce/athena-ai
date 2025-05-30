@@ -9,15 +9,14 @@
         if (input.value) {
             input.setAttribute('data-filled', 'true');
             parent.classList.add('has-value');
-            if (floatingLabel) {
-                floatingLabel.classList.add('floating');
-            }
         } else {
             input.removeAttribute('data-filled');
             parent.classList.remove('has-value');
-            if (floatingLabel) {
-                floatingLabel.classList.remove('floating');
-            }
+        }
+        
+        // Always ensure the floating label is visible
+        if (floatingLabel) {
+            floatingLabel.style.opacity = '1';
         }
     }
 
@@ -32,10 +31,7 @@
             input.addEventListener('focus', function() {
                 const parent = this.parentElement;
                 parent.classList.add('focused');
-                const floatingLabel = parent.querySelector('.floating-label');
-                if (floatingLabel) {
-                    floatingLabel.classList.add('floating');
-                }
+                updateInputState(this);
             });
 
             input.addEventListener('blur', function() {
@@ -43,6 +39,9 @@
                 parent.classList.remove('focused');
                 updateInputState(this);
             });
+            
+            // Initialize the label state
+            updateInputState(input);
 
             // Handle input changes in real-time
             input.addEventListener('input', function() {
