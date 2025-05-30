@@ -99,6 +99,12 @@ jobs:
           # Installiere fehlende Abhängigkeiten für den Build-Prozess
           npm install postcss-nesting vue@2 --no-save
           
+          # Erstelle fehlende Verzeichnisse für den Build-Prozess
+          mkdir -p assets/src/fonts
+          mkdir -p assets/dist/css
+          mkdir -p assets/dist/js
+          mkdir -p assets/dist/fonts
+          
       # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
           
       - name: Build assets
