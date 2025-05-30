@@ -97,7 +97,7 @@ jobs:
           npm ci --prefer-offline --no-audit
           
           # Installiere fehlende Abhängigkeiten für den Build-Prozess
-          npm install postcss-nesting --no-save
+          npm install postcss-nesting vue@2 --no-save
           
       # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
           
