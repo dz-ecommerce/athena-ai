@@ -99,7 +99,8 @@ jobs:
           
       - name: Build assets
         run: |
-          npm run build:css
+          # Verwende das vorhandene build-Skript aus package.json
+          npm run build
           # Weitere Build-Befehle können hier hinzugefügt werden
           # Stage CSS files
           git add assets/css/*.css
