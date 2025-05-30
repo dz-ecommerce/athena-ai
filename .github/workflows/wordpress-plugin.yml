@@ -44,73 +44,43 @@ jobs:
           echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
           echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
 
-      - name: Get and increment version
+      - name: Get version
         id: get_version
         run: |
           echo "Reading version from athena-ai.php..."
-          # Extract current version from plugin header
-          PLUGIN_HEADER_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+          # Einfache Versionserkennung aus der Konstante
+          VERSION=$(grep -E "define\('ATHENA_AI_VERSION', '[0-9.]+'\)" athena-ai.php | cut -d "'" -f 4)
           
-          # Extract current version from constant - simpler approach
-          CONSTANT_VERSION=$(grep "define('ATHENA_AI_VERSION'" athena-ai.php | sed -n "s/.*define('ATHENA_AI_VERSION',\s*'\([0-9.]*\)'.*/\1/p" || echo "")
-          if [ -z "$CONSTANT_VERSION" ]; then
-            CONSTANT_VERSION=$(grep 'define("ATHENA_AI_VERSION"' athena-ai.php | sed -n 's/.*define("ATHENA_AI_VERSION",\s*"\([0-9.]*\)".*/\1/p' || echo "")  
+          if [ -z "$VERSION" ]; then
+            # Fallback zur Plugin-Header-Version
+            VERSION=$(grep -E "Version:[ ]*[0-9.]+" athena-ai.php | grep -o -E "[0-9.]+")
           fi
           
-          # Use the newer version if they don't match
-          if [ -z "$CONSTANT_VERSION" ] || [ "$CONSTANT_VERSION" = "$PLUGIN_HEADER_VERSION" ]; then
-            # Versions match or constant not found, increment patch version
-            CURRENT_VERSION="$PLUGIN_HEADER_VERSION"
-            IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-            PATCH_VERSION=$((VERSION_PARTS[2] + 1))
-            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            echo "Incrementing version from $CURRENT_VERSION to $NEW_VERSION"
-          else
-            # Versions don't match, use the newer one
-            if [[ "$(printf '%s\n' "$PLUGIN_HEADER_VERSION" "$CONSTANT_VERSION" | sort -V | tail -n1)" == "$CONSTANT_VERSION" ]]; then
-              CURRENT_VERSION="$CONSTANT_VERSION"
-              NEW_VERSION="$CONSTANT_VERSION"
-              echo "Using existing version from constant: $NEW_VERSION"
-            else
-              CURRENT_VERSION="$PLUGIN_HEADER_VERSION"
-              NEW_VERSION="$PLUGIN_HEADER_VERSION"
-              echo "Using existing version from plugin header: $NEW_VERSION"
-            fi
-          fi
+          echo "Detected version: $VERSION"
           
-          # Update version in plugin header if needed
-          if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
-            sed -i "s/Version: $CURRENT_VERSION/Version: $NEW_VERSION/" athena-ai.php
-          fi
+          # Inkrementiere die Patch-Version
+          IFS='.' read -r -a VERSION_PARTS <<< "$VERSION"
+          PATCH_VERSION=$((VERSION_PARTS[2] + 1))
+          NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+          echo "New version will be: $NEW_VERSION"
           
-          # Update version in constant definition if needed
-          if [ -n "$CONSTANT_VERSION" ] && [ "$CONSTANT_VERSION" != "$NEW_VERSION" ]; then
-            sed -i "s/define(\"ATHENA_AI_VERSION\", \"$CURRENT_VERSION\")/define(\"ATHENA_AI_VERSION\", \"$NEW_VERSION\")/" athena-ai.php
-            sed -i "s/define('ATHENA_AI_VERSION', '$CURRENT_VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
-            sed -i "s/define(\"ATHENA_AI_VERSION\",\s*\"$CURRENT_VERSION\")/define(\"ATHENA_AI_VERSION\", \"$NEW_VERSION\")/" athena-ai.php
-            sed -i "s/define('ATHENA_AI_VERSION',\s*'$CURRENT_VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
-          fi
-
-          # Debug output
-          echo "Versions after update:"
-          PLUGIN_HEADER_VERSION=$(grep -oP 'Version:\s*\K[0-9.]+' athena-ai.php || echo 'Not found')
-          CONSTANT_VERSION=$(grep -oP 'define\([\"\']ATHENA_AI_VERSION[\"\'],\s*[\"\']\K[0-9.]+(?=[\"\'])' athena-ai.php || echo 'Not found')
-          echo "- Plugin header: $PLUGIN_HEADER_VERSION"
-          echo "- Constant: $CONSTANT_VERSION"
-
-          # Only commit if there are changes
+          # Aktualisiere die Version in der Plugin-Datei
+          sed -i "s/Version:[ ]*$VERSION/Version: $NEW_VERSION/g" athena-ai.php
+          sed -i "s/define('ATHENA_AI_VERSION', '$VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/g" athena-ai.php
+          
+          # Überprüfe, ob Änderungen vorgenommen wurden
           if ! git diff --quiet athena-ai.php; then
             git add athena-ai.php
             git commit -m "Bump version to $NEW_VERSION [skip ci]"
             git push
-            echo "Committed version update to $NEW_VERSION"
+            echo "Version updated and committed"
           else
             echo "No version changes to commit"
           fi
-
-          # Set output for later steps
+          
+          # Setze Ausgabevariablen für spätere Schritte
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$VERSION" >> $GITHUB_OUTPUT
 
 
 
