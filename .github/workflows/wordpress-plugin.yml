@@ -93,7 +93,7 @@ jobs:
           PLUGIN_HEADER_VERSION=$(grep -oP 'Version:\s*\K[0-9.]+' athena-ai.php || echo 'Not found')
           CONSTANT_VERSION=$(grep -oP 'define\([\"\']ATHENA_AI_VERSION[\"\'],\s*[\"\']\K[0-9.]+(?=[\"\'])' athena-ai.php || echo 'Not found')
           echo "- Plugin header: $PLUGIN_HEADER_VERSION"
-          echo "- Constant: $CONSTANT_VERSION""
+          echo "- Constant: $CONSTANT_VERSION"
 
           # Only commit if there are changes
           if ! git diff --quiet athena-ai.php; then
