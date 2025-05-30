@@ -51,8 +51,11 @@ jobs:
           # Extract current version from plugin header
           PLUGIN_HEADER_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
           
-          # Extract current version from constant
-          CONSTANT_VERSION=$(grep -oP "define\(['\"]ATHENA_AI_VERSION['\"],\s*['\"]\K[^'\"]+(?=['\"])?" athena-ai.php || true)
+          # Extract current version from constant - simpler approach
+          CONSTANT_VERSION=$(grep "define('ATHENA_AI_VERSION'" athena-ai.php | sed -n "s/.*define('ATHENA_AI_VERSION',\s*'\([0-9.]*\)'.*/\1/p" || echo "")
+          if [ -z "$CONSTANT_VERSION" ]; then
+            CONSTANT_VERSION=$(grep 'define("ATHENA_AI_VERSION"' athena-ai.php | sed -n 's/.*define("ATHENA_AI_VERSION",\s*"\([0-9.]*\)".*/\1/p' || echo "")  
+          fi
           
           # Use the newer version if they don't match
           if [ -z "$CONSTANT_VERSION" ] || [ "$CONSTANT_VERSION" = "$PLUGIN_HEADER_VERSION" ]; then
