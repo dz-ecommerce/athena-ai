@@ -93,7 +93,11 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Installiere Hauptabhängigkeiten
           npm ci --prefer-offline --no-audit
+          
+          # Installiere fehlende Abhängigkeiten für den Build-Prozess
+          npm install postcss-nesting --no-save
           
       # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
           
