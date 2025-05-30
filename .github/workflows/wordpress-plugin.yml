@@ -44,80 +44,61 @@ jobs:
           echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
           echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
 
-      - name: Get version
+      - name: Get and increment version
         id: get_version
         run: |
           echo "Reading version from athena-ai.php..."
-          # Einfache Versionserkennung aus der Konstante
-          VERSION=$(grep -E "define\('ATHENA_AI_VERSION', '[0-9.]+'\)" athena-ai.php | cut -d "'" -f 4)
-          
-          if [ -z "$VERSION" ]; then
-            # Fallback zur Plugin-Header-Version
-            VERSION=$(grep -E "Version:[ ]*[0-9.]+" athena-ai.php | grep -o -E "[0-9.]+")
-          fi
-          
-          echo "Detected version: $VERSION"
-          
-          # Inkrementiere die Patch-Version
-          IFS='.' read -r -a VERSION_PARTS <<< "$VERSION"
+          # Extract current version
+          CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Split version into parts
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+
+          # Increment patch version (last number)
           PATCH_VERSION=$((VERSION_PARTS[2] + 1))
           NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-          echo "New version will be: $NEW_VERSION"
-          
-          # Aktualisiere die Version in der Plugin-Datei
-          sed -i "s/Version:[ ]*$VERSION/Version: $NEW_VERSION/g" athena-ai.php
-          sed -i "s/define('ATHENA_AI_VERSION', '$VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/g" athena-ai.php
-          
-          # Überprüfe, ob Änderungen vorgenommen wurden
-          if ! git diff --quiet athena-ai.php; then
-            git add athena-ai.php
-            git commit -m "Bump version to $NEW_VERSION [skip ci]"
-            git push
-            echo "Version updated and committed"
-          else
-            echo "No version changes to commit"
-          fi
-          
-          # Setze Ausgabevariablen für spätere Schritte
+          echo "New version: $NEW_VERSION"
+
+          # Update version in plugin header
+          sed -i "s/Version: $CURRENT_VERSION/Version: $NEW_VERSION/" athena-ai.php
+
+          # Update version in constant definition - mehrere Varianten für verschiedene Formate
+          sed -i "s/ATHENA_AI_VERSION', '$CURRENT_VERSION'/ATHENA_AI_VERSION', '$NEW_VERSION'/" athena-ai.php
+          sed -i "s/ATHENA_AI_VERSION', \"$CURRENT_VERSION\"/ATHENA_AI_VERSION', \"$NEW_VERSION\"/" athena-ai.php
+          sed -i "s/ATHENA_AI_VERSION\\', '$CURRENT_VERSION'/ATHENA_AI_VERSION\\', '$NEW_VERSION'/" athena-ai.php
+          sed -i "s/define('ATHENA_AI_VERSION', '$CURRENT_VERSION')/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
+
+          # Debug-Ausgabe
+          echo "Updated version in files:"
+          grep -n "Version:" athena-ai.php
+          grep -n "ATHENA_AI_VERSION" athena-ai.php
+
+          # Stage and commit the changes
+          git add athena-ai.php
+          git commit -m "Bump version to $NEW_VERSION [skip ci]"
+          git push
+
+          # Set output for later steps
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "previous_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
 
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20.x"
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
+          node-version: "16"
+          cache: "npm"
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Build CSS with Tailwind
+        run: npm run build:css
+
+      - name: Commit compiled CSS files
         run: |
-          # Installiere Hauptabhängigkeiten
-          npm ci --prefer-offline --no-audit
-          
-          # Installiere fehlende Abhängigkeiten für den Build-Prozess
-          npm install postcss-nesting vue@2 --no-save
-          
-          # Erstelle fehlende Verzeichnisse für den Build-Prozess
-          mkdir -p assets/src/fonts
-          mkdir -p assets/src/js
-          mkdir -p assets/src/scss
-          mkdir -p assets/dist/css
-          mkdir -p assets/dist/js
-          mkdir -p assets/dist/fonts
-          
-          # Erstelle minimale Quelldateien für den Build-Prozess
-          echo "// Athena AI main JavaScript file" > assets/src/js/app.js
-          echo "// Athena AI main SCSS file" > assets/src/scss/app.scss
-          
-      # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
-          
-      - name: Build assets
-        run: |
-          # Verwende das vorhandene build-Skript aus package.json
-          npm run build
-          # Weitere Build-Befehle können hier hinzugefügt werden
           # Stage CSS files
           git add assets/css/*.css
 
@@ -126,23 +107,6 @@ jobs:
             echo "No CSS changes to commit"
           else
             git commit -m "Update compiled CSS files for v${{ steps.get_version.outputs.version }} [skip ci]"
-            git push
-          fi
-
-      - name: Commit build artifacts
-        if: success()
-        run: |
-          # Stage CSS and other build artifacts
-          git add assets/css/*.css
-          
-          # Add any other build artifacts that should be committed
-          # git add path/to/other/artifacts
-
-          # Check if there are changes to commit
-          if [ -n "$(git status --porcelain)" ]; then
-            git config --global user.email "info@dz-ecom.de"
-            git config --global user.name "GitHub Actions"
-            git commit -m "Build: Update compiled assets [skip ci]"
             git push
           fi
 
