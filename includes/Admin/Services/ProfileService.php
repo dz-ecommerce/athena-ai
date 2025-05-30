@@ -61,4 +61,3 @@ class ProfileService {
         return $this->profile->getProfileField($field, $default);
     }
 }
-
