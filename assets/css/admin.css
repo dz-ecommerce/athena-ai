@@ -19,13 +19,43 @@
     z-index: 10;
 }
 
+/* Special case for floating-label class */
+.form-group .floating-label {
+    position: absolute;
+    top: 0.5rem;
+    left: 1rem;
+    padding: 0 0.25rem;
+    background-color: white;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    pointer-events: none;
+    transform-origin: left top;
+    z-index: 10;
+    opacity: 0;
+}
+
 .form-group.focused label,
-.form-group.filled label {
+.form-group.filled label,
+.form-group .floating-label.floating {
     transform: translateY(-1.1rem) scale(0.85);
     color: #4f46e5;
     background-color: white;
     padding: 0 0.5rem;
     left: 0.75rem;
+    opacity: 1;
+}
+
+/* Hide the static label when floating label is present */
+.form-group .floating-label + .text-sm {
+    display: none;
+}
+
+/* Show the floating label when input is focused or has value */
+.form-group.focused .floating-label,
+.form-group.has-value .floating-label {
+    opacity: 1;
 }
 
 .form-group input[type="text"],

@@ -4,12 +4,20 @@
     // Update input state for floating labels
     function updateInputState(input) {
         const parent = input.parentElement;
+        const floatingLabel = parent.querySelector('.floating-label');
+        
         if (input.value) {
             input.setAttribute('data-filled', 'true');
             parent.classList.add('has-value');
+            if (floatingLabel) {
+                floatingLabel.classList.add('floating');
+            }
         } else {
             input.removeAttribute('data-filled');
             parent.classList.remove('has-value');
+            if (floatingLabel) {
+                floatingLabel.classList.remove('floating');
+            }
         }
     }
 
@@ -22,11 +30,17 @@
 
             // Add event listeners
             input.addEventListener('focus', function() {
-                this.parentElement.classList.add('focused');
+                const parent = this.parentElement;
+                parent.classList.add('focused');
+                const floatingLabel = parent.querySelector('.floating-label');
+                if (floatingLabel) {
+                    floatingLabel.classList.add('floating');
+                }
             });
 
             input.addEventListener('blur', function() {
-                this.parentElement.classList.remove('focused');
+                const parent = this.parentElement;
+                parent.classList.remove('focused');
                 updateInputState(this);
             });
 
