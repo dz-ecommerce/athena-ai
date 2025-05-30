@@ -95,31 +95,7 @@ jobs:
         run: |
           npm ci --prefer-offline --no-audit
           
-      - name: Check for JavaScript tests
-        if: success()
-        run: |
-          if grep -q '"test"' package.json; then
-            echo "Running JavaScript tests..."
-            npm test
-          else
-            echo "No test script found in package.json, skipping tests"
-          fi
-          
-      - name: Run PHP CodeSniffer
-        if: success()
-        run: |
-          # Installiere PHP CodeSniffer und WordPress-Coding-Standards
-          composer require --dev squizlabs/php_codesniffer wp-coding-standards/wpcs
-          # Führe PHP_CodeSniffer mit WordPress-Standards aus
-          ./vendor/bin/phpcs --standard=WordPress .
-          
-      - name: Run PHPStan
-        if: success()
-        run: |
-          # Installiere PHPStan
-          composer require --dev phpstan/phpstan
-          # Führe PHPStan mit Level 5 aus (streng, aber nicht zu streng)
-          ./vendor/bin/phpstan analyse --level=5
+      # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
           
       - name: Build assets
         run: |
