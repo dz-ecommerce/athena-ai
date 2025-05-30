@@ -175,7 +175,6 @@ if (!defined('ABSPATH')) {
                     <div class="grid grid-cols-1 gap-6">
                         <div class="relative">
                             <div class="flex justify-between items-center mb-2">
-                                <label for="company_products" class="text-sm font-medium text-gray-700"><?php esc_html_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?></label>
                                 <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
                                     Athena AI Produkte
                                 </button>
@@ -292,10 +291,12 @@ if (!defined('ABSPATH')) {
                         <?php esc_html_e('Unternehmenswerte und Kommunikation', 'athena-ai'); ?>
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
-                        <div class="form-group">
-                            <label for="company_values"><?php esc_html_e('Unternehmenswerte', 'athena-ai'); ?></label>
-                            <textarea name="athena_ai_profiles[company_values]" id="company_values" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_values']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_values'] ?? ''); ?></textarea>
-                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Werte, je ein Wert pro Zeile', 'athena-ai'); ?></p>
+                        <div class="relative">
+                            <div class="form-group">
+                                <label class="floating-label" for="company_values"><?php esc_html_e('Unternehmenswerte', 'athena-ai'); ?></label>
+                                <textarea name="athena_ai_profiles[company_values]" id="company_values" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_values']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_values'] ?? ''); ?></textarea>
+                                <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Werte, je ein Wert pro Zeile', 'athena-ai'); ?></p>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -378,14 +379,18 @@ if (!defined('ABSPATH')) {
                         <?php esc_html_e('Fachwissen und Expertise', 'athena-ai'); ?>
                     </legend>
                     <div class="grid grid-cols-1 gap-6">
-                        <div class="form-group">
-                            <label for="expertise_areas"><?php esc_html_e('Fachgebiete', 'athena-ai'); ?></label>
-                            <textarea name="athena_ai_profiles[expertise_areas]" id="expertise_areas" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['expertise_areas']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['expertise_areas'] ?? ''); ?></textarea>
-                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Stichpunkte, ein Eintrag pro Zeile', 'athena-ai'); ?></p>
+                        <div class="relative">
+                            <div class="form-group">
+                                <label class="floating-label" for="expertise_areas"><?php esc_html_e('Fachgebiete', 'athena-ai'); ?></label>
+                                <textarea name="athena_ai_profiles[expertise_areas]" id="expertise_areas" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['expertise_areas']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['expertise_areas'] ?? ''); ?></textarea>
+                                <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Stichpunkte, ein Eintrag pro Zeile', 'athena-ai'); ?></p>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="certifications"><?php esc_html_e('Besondere Qualifikationen oder Zertifizierungen', 'athena-ai'); ?></label>
-                            <textarea name="athena_ai_profiles[certifications]" id="certifications" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['certifications']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['certifications'] ?? ''); ?></textarea>
+                        <div class="relative">
+                            <div class="form-group">
+                                <label class="floating-label" for="certifications"><?php esc_html_e('Besondere Qualifikationen oder Zertifizierungen', 'athena-ai'); ?></label>
+                                <textarea name="athena_ai_profiles[certifications]" id="certifications" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['certifications']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['certifications'] ?? ''); ?></textarea>
+                            </div>
                         </div>
                     </div>
                 </fieldset>
@@ -395,10 +400,12 @@ if (!defined('ABSPATH')) {
                     <legend class="text-md font-medium text-gray-700 px-2">
                         <?php esc_html_e('Wichtige Keywords', 'athena-ai'); ?>
                     </legend>
-                    <div class="form-group">
-                        <label for="seo_keywords"><?php esc_html_e('SEO-Keywords', 'athena-ai'); ?></label>
-                        <textarea name="athena_ai_profiles[seo_keywords]" id="seo_keywords" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['seo_keywords']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['seo_keywords'] ?? ''); ?></textarea>
-                        <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 5 Begriffe, je ein Begriff pro Zeile', 'athena-ai'); ?></p>
+                    <div class="relative">
+                        <div class="form-group">
+                            <label class="floating-label" for="seo_keywords"><?php esc_html_e('SEO-Keywords', 'athena-ai'); ?></label>
+                            <textarea name="athena_ai_profiles[seo_keywords]" id="seo_keywords" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['seo_keywords']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['seo_keywords'] ?? ''); ?></textarea>
+                            <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 5 Begriffe, je ein Begriff pro Zeile', 'athena-ai'); ?></p>
+                        </div>
                     </div>
                 </fieldset>
 
