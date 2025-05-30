@@ -1,9 +1,41 @@
 (function ($) {
     'use strict';
 
+    // Initialize floating labels
+    function initFloatingLabels() {
+        // Handle input events
+        document.querySelectorAll('.form-group input, .form-group textarea, .form-group select').forEach(input => {
+            // Check if the input has a value on page load
+            if (input.value) {
+                input.setAttribute('data-filled', 'true');
+                input.parentElement.classList.add('has-value');
+            }
+
+            // Add event listeners
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+                if (this.value) {
+                    this.setAttribute('data-filled', 'true');
+                    this.parentElement.classList.add('has-value');
+                } else {
+                    this.removeAttribute('data-filled');
+                    this.parentElement.classList.remove('has-value');
+                }
+            });
+        });
+    }
+
+
     $(document).ready(function () {
         // Initialize any admin-specific JavaScript here
         console.log('Athena AI admin initialized');
+        
+        // Initialize floating labels
+        initFloatingLabels();
 
         // Feed Dropdown Handling
         const feedCheckboxes = document.querySelectorAll('input[name="feed_ids[]"]');
