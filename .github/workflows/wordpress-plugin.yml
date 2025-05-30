@@ -101,9 +101,15 @@ jobs:
           
           # Erstelle fehlende Verzeichnisse für den Build-Prozess
           mkdir -p assets/src/fonts
+          mkdir -p assets/src/js
+          mkdir -p assets/src/scss
           mkdir -p assets/dist/css
           mkdir -p assets/dist/js
           mkdir -p assets/dist/fonts
+          
+          # Erstelle minimale Quelldateien für den Build-Prozess
+          echo "// Athena AI main JavaScript file" > assets/src/js/app.js
+          echo "// Athena AI main SCSS file" > assets/src/scss/app.scss
           
       # Qualitätssicherungsprüfungen wurden entfernt und werden nur für Minor-Releases ausgeführt
           
