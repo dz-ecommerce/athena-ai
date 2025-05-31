@@ -64,12 +64,12 @@ jobs:
             # Split base version into parts
             IFS='.' read -r -a VERSION_PARTS <<< "$BASE_VERSION"
             
-            # Get current date in format YYMMDD
-            BUILD_NUMBER=$(date +'%y%m%d')
+            # Inkrementiere die Patch-Version (letzte Nummer)
+            PATCH_VERSION=$((${VERSION_PARTS[2]} + 1))
             
-            # Create new version with date-based build number
-            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$BUILD_NUMBER"
-            echo "Auto-generating new version: $NEW_VERSION"
+            # Erstelle neue Version mit inkrementierter Patch-Version
+            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+            echo "Auto-incrementing to new version: $NEW_VERSION"
           else
             # Use fixed base version
             NEW_VERSION="$BASE_VERSION"
