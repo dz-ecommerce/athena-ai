@@ -2,8 +2,8 @@ name: Automated Release
 
 env:
   PRERELEASE: "false"
-  # Hier wird die Basis-Version definiert
-  PLUGIN_VERSION_BASE: "1.1.98"
+  # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
+  PLUGIN_VERSION_BASE: "1.1.99"
   # Auto-Release aktivieren (true/false)
   AUTO_RELEASE: "true"
 
@@ -99,7 +99,7 @@ jobs:
 
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v2
         with:
           node-version: "16"
           cache: "npm"
