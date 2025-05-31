@@ -11,6 +11,7 @@
     "prod": "npm run production",
     "production": "mix --production",
     "build": "npm run production",
+    "build:css": "mix --production",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore --ignore-pattern "
   },
   "repository": {

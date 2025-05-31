@@ -108,7 +108,7 @@ jobs:
         run: npm ci
 
       - name: Build assets
-        run: npm run build
+        run: npm run build:css
 
       - name: Commit compiled CSS files
         run: |
