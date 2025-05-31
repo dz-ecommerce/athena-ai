@@ -2,8 +2,10 @@ name: Automated Release
 
 env:
   PRERELEASE: "false"
-  # Hier wird die Version zentral definiert
-  PLUGIN_VERSION: "1.1.98"
+  # Hier wird die Basis-Version definiert
+  PLUGIN_VERSION_BASE: "1.1.98"
+  # Auto-Release aktivieren (true/false)
+  AUTO_RELEASE: "true"
 
 on:
   push:
@@ -49,19 +51,36 @@ jobs:
       - name: Set plugin version
         id: get_version
         run: |
-          echo "Using fixed version from workflow configuration..."
-          VERSION="${{ env.PLUGIN_VERSION }}"
-          echo "Plugin version: $VERSION"
+          # Basis-Version aus der Workflow-Konfiguration
+          BASE_VERSION="${{ env.PLUGIN_VERSION_BASE }}"
+          echo "Base version: $BASE_VERSION"
           
-          # Lese aktuelle Version aus der Datei für die Ausgabe
+          # Lese aktuelle Version aus der Datei
           CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
           echo "Current file version: $CURRENT_VERSION"
           
+          # Bestimme die neue Version
+          if [ "${{ env.AUTO_RELEASE }}" = "true" ]; then
+            # Split base version into parts
+            IFS='.' read -r -a VERSION_PARTS <<< "$BASE_VERSION"
+            
+            # Get current date in format YYMMDD
+            BUILD_NUMBER=$(date +'%y%m%d')
+            
+            # Create new version with date-based build number
+            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$BUILD_NUMBER"
+            echo "Auto-generating new version: $NEW_VERSION"
+          else
+            # Use fixed base version
+            NEW_VERSION="$BASE_VERSION"
+            echo "Using fixed base version: $NEW_VERSION"
+          fi
+          
           # Update version in plugin header
-          sed -i "s/Version: .*$/Version: $VERSION/" athena-ai.php
+          sed -i "s/Version: .*$/Version: $NEW_VERSION/" athena-ai.php
           
           # Update version in constant definition
-          sed -i -E "s/define\('ATHENA_AI_VERSION', '[0-9.]+'\)/define('ATHENA_AI_VERSION', '$VERSION')/" athena-ai.php
+          sed -i -E "s/define\('ATHENA_AI_VERSION', '[0-9.]+'\)/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
           
           # Debug-Ausgabe
           echo "Updated version in files:"
@@ -70,11 +89,11 @@ jobs:
           
           # Stage and commit the changes
           git add athena-ai.php
-          git commit -m "Set version to $VERSION [skip ci]"
+          git commit -m "Set version to $NEW_VERSION [skip ci]"
           git push
           
           # Set output for later steps
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
 
