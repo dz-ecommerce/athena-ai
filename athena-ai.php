@@ -29,11 +29,5 @@ define('ATHENA_AI_PLUGIN_BASENAME', plugin_basename(__FILE__));
 // Include the main plugin class
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/AthenaAI.php';
 
-// Initialize the plugin
-function run_athena_ai() {
-    $plugin = new AthenaAI();
-    $plugin->run();
-}
-
 // Run the plugin
 run_athena_ai();
