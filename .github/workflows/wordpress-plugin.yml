@@ -3,7 +3,7 @@ name: Automated Release
 env:
   PRERELEASE: "false"
   # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
-  PLUGIN_VERSION_BASE: "1.1.99"
+  PLUGIN_VERSION_BASE: "1.2.0"
   # Auto-Release aktivieren (true/false)
   AUTO_RELEASE: "true"
 
@@ -98,17 +98,17 @@ jobs:
 
 
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build assets
-        run: npm run build:css
+      - name: Setup Node.js and build assets
+        run: |
+          # Verwende die vorinstallierte Node.js-Version
+          echo "Node.js version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          
+          # Installiere Abhängigkeiten ohne Cache
+          npm ci --no-fund --no-audit --prefer-offline
+          
+          # Baue die Assets
+          npm run build:css
 
       - name: Commit compiled CSS files
         run: |
