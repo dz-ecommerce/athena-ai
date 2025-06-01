@@ -2,6 +2,8 @@
 /**
  * Handles AI-related operations
  */
+namespace AthenaAI\Admin\Services;
+
 class AIService {
     /**
      * Generate content using AI

@@ -2,6 +2,14 @@
 /**
  * Main admin module class
  */
+namespace AthenaAI\Admin;
+
+use AthenaAI\Admin\Controllers\ProfileController;
+use AthenaAI\Admin\Models\Profile;
+use AthenaAI\Admin\Services\ProfileService;
+use AthenaAI\Admin\Services\AIService;
+use AthenaAI\Admin\Views\ProfileView;
+
 class AdminModule {
     /**
      * @var ProfileController Profile controller instance

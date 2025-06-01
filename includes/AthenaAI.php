@@ -17,6 +17,8 @@ if (!defined('ATHENA_AI_VERSION')) {
     return;
 }
 
+use AthenaAI\Admin\AdminModule;
+
 /**
  * The core plugin class that is used to define internationalization,
  * admin-specific hooks, and public-facing site hooks.

@@ -2,6 +2,8 @@
 /**
  * Handles profile data operations
  */
+namespace AthenaAI\Admin\Models;
+
 class Profile {
     /**
      * @var string The option name for storing profile data

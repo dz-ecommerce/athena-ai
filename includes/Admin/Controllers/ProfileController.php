@@ -2,6 +2,12 @@
 /**
  * Handles profile-related requests
  */
+namespace AthenaAI\Admin\Controllers;
+
+use AthenaAI\Admin\Services\ProfileService;
+use AthenaAI\Admin\Services\AIService;
+use AthenaAI\Admin\Views\ProfileView;
+
 class ProfileController {
     /**
      * @var ProfileService Profile service instance
@@ -12,16 +18,23 @@ class ProfileController {
      * @var AIService AI service instance
      */
     private $aiService;
+    
+    /**
+     * @var ProfileView Profile view instance
+     */
+    private $profileView;
 
     /**
      * Constructor
      * 
      * @param ProfileService $profileService Profile service instance
      * @param AIService $aiService AI service instance
+     * @param ProfileView $profileView Profile view instance
      */
-    public function __construct($profileService, $aiService) {
+    public function __construct($profileService, $aiService, $profileView) {
         $this->profileService = $profileService;
         $this->aiService = $aiService;
+        $this->profileView = $profileView;
         
         $this->registerHooks();
     }

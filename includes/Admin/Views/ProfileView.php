@@ -2,6 +2,10 @@
 /**
  * Handles rendering of profile-related views
  */
+namespace AthenaAI\Admin\Views;
+
+use AthenaAI\Admin\Services\ProfileService;
+
 class ProfileView {
     /**
      * @var ProfileService Profile service instance

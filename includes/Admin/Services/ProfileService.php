@@ -2,6 +2,10 @@
 /**
  * Handles business logic for profile management
  */
+namespace AthenaAI\Admin\Services;
+
+use AthenaAI\Admin\Models\Profile;
+
 class ProfileService {
     /**
      * @var Profile Profile model instance

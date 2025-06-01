@@ -26,6 +26,24 @@ define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('ATHENA_AI_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
+// Register autoloader for plugin classes
+spl_autoload_register(function ($class) {
+    // Check if the class belongs to our plugin namespace
+    if (strpos($class, 'AthenaAI\\') !== 0) {
+        return;
+    }
+
+    // Convert namespace to file path
+    $file_path = str_replace('\\', DIRECTORY_SEPARATOR, $class);
+    $file_path = str_replace('AthenaAI', 'includes', $file_path);
+    $file = ATHENA_AI_PLUGIN_DIR . $file_path . '.php';
+
+    // Load the file if it exists
+    if (file_exists($file)) {
+        require_once $file;
+    }
+});
+
 // Include the main plugin class
 require_once ATHENA_AI_PLUGIN_DIR . 'includes/AthenaAI.php';
 
