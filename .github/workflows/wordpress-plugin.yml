@@ -3,7 +3,7 @@ name: Automated Release
 env:
     PRERELEASE: 'false'
     # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
-    PLUGIN_VERSION_BASE: '1.2.3'
+    PLUGIN_VERSION_BASE: '1.2.4'
     # Auto-Release aktivieren (true/false)
     AUTO_RELEASE: 'true'
 
@@ -51,18 +51,14 @@ jobs:
             - name: Set plugin version
               id: get_version
               run: |
-                  # Basis-Version aus der Workflow-Konfiguration
-                  BASE_VERSION="${{ env.PLUGIN_VERSION_BASE }}"
-                  echo "Base version: $BASE_VERSION"
-
                   # Lese aktuelle Version aus der Datei
                   CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
                   echo "Current file version: $CURRENT_VERSION"
 
                   # Bestimme die neue Version
                   if [ "${{ env.AUTO_RELEASE }}" = "true" ]; then
-                    # Split base version into parts
-                    IFS='.' read -r -a VERSION_PARTS <<< "$BASE_VERSION"
+                    # Split current version into parts
+                    IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
                     
                     # Inkrementiere die Patch-Version (letzte Nummer)
                     PATCH_VERSION=$((${VERSION_PARTS[2]} + 1))
@@ -71,9 +67,9 @@ jobs:
                     NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
                     echo "Auto-incrementing to new version: $NEW_VERSION"
                   else
-                    # Use fixed base version
-                    NEW_VERSION="$BASE_VERSION"
-                    echo "Using fixed base version: $NEW_VERSION"
+                    # Use the specified base version if auto-release is disabled
+                    NEW_VERSION="${{ env.PLUGIN_VERSION_BASE }}"
+                    echo "Using specified base version: $NEW_VERSION"
                   fi
 
                   # Update version in plugin header
