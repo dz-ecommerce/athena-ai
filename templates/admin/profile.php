@@ -680,11 +680,11 @@ jQuery(function($) {
         var modelProvider = $('input[name="athena-ai-model-provider"]:checked').val();
         var debugField = $('#athena-ai-modal-debug');
         
-        // Page selection is now optional, only check for extra info
-        if (!extraInfo.trim()) {
-            alert('Bitte gib zusätzliche Informationen ein');
-            return;
-        }
+        // Require either page selection or additional information (or both)
+if (!pageId && !extraInfo.trim()) {
+    alert('Bitte wähle eine Seite aus ODER gib zusätzliche Informationen ein');
+    return;
+}
         
         debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
         
@@ -804,11 +804,10 @@ jQuery(function($) {
         var modelProvider = $('input[name="athena-ai-model-provider-products"]:checked').val();
         var debugField = $('#athena-ai-modal-debug-products');
         
-        // Page selection is now optional, only check for extra info
-        if (!extraInfo.trim()) {
-            alert('Bitte gib zusätzliche Informationen ein');
-            return;
-        }
+        if (!pageId && !extraInfo.trim()) {
+    alert('Bitte wähle eine Seite aus ODER gib zusätzliche Informationen ein');
+    return;
+}
         
         debugField.html('<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>').show();
         
