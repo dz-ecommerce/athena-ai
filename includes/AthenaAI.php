@@ -1,17 +1,8 @@
 <?php
 /**
- * Plugin Name:       Athena AI
- * Plugin URI:        https://example.com/plugins/athena-ai
- * Description:       A powerful AI assistant for WordPress that helps you create and manage content.
- * Version:           2.0.0
- * Author:            Your Name
- * Author URI:        https://example.com
- * License:           GPL-2.0+
- * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
- * Text Domain:       athena-ai
- * Domain Path:       /languages
- * Requires at least: 5.8
- * Requires PHP:      7.4
+ * Main AthenaAI class file
+ *
+ * @package AthenaAI
  */
 
 // If this file is called directly, abort.
