@@ -1,160 +1,158 @@
 name: Automated Release
 
 env:
-  PRERELEASE: "false"
-  # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
-  PLUGIN_VERSION_BASE: "1.2.2"
-  # Auto-Release aktivieren (true/false)
-  AUTO_RELEASE: "true"
+    PRERELEASE: 'false'
+    # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
+    PLUGIN_VERSION_BASE: '1.2.2'
+    # Auto-Release aktivieren (true/false)
+    AUTO_RELEASE: 'true'
 
 on:
-  push:
-    branches: [main]
+    push:
+        branches: [main]
 
 permissions:
-  contents: write
-  id-token: write
-  pull-requests: write
+    contents: write
+    id-token: write
+    pull-requests: write
 
 # Cancel in-progress jobs or runs for the current workflow run
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure Git
-        run: |
-          git config --global user.email "info@dz-ecom.de"
-          git config --global user.name "dz-ecommerce"
-          git config --global core.autocrlf false
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Configure Git
+              run: |
+                  git config --global user.email "info@dz-ecom.de"
+                  git config --global user.name "dz-ecommerce"
+                  git config --global core.autocrlf false
 
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+            - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          coverage: none
-          extensions: mbstring, intl
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.3'
+                  coverage: none
+                  extensions: mbstring, intl
 
-      - name: Get PHP version
-        id: php_version
-        run: |
-          echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
-          echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
+            - name: Get PHP version
+              id: php_version
+              run: |
+                  echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
+                  echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
 
-      - name: Set plugin version
-        id: get_version
-        run: |
-          # Basis-Version aus der Workflow-Konfiguration
-          BASE_VERSION="${{ env.PLUGIN_VERSION_BASE }}"
-          echo "Base version: $BASE_VERSION"
-          
-          # Lese aktuelle Version aus der Datei
-          CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
-          echo "Current file version: $CURRENT_VERSION"
-          
-          # Bestimme die neue Version
-          if [ "${{ env.AUTO_RELEASE }}" = "true" ]; then
-            # Split base version into parts
-            IFS='.' read -r -a VERSION_PARTS <<< "$BASE_VERSION"
-            
-            # Inkrementiere die Patch-Version (letzte Nummer)
-            PATCH_VERSION=$((${VERSION_PARTS[2]} + 1))
-            
-            # Erstelle neue Version mit inkrementierter Patch-Version
-            NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
-            echo "Auto-incrementing to new version: $NEW_VERSION"
-          else
-            # Use fixed base version
-            NEW_VERSION="$BASE_VERSION"
-            echo "Using fixed base version: $NEW_VERSION"
-          fi
-          
-          # Update version in plugin header
-          sed -i "s/Version: .*$/Version: $NEW_VERSION/" athena-ai.php
-          
-          # Update version in constant definition
-          sed -i -E "s/define\('ATHENA_AI_VERSION', '[0-9.]+'\)/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
-          
-          # Debug-Ausgabe
-          echo "Updated version in files:"
-          grep -n "Version:" athena-ai.php
-          grep -n "ATHENA_AI_VERSION" athena-ai.php
-          
-          # Stage and commit the changes
-          git add athena-ai.php
-          git commit -m "Set version to $NEW_VERSION [skip ci]"
-          git push
-          
-          # Set output for later steps
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            - name: Set plugin version
+              id: get_version
+              run: |
+                  # Basis-Version aus der Workflow-Konfiguration
+                  BASE_VERSION="${{ env.PLUGIN_VERSION_BASE }}"
+                  echo "Base version: $BASE_VERSION"
 
+                  # Lese aktuelle Version aus der Datei
+                  CURRENT_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+                  echo "Current file version: $CURRENT_VERSION"
 
+                  # Bestimme die neue Version
+                  if [ "${{ env.AUTO_RELEASE }}" = "true" ]; then
+                    # Split base version into parts
+                    IFS='.' read -r -a VERSION_PARTS <<< "$BASE_VERSION"
+                    
+                    # Inkrementiere die Patch-Version (letzte Nummer)
+                    PATCH_VERSION=$((${VERSION_PARTS[2]} + 1))
+                    
+                    # Erstelle neue Version mit inkrementierter Patch-Version
+                    NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH_VERSION"
+                    echo "Auto-incrementing to new version: $NEW_VERSION"
+                  else
+                    # Use fixed base version
+                    NEW_VERSION="$BASE_VERSION"
+                    echo "Using fixed base version: $NEW_VERSION"
+                  fi
 
-      - name: Setup Node.js and build assets
-        run: |
-          # Verwende die vorinstallierte Node.js-Version
-          echo "Node.js version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          
-          # Installiere Abhängigkeiten ohne Cache
-          npm ci --no-fund --no-audit --prefer-offline
-          
-          # Baue die Assets
-          npm run build:css
+                  # Update version in plugin header
+                  sed -i "s/Version: .*$/Version: $NEW_VERSION/" athena-ai.php
 
-      - name: Commit compiled CSS files
-        run: |
-          # Stage CSS files
-          git add assets/css/*.css
+                  # Update version in constant definition
+                  sed -i -E "s/define\('ATHENA_AI_VERSION', '[0-9.]+'\)/define('ATHENA_AI_VERSION', '$NEW_VERSION')/" athena-ai.php
 
-          # Only commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No CSS changes to commit"
-          else
-            git commit -m "Update compiled CSS files for v${{ steps.get_version.outputs.version }} [skip ci]"
-            git push
-          fi
+                  # Debug-Ausgabe
+                  echo "Updated version in files:"
+                  grep -n "Version:" athena-ai.php
+                  grep -n "ATHENA_AI_VERSION" athena-ai.php
 
-      - name: Create plugin archives
-        run: |
-          # Create temporary directories
-          mkdir -p build/athena-ai
-          mkdir -p build/athena-ai-${{ steps.get_version.outputs.version }}
+                  # Stage and commit the changes
+                  git add athena-ai.php
+                  git commit -m "Set version to $NEW_VERSION [skip ci]"
+                  git push
 
-          # Copy plugin files to both directories
-          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai/
-          rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai-${{ steps.get_version.outputs.version }}/
+                  # Set output for later steps
+                  echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+                  echo "previous_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-          # Create ZIP archives
-          cd build
-          zip -r athena-ai.zip athena-ai
-          zip -r athena-ai-${{ steps.get_version.outputs.version }}.zip athena-ai-${{ steps.get_version.outputs.version }}
-          cd ..
+            - name: Setup Node.js and build assets
+              run: |
+                  # Verwende die vorinstallierte Node.js-Version
+                  echo "Node.js version: $(node -v)"
+                  echo "NPM version: $(npm -v)"
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          name: Release v${{ steps.get_version.outputs.version }}
-          files: |
-            build/athena-ai.zip
-            build/athena-ai-${{ steps.get_version.outputs.version }}.zip
-          body: |
-            Automated release for v${{ steps.get_version.outputs.version }}
+                  # Installiere Abhängigkeiten ohne Cache
+                  npm ci --no-fund --no-audit --prefer-offline
 
-            Changes in this release:
-            - Automatic version bump from v${{ steps.get_version.outputs.previous_version }} to v${{ steps.get_version.outputs.version }}
-            - Compiled CSS files with latest Tailwind changes
-            - Built with PHP ${{ steps.php_version.outputs.php_version }}
-          prerelease: ${{ env.PRERELEASE }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+                  # Baue die Assets
+                  npm run build:css
+
+            - name: Commit compiled CSS files
+              run: |
+                  # Stage CSS files
+                  git add assets/css/*.css
+
+                  # Only commit if there are changes
+                  if git diff --staged --quiet; then
+                    echo "No CSS changes to commit"
+                  else
+                    git commit -m "Update compiled CSS files for v${{ steps.get_version.outputs.version }} [skip ci]"
+                    git push
+                  fi
+
+            - name: Create plugin archives
+              run: |
+                  # Create temporary directories
+                  mkdir -p build/athena-ai
+                  mkdir -p build/athena-ai-${{ steps.get_version.outputs.version }}
+
+                  # Copy plugin files to both directories
+                  rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai/
+                  rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai-${{ steps.get_version.outputs.version }}/
+
+                  # Create ZIP archives
+                  cd build
+                  zip -r athena-ai.zip athena-ai
+                  zip -r athena-ai-${{ steps.get_version.outputs.version }}.zip athena-ai-${{ steps.get_version.outputs.version }}
+                  cd ..
+
+            - name: Create GitHub release
+              uses: softprops/action-gh-release@v1
+              env:
+                  GITHUB_REPOSITORY: ${{ github.repository }}
+              with:
+                  tag_name: v${{ steps.get_version.outputs.version }}
+                  name: Release v${{ steps.get_version.outputs.version }}
+                  files: |
+                      build/athena-ai.zip
+                      build/athena-ai-${{ steps.get_version.outputs.version }}.zip
+                  body: |
+                      Automated release for v${{ steps.get_version.outputs.version }}
+
+                      Changes in this release:
+                      - Automatic version bump from v${{ steps.get_version.outputs.previous_version }} to v${{ steps.get_version.outputs.version }}
+                      - Compiled CSS files with latest Tailwind changes
+                      - Built with PHP ${{ steps.php_version.outputs.php_version }}
+                  prerelease: ${{ env.PRERELEASE }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
