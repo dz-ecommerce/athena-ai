@@ -1,0 +1,113 @@
+name: Create Release from Tag
+
+on:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: 'Tag to create release from (e.g. v2.2.1)'
+                required: true
+                type: string
+            prerelease:
+                description: 'Is this a prerelease?'
+                required: false
+                default: false
+                type: boolean
+
+permissions:
+    contents: write
+    id-token: write
+
+jobs:
+    create-release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Configure Git
+              run: |
+                  git config --global user.email "info@dz-ecom.de"
+                  git config --global user.name "dz-ecommerce"
+                  git config --global core.autocrlf false
+
+            - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+                  ref: ${{ github.event.inputs.tag }}
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.3'
+                  coverage: none
+                  extensions: mbstring, intl
+
+            - name: Get PHP version
+              id: php_version
+              run: |
+                  echo "php_version=$(php -r 'echo PHP_VERSION;')" >> $GITHUB_OUTPUT
+                  echo "Using PHP version: $(php -r 'echo PHP_VERSION;')"
+
+            - name: Get version from tag
+              id: get_version
+              run: |
+                  # Get version from tag (remove 'v' prefix if present)
+                  TAG=${{ github.event.inputs.tag }}
+                  VERSION=${TAG#v}
+                  echo "Version from tag: $VERSION"
+
+                  # Check if version matches what's in the file
+                  FILE_VERSION=$(grep "Version:" athena-ai.php | sed -n 's/.*Version: *\([0-9.]*\).*/\1/p')
+                  echo "Version in file: $FILE_VERSION"
+
+                  if [ "$VERSION" != "$FILE_VERSION" ]; then
+                    echo "Warning: Tag version ($VERSION) does not match file version ($FILE_VERSION)"
+                  fi
+
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '16'
+                  cache: 'npm'
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build CSS with Tailwind
+              run: npm run build:css
+
+            - name: Create plugin archives
+              run: |
+                  # Create temporary directories
+                  mkdir -p build/athena-ai
+                  mkdir -p build/athena-ai-${{ steps.get_version.outputs.version }}
+
+                  # Copy plugin files to both directories
+                  rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai/
+                  rsync -av --exclude='.git*' --exclude='build' --exclude='node_modules' --exclude='tests' --exclude='php83' . build/athena-ai-${{ steps.get_version.outputs.version }}/
+
+                  # Create ZIP archives
+                  cd build
+                  zip -r athena-ai.zip athena-ai
+                  zip -r athena-ai-${{ steps.get_version.outputs.version }}.zip athena-ai-${{ steps.get_version.outputs.version }}
+                  cd ..
+
+            - name: Create GitHub release
+              uses: softprops/action-gh-release@v1
+              env:
+                  GITHUB_REPOSITORY: ${{ github.repository }}
+              with:
+                  tag_name: ${{ github.event.inputs.tag }}
+                  name: Release ${{ github.event.inputs.tag }}
+                  files: |
+                      build/athena-ai.zip
+                      build/athena-ai-${{ steps.get_version.outputs.version }}.zip
+                  body: |
+                      Release für ${{ github.event.inputs.tag }}
+
+                      ### Änderungen in dieser Version:
+                      - Basierend auf der stabilen Version 1.1.98
+                      - Versionsnummer auf 2.2.1 aktualisiert
+                      - Kompilierte CSS-Dateien mit den neuesten Tailwind-Änderungen
+                      - Erstellt mit PHP ${{ steps.php_version.outputs.php_version }}
+                  prerelease: ${{ github.event.inputs.prerelease }}
+                  token: ${{ secrets.GITHUB_TOKEN }}

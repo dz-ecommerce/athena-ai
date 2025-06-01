@@ -1,15 +1,13 @@
 <?php
 /**
- * Plugin Name:       Athena AI
- * Plugin URI:        https://example.com/plugins/athena-ai
- * Description:       A powerful AI assistant for WordPress that helps you create and manage content.
- * Version: 1.2.6
- * Author:            Your Name
- * Author URI:        https://example.com
- * License:           GPL-2.0+
- * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
- * Text Domain:       athena-ai
- * Domain Path:       /languages
+ * Plugin Name: Athena AI
+ * Plugin URI: https://your-domain.com/athena-ai
+ * Description: A powerful AI integration plugin for WordPress
+ * Version:  2.2.1
+ * Author: Your Name
+ * Author URI: https://your-domain.com
+ * Text Domain: athena-ai
+ * Domain Path: /languages
  * Requires at least: 5.8
  * Requires PHP:      7.4
  */
@@ -20,7 +18,7 @@ if (!defined('WPINC')) {
 }
 
 // Define plugin constants
-define('ATHENA_AI_VERSION', '1.2.6');
+define('ATHENA_AI_VERSION', '2.2.1');
 define('ATHENA_AI_PLUGIN_FILE', __FILE__);
 define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
