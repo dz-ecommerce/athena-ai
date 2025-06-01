@@ -63,7 +63,7 @@ class AdminModule {
             __('Athena AI', 'athena-ai'),
             'manage_options',
             'athena-ai',
-            '',
+            [$this, 'dashboard_page'],
             'dashicons-admin-generic',
             30
         );
@@ -76,6 +76,19 @@ class AdminModule {
             'athena-ai-profile',
             [$this->profile_controller, 'renderProfilePage']
         );
+    }
+
+    /**
+     * Render the dashboard page
+     */
+    public function dashboard_page() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        
+        // Include the template
+        include ATHENA_AI_PLUGIN_DIR . 'templates/admin/dashboard.php';
     }
 
     /**
