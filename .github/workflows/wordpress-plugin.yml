@@ -3,7 +3,7 @@ name: Automated Release
 env:
     PRERELEASE: 'false'
     # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
-    PLUGIN_VERSION_BASE: '1.2.2'
+    PLUGIN_VERSION_BASE: '1.2.3'
     # Auto-Release aktivieren (true/false)
     AUTO_RELEASE: 'true'
 
@@ -89,8 +89,14 @@ jobs:
 
                   # Stage and commit the changes
                   git add athena-ai.php
-                  git commit -m "Set version to $NEW_VERSION [skip ci]"
-                  git push
+
+                  # Only commit if there are changes
+                  if git diff --staged --quiet; then
+                    echo "No version changes to commit - file already at version $NEW_VERSION"
+                  else
+                    git commit -m "Set version to $NEW_VERSION [skip ci]"
+                    git push
+                  fi
 
                   # Set output for later steps
                   echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
