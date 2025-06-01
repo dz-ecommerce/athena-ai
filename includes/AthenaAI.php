@@ -10,12 +10,12 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Define plugin constants
-define('ATHENA_AI_VERSION', '2.0.0');
-define('ATHENA_AI_PLUGIN_FILE', __FILE__);
-define('ATHENA_AI_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('ATHENA_AI_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('ATHENA_AI_PLUGIN_BASENAME', plugin_basename(__FILE__));
+// Ensure plugin constants are defined
+if (!defined('ATHENA_AI_VERSION')) {
+    // Diese Datei sollte normalerweise über die Hauptdatei geladen werden,
+    // wo die Konstanten bereits definiert sind
+    return;
+}
 
 /**
  * The core plugin class that is used to define internationalization,
