@@ -3,7 +3,7 @@ name: Automated Release
 env:
   PRERELEASE: "false"
   # Hier wird die Basis-Version definiert - sollte auf die aktuelle Minor-Version gesetzt werden
-  PLUGIN_VERSION_BASE: "1.2.1"
+  PLUGIN_VERSION_BASE: "1.2.2"
   # Auto-Release aktivieren (true/false)
   AUTO_RELEASE: "true"
 
