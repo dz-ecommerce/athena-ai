@@ -15,6 +15,27 @@ class AdminModule {
      * @var ProfileController Profile controller instance
      */
     private $profile_controller;
+    
+    /**
+     * @var string The plugin name
+     */
+    private $plugin_name;
+    
+    /**
+     * @var string The plugin version
+     */
+    private $version;
+    
+    /**
+     * Constructor
+     * 
+     * @param string $plugin_name The name of the plugin
+     * @param string $version The version of the plugin
+     */
+    public function __construct($plugin_name, $version) {
+        $this->plugin_name = $plugin_name;
+        $this->version = $version;
+    }
 
     /**
      * Initialize the admin module
@@ -31,16 +52,12 @@ class AdminModule {
             $ai_service,
             new ProfileView($profile_service)
         );
-        
-        // Register hooks
-        add_action('admin_menu', [$this, 'addAdminMenu']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueueAdminAssets']);
     }
 
     /**
      * Add admin menu items
      */
-    public function addAdminMenu() {
+    public function add_admin_menu() {
         add_menu_page(
             __('Athena AI', 'athena-ai'),
             __('Athena AI', 'athena-ai'),
@@ -66,7 +83,7 @@ class AdminModule {
      * 
      * @param string $hook Current admin page
      */
-    public function enqueueAdminAssets($hook) {
+    public function enqueue_admin_assets($hook) {
         if (strpos($hook, 'athena-ai') === false) {
             return;
         }
