@@ -4,11 +4,42 @@
  */
 namespace AthenaAI\Admin\Models;
 
+use AthenaAI\Admin\Core\FieldStorage;
+use AthenaAI\Admin\Core\FieldSanitizer;
+
 class Profile {
     /**
-     * @var string The option name for storing profile data
+     * @var FieldStorage Storage handler
      */
-    private $option_name = 'athena_ai_profiles';
+    private $storage;
+    
+    /**
+     * Field type configuration for sanitization
+     */
+    private const FIELD_TYPES = [
+        'company_name' => 'text',
+        'company_industry' => 'text', 
+        'company_description' => 'textarea',
+        'company_products' => 'textarea',
+        'company_usps' => 'textarea',
+        'target_audience' => 'textarea',
+        'age_group' => 'array',
+        'company_values' => 'textarea',
+        'expertise_areas' => 'textarea',
+        'certifications' => 'textarea',
+        'seo_keywords' => 'textarea',
+        'avoided_topics' => 'textarea',
+        'customer_type' => 'text',
+        'preferred_tone' => 'text',
+        'tonality' => 'array'
+    ];
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->storage = new FieldStorage();
+    }
 
     /**
      * Get profile data
@@ -16,7 +47,7 @@ class Profile {
      * @return array Profile data
      */
     public function getProfileData() {
-        return get_option($this->option_name, []);
+        return $this->storage->get('profiles');
     }
 
     /**
@@ -30,32 +61,8 @@ class Profile {
             return false;
         }
 
-        $sanitized_data = $this->sanitizeProfileData($data);
-        return update_option($this->option_name, $sanitized_data);
-    }
-
-    /**
-     * Sanitize profile data
-     * 
-     * @param array $data Raw profile data
-     * @return array Sanitized profile data
-     */
-    private function sanitizeProfileData($data) {
-        $sanitized = [];
-        
-        if (!is_array($data)) {
-            return $sanitized;
-        }
-
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $sanitized[$key] = array_map('sanitize_text_field', $value);
-            } else {
-                $sanitized[$key] = sanitize_text_field($value);
-            }
-        }
-
-        return $sanitized;
+        $sanitized_data = FieldSanitizer::sanitize($data, self::FIELD_TYPES);
+        return $this->storage->save('profiles', $sanitized_data);
     }
 
     /**
@@ -66,7 +73,15 @@ class Profile {
      * @return mixed Field value or default
      */
     public function getProfileField($field, $default = '') {
-        $profile_data = $this->getProfileData();
-        return $profile_data[$field] ?? $default;
+        return $this->storage->getField('profiles', $field, $default);
+    }
+    
+    /**
+     * Get field configuration for validation/rendering
+     * 
+     * @return array Field type configuration
+     */
+    public static function getFieldTypes(): array {
+        return self::FIELD_TYPES;
     }
 }

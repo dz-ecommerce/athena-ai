@@ -11,6 +11,10 @@ declare(strict_types=1);
 
 namespace AthenaAI\Admin;
 
+use AthenaAI\Admin\Core\FieldSanitizer;
+use AthenaAI\Admin\Models\Profile;
+use AthenaAI\Admin\Config\IndustryConfig;
+
 if (!defined('ABSPATH')) {
     exit();
 }
@@ -19,32 +23,31 @@ if (!defined('ABSPATH')) {
  * ProfilePage-Klasse zur Verwaltung von Athena AI Profilen.
  */
 class ProfilePage {
+    
+    /**
+     * @var Profile Profile model instance
+     */
+    private static $profile_model;
+
     /**
      * Registriert die Profilseite im Admin-Menü.
-     *
-     * @return void
      */
     public static function register(): void {
+        self::$profile_model = new Profile();
+        
         add_action('admin_menu', [self::class, 'add_profile_page'], 20);
         add_action('admin_init', [self::class, 'register_settings']);
     }
 
     /**
      * Fügt die Profilseite zum Admin-Menü hinzu.
-     * 
-     * Diese Seite soll vor der Einstellungsseite erscheinen.
-     *
-     * @return void
      */
     public static function add_profile_page(): void {
-        // Im Athena AI Hauptmenü registrieren (vor Settings)
-        $parent_slug = 'edit.php?post_type=athena-feed';
-        
         add_submenu_page(
-            $parent_slug,
+            'edit.php?post_type=athena-feed',
             __('Athena AI Profiles', 'athena-ai'),
             __('Profiles', 'athena-ai'),
-            'manage_athena_ai', // Verwende die gleiche Berechtigung wie Settings
+            'manage_athena_ai',
             'athena-ai-profiles',
             [self::class, 'render_page']
         );
@@ -52,8 +55,6 @@ class ProfilePage {
 
     /**
      * Registriert die Einstellungen für die Profilseite.
-     *
-     * @return void
      */
     public static function register_settings(): void {
         register_setting(
@@ -61,99 +62,26 @@ class ProfilePage {
             'athena_ai_profiles', 
             ['sanitize_callback' => [self::class, 'sanitize_profile_settings']]
         );
-        
-        // Keine Einstellungsgruppen oder Felder für Profile Configuration
     }
     
     /**
-     * Sanitiert die Profileinstellungen.
-     *
-     * @param array $input Die Eingabewerte.
-     * @return array Die sanitierten Werte.
+     * Sanitiert die Profileinstellungen mittels FieldSanitizer.
      */
     public static function sanitize_profile_settings(array $input): array {
-        $sanitized = [];
-        
-        // Unternehmensprofil
-        if (isset($input['company_name'])) {
-            $sanitized['company_name'] = sanitize_text_field($input['company_name']);
-        }
-        
-        if (isset($input['company_industry'])) {
-            $sanitized['company_industry'] = sanitize_text_field($input['company_industry']);
-        }
-        
-        if (isset($input['company_description'])) {
-            $sanitized['company_description'] = sanitize_textarea_field($input['company_description']);
-        }
-        
-        // Produkte und Dienstleistungen
-        if (isset($input['company_products'])) {
-            $sanitized['company_products'] = sanitize_textarea_field($input['company_products']);
-        }
-        
-        if (isset($input['company_usps'])) {
-            $sanitized['company_usps'] = sanitize_textarea_field($input['company_usps']);
-        }
-        
-        // Zielgruppe
-        if (isset($input['target_audience'])) {
-            $sanitized['target_audience'] = sanitize_textarea_field($input['target_audience']);
-        }
-        
-        if (isset($input['age_group']) && is_array($input['age_group'])) {
-            $sanitized['age_group'] = array_map('sanitize_text_field', $input['age_group']);
-        }
-        
-        // Unternehmenswerte
-        if (isset($input['company_values'])) {
-            $sanitized['company_values'] = sanitize_textarea_field($input['company_values']);
-        }
-        
-        // Fachwissen und Expertise
-        if (isset($input['expertise_areas'])) {
-            $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);
-        }
-        
-        if (isset($input['certifications'])) {
-            $sanitized['certifications'] = sanitize_textarea_field($input['certifications']);
-        }
-        
-        // Wichtige Keywords
-        if (isset($input['seo_keywords'])) {
-            $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);
-        }
-        
-        // Zusätzliche Informationen
-        if (isset($input['avoided_topics'])) {
-            $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
-        }
-        
-        // B2B oder B2C
-        if (isset($input['customer_type'])) {
-            $sanitized['customer_type'] = sanitize_text_field($input['customer_type']);
-        }
-        
-        // Bevorzugte Ansprache
-        if (isset($input['preferred_tone'])) {
-            $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);
-        }
-        
-        // Tonalität
-        if (isset($input['tonality']) && is_array($input['tonality'])) {
-            $sanitized['tonality'] = array_map('sanitize_text_field', $input['tonality']);
-        }
-        
-        return $sanitized;
+        return FieldSanitizer::sanitize($input, Profile::getFieldTypes());
     }
 
     /**
      * Rendert die Profilseite.
-     *
-     * @return void
      */
     public static function render_page(): void {
-        // Template für die Profilseite laden
         require_once plugin_dir_path(dirname(__DIR__)) . 'templates/admin/profile.php';
+    }
+    
+    /**
+     * Holt die Branchenkonfiguration (für Template-Nutzung).
+     */
+    public static function get_industry_groups(): array {
+        return IndustryConfig::getIndustryGroups();
     }
 }
