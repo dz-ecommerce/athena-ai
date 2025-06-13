@@ -19,28 +19,6 @@ if (!defined('ABSPATH')) {
  * ProfilePage-Klasse zur Verwaltung von Athena AI Profilen.
  */
 class ProfilePage {
-    
-    /**
-     * Feldkonfiguration für die Sanitization
-     */
-    private const FIELD_CONFIG = [
-        'company_name' => 'text',
-        'company_industry' => 'text', 
-        'company_description' => 'textarea',
-        'company_products' => 'textarea',
-        'company_usps' => 'textarea',
-        'target_audience' => 'textarea',
-        'age_group' => 'array',
-        'company_values' => 'textarea',
-        'expertise_areas' => 'textarea',
-        'certifications' => 'textarea',
-        'seo_keywords' => 'textarea',
-        'avoided_topics' => 'textarea',
-        'customer_type' => 'text',
-        'preferred_tone' => 'text',
-        'tonality' => 'array'
-    ];
-
     /**
      * Registriert die Profilseite im Admin-Menü.
      *
@@ -88,7 +66,7 @@ class ProfilePage {
     }
     
     /**
-     * Sanitiert die Profileinstellungen basierend auf der Feldkonfiguration.
+     * Sanitiert die Profileinstellungen.
      *
      * @param array $input Die Eingabewerte.
      * @return array Die sanitierten Werte.
@@ -96,14 +74,74 @@ class ProfilePage {
     public static function sanitize_profile_settings(array $input): array {
         $sanitized = [];
         
-        foreach (self::FIELD_CONFIG as $field => $type) {
-            if (!isset($input[$field])) continue;
-            
-            $sanitized[$field] = match($type) {
-                'text' => sanitize_text_field($input[$field]),
-                'textarea' => sanitize_textarea_field($input[$field]),
-                'array' => is_array($input[$field]) ? array_map('sanitize_text_field', $input[$field]) : []
-            };
+        // Unternehmensprofil
+        if (isset($input['company_name'])) {
+            $sanitized['company_name'] = sanitize_text_field($input['company_name']);
+        }
+        
+        if (isset($input['company_industry'])) {
+            $sanitized['company_industry'] = sanitize_text_field($input['company_industry']);
+        }
+        
+        if (isset($input['company_description'])) {
+            $sanitized['company_description'] = sanitize_textarea_field($input['company_description']);
+        }
+        
+        // Produkte und Dienstleistungen
+        if (isset($input['company_products'])) {
+            $sanitized['company_products'] = sanitize_textarea_field($input['company_products']);
+        }
+        
+        if (isset($input['company_usps'])) {
+            $sanitized['company_usps'] = sanitize_textarea_field($input['company_usps']);
+        }
+        
+        // Zielgruppe
+        if (isset($input['target_audience'])) {
+            $sanitized['target_audience'] = sanitize_textarea_field($input['target_audience']);
+        }
+        
+        if (isset($input['age_group']) && is_array($input['age_group'])) {
+            $sanitized['age_group'] = array_map('sanitize_text_field', $input['age_group']);
+        }
+        
+        // Unternehmenswerte
+        if (isset($input['company_values'])) {
+            $sanitized['company_values'] = sanitize_textarea_field($input['company_values']);
+        }
+        
+        // Fachwissen und Expertise
+        if (isset($input['expertise_areas'])) {
+            $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);
+        }
+        
+        if (isset($input['certifications'])) {
+            $sanitized['certifications'] = sanitize_textarea_field($input['certifications']);
+        }
+        
+        // Wichtige Keywords
+        if (isset($input['seo_keywords'])) {
+            $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);
+        }
+        
+        // Zusätzliche Informationen
+        if (isset($input['avoided_topics'])) {
+            $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
+        }
+        
+        // B2B oder B2C
+        if (isset($input['customer_type'])) {
+            $sanitized['customer_type'] = sanitize_text_field($input['customer_type']);
+        }
+        
+        // Bevorzugte Ansprache
+        if (isset($input['preferred_tone'])) {
+            $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);
+        }
+        
+        // Tonalität
+        if (isset($input['tonality']) && is_array($input['tonality'])) {
+            $sanitized['tonality'] = array_map('sanitize_text_field', $input['tonality']);
         }
         
         return $sanitized;
@@ -117,85 +155,5 @@ class ProfilePage {
     public static function render_page(): void {
         // Template für die Profilseite laden
         require_once plugin_dir_path(dirname(__DIR__)) . 'templates/admin/profile.php';
-    }
-
-    /**
-     * Holt die Branchenkonfiguration (für Template-Nutzung).
-     */
-    public static function get_industry_groups(): array {
-        return [
-            'Dienstleistungen' => [
-                'accounting' => 'Buchhaltung & Steuern',
-                'advertising' => 'Werbung & Marketing',
-                'consulting' => 'Unternehmensberatung',
-                'financial' => 'Finanzdienstleistungen',
-                'insurance' => 'Versicherungen',
-                'legal' => 'Rechtsberatung',
-                'real_estate' => 'Immobilien'
-            ],
-            'IT & Technologie' => [
-                'it_services' => 'IT-Dienstleistungen',
-                'software' => 'Softwareentwicklung',
-                'web_design' => 'Webdesign & -entwicklung',
-                'ecommerce' => 'E-Commerce',
-                'telecommunications' => 'Telekommunikation',
-                'data_analytics' => 'Datenanalyse',
-                'cloud_computing' => 'Cloud Computing',
-                'cybersecurity' => 'IT-Sicherheit'
-            ],
-            'Handel & Einzelhandel' => [
-                'retail' => 'Einzelhandel',
-                'wholesale' => 'Großhandel',
-                'ecommerce_retail' => 'Online-Handel',
-                'consumer_goods' => 'Konsumgüter',
-                'food_retail' => 'Lebensmittelhandel',
-                'fashion' => 'Mode & Bekleidung',
-                'electronics_retail' => 'Elektronik',
-                'furniture' => 'Möbel & Einrichtung'
-            ],
-            'Produktion & Fertigung' => [
-                'manufacturing' => 'Fertigungsindustrie',
-                'automotive' => 'Automobilindustrie',
-                'aerospace' => 'Luft- und Raumfahrt',
-                'electronics' => 'Elektronik & Elektrotechnik',
-                'chemicals' => 'Chemische Industrie',
-                'pharma' => 'Pharmazeutische Industrie',
-                'machinery' => 'Maschinenbau',
-                'textiles' => 'Textilindustrie'
-            ],
-            'Gesundheitswesen' => [
-                'healthcare' => 'Gesundheitswesen',
-                'medical_practice' => 'Arztpraxis',
-                'hospital' => 'Krankenhaus',
-                'biotech' => 'Biotechnologie',
-                'medical_devices' => 'Medizintechnik',
-                'pharmaceutical' => 'Pharmaindustrie',
-                'healthcare_services' => 'Gesundheitsdienstleistungen',
-                'eldercare' => 'Altenpflege'
-            ],
-            'Bildung & Forschung' => [
-                'education' => 'Bildungseinrichtungen',
-                'school' => 'Schulen',
-                'university' => 'Hochschulen & Universitäten',
-                'vocational_training' => 'Berufsbildung',
-                'research' => 'Forschungseinrichtungen',
-                'e_learning' => 'E-Learning & Online-Bildung'
-            ],
-            'Weitere Branchen' => [
-                'agriculture' => 'Landwirtschaft',
-                'architecture' => 'Architektur & Ingenieurwesen',
-                'art' => 'Kunst & Design',
-                'beauty' => 'Schönheit & Kosmetik',
-                'construction' => 'Bauwesen',
-                'energy' => 'Energie & Versorgung',
-                'entertainment' => 'Unterhaltung & Freizeit',
-                'food' => 'Gastronomie & Lebensmittel',
-                'hospitality' => 'Hotellerie & Gastgewerbe',
-                'media' => 'Medien & Kommunikation',
-                'transport' => 'Transport & Logistik',
-                'travel' => 'Tourismus & Reisen',
-                'other' => 'Sonstige'
-            ]
-        ];
     }
 }

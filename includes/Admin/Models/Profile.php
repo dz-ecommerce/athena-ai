@@ -9,27 +9,6 @@ class Profile {
      * @var string The option name for storing profile data
      */
     private $option_name = 'athena_ai_profiles';
-    
-    /**
-     * Field type configuration for sanitization
-     */
-    private const FIELD_TYPES = [
-        'company_name' => 'text',
-        'company_industry' => 'text', 
-        'company_description' => 'textarea',
-        'company_products' => 'textarea',
-        'company_usps' => 'textarea',
-        'target_audience' => 'textarea',
-        'age_group' => 'array',
-        'company_values' => 'textarea',
-        'expertise_areas' => 'textarea',
-        'certifications' => 'textarea',
-        'seo_keywords' => 'textarea',
-        'avoided_topics' => 'textarea',
-        'customer_type' => 'text',
-        'preferred_tone' => 'text',
-        'tonality' => 'array'
-    ];
 
     /**
      * Get profile data
@@ -56,7 +35,7 @@ class Profile {
     }
 
     /**
-     * Sanitize profile data based on field types
+     * Sanitize profile data
      * 
      * @param array $data Raw profile data
      * @return array Sanitized profile data
@@ -68,14 +47,12 @@ class Profile {
             return $sanitized;
         }
 
-        foreach (self::FIELD_TYPES as $field => $type) {
-            if (!isset($data[$field])) continue;
-            
-            $sanitized[$field] = match($type) {
-                'text' => sanitize_text_field($data[$field]),
-                'textarea' => sanitize_textarea_field($data[$field]),
-                'array' => is_array($data[$field]) ? array_map('sanitize_text_field', $data[$field]) : []
-            };
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $sanitized[$key] = array_map('sanitize_text_field', $value);
+            } else {
+                $sanitized[$key] = sanitize_text_field($value);
+            }
         }
 
         return $sanitized;
@@ -91,14 +68,5 @@ class Profile {
     public function getProfileField($field, $default = '') {
         $profile_data = $this->getProfileData();
         return $profile_data[$field] ?? $default;
-    }
-    
-    /**
-     * Get field configuration for validation/rendering
-     * 
-     * @return array Field type configuration
-     */
-    public static function getFieldTypes(): array {
-        return self::FIELD_TYPES;
     }
 }

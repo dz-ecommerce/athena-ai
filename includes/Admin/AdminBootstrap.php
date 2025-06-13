@@ -102,8 +102,6 @@ class AdminBootstrap {
         DatabaseUpgrade::init();
 
         // Profilseite initialisieren
-        // TODO: Migration zu ProfileController/ProfileView/ProfileService (MVC-Pattern)
-        // Aktuelle Implementierung: Statische ProfilePage-Klasse
         ProfilePage::register();
     }
 
