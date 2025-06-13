@@ -4,14 +4,11 @@
  */
 namespace AthenaAI\Admin\Models;
 
-use AthenaAI\Admin\Core\FieldStorage;
-use AthenaAI\Admin\Core\FieldSanitizer;
-
 class Profile {
     /**
-     * @var FieldStorage Storage handler
+     * @var string The option name for storing profile data
      */
-    private $storage;
+    private $option_name = 'athena_ai_profiles';
     
     /**
      * Field type configuration for sanitization
@@ -35,19 +32,12 @@ class Profile {
     ];
 
     /**
-     * Constructor
-     */
-    public function __construct() {
-        $this->storage = new FieldStorage();
-    }
-
-    /**
      * Get profile data
      * 
      * @return array Profile data
      */
     public function getProfileData() {
-        return $this->storage->get('profiles');
+        return get_option($this->option_name, []);
     }
 
     /**
@@ -61,8 +51,34 @@ class Profile {
             return false;
         }
 
-        $sanitized_data = FieldSanitizer::sanitize($data, self::FIELD_TYPES);
-        return $this->storage->save('profiles', $sanitized_data);
+        $sanitized_data = $this->sanitizeProfileData($data);
+        return update_option($this->option_name, $sanitized_data);
+    }
+
+    /**
+     * Sanitize profile data based on field types
+     * 
+     * @param array $data Raw profile data
+     * @return array Sanitized profile data
+     */
+    private function sanitizeProfileData($data) {
+        $sanitized = [];
+        
+        if (!is_array($data)) {
+            return $sanitized;
+        }
+
+        foreach (self::FIELD_TYPES as $field => $type) {
+            if (!isset($data[$field])) continue;
+            
+            $sanitized[$field] = match($type) {
+                'text' => sanitize_text_field($data[$field]),
+                'textarea' => sanitize_textarea_field($data[$field]),
+                'array' => is_array($data[$field]) ? array_map('sanitize_text_field', $data[$field]) : []
+            };
+        }
+
+        return $sanitized;
     }
 
     /**
@@ -73,7 +89,8 @@ class Profile {
      * @return mixed Field value or default
      */
     public function getProfileField($field, $default = '') {
-        return $this->storage->getField('profiles', $field, $default);
+        $profile_data = $this->getProfileData();
+        return $profile_data[$field] ?? $default;
     }
     
     /**
