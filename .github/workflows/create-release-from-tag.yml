@@ -68,10 +68,15 @@ jobs:
                   fi
 
             - name: Checkout specific tag
-              uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
-                  ref: ${{ github.event.inputs.tag }}
+              run: |
+                  TAG=${{ github.event.inputs.tag }}
+                  echo "Switching to tag $TAG..."
+
+                  # Fetch all tags to make sure we have the latest
+                  git fetch --tags
+
+                  # Checkout the tag
+                  git checkout "$TAG"
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
