@@ -1,96 +1,59 @@
 # Athena AI
 
-A powerful AI assistant for WordPress that helps you create and manage content with the help of artificial intelligence.
+A powerful AI integration plugin for WordPress that provides advanced AI features and capabilities.
 
 ## Features
 
-- **AI-Powered Content Generation**: Generate high-quality content using advanced AI models
-- **Profile Management**: Store and manage company and product information
-- **Smart Content Analysis**: Extract key information from existing content
-- **Multiple AI Providers**: Support for various AI providers (OpenAI, Gemini, etc.)
-- **Modern Admin Interface**: Intuitive and responsive design
-- **Fully Extensible**: Built with modular architecture for easy extension
-- **Multilingual Support**: Ready for translation with included .pot file
-- **Secure**: Follows WordPress coding standards and security best practices
+- Feed management system with categories
+- Advanced feed parsing technology for all feed formats (RSS, Atom, RDF)
+- Domain-based dynamic handling for problematic feeds
+- Overview dashboard with quick stats and recent activity
+- Feed page for displaying AI-generated content
+- Settings page for managing API keys and plugin options
+- Fully translatable (includes German translation)
+- Modern and responsive admin interface
+- Automatic updates via GitHub
 
 ## Requirements
 
 - WordPress 5.8 or higher
 - PHP 7.4 or higher
-- An API key from a supported AI provider (OpenAI, Gemini, etc.)
+- Valid Athena AI API key
 
 ## Installation
 
 1. Upload the `athena-ai` folder to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to 'Athena AI > Profile' to set up your company and product information
-4. Configure your AI provider settings in the plugin settings
+3. Go to 'Athena AI > Settings' and enter your API key
+4. Enable the plugin features
 
-## Getting Started
+## Usage
 
-### Setting Up Your Profile
+### Feed Management
 
-1. Navigate to 'Athena AI > Profile' in your WordPress admin
-2. Fill in your company details, products, and services
-3. Save your profile information
+Access the feed management system through the 'Athena AI' menu in WordPress admin:
 
-### Generating Content
+- View all feeds
+- Add new feeds
+- Organize feeds into categories
+- Configure feed settings
 
-1. Go to any post or page editor
-2. Look for the 'Athena AI' meta box
-3. Enter a prompt or select a template
-4. Click 'Generate' to create content
-5. Review and insert the generated content into your editor
+### Feed Parser Features
 
-## Advanced Usage
+The plugin includes a sophisticated feed parsing system that:
 
-### Content Generation
+- Supports multiple feed formats (RSS, Atom, RDF)
+- Automatically extracts content from problematic feeds
+- Uses domain-based dynamic handling for special cases
+- Provides fallback mechanisms for optimal content retrieval
 
-Athena AI provides several ways to generate content:
+### Settings Page
 
-1. **Quick Generate**: Generate content directly from the post editor
-2. **Templates**: Use predefined templates for common content types
-3. **Custom Prompts**: Create and save your own custom prompts
-
-### API Integration
-
-Connect with multiple AI providers:
-
-1. OpenAI (GPT models)
-2. Google Gemini
-3. And more coming soon...
-
-### Customization
-
-- Create custom content templates
-- Define your brand voice and style
-- Set content generation rules and guidelines
+Configure your API key and enable/disable plugin features.
 
 ## Translation
 
-The plugin is translation-ready and includes a `.pot` file in the `languages` directory. To add a new translation:
-
-1. Copy the `.pot` file and rename it to `athena-ai-de_DE.po` (for German)
-2. Translate the strings using a PO editor like Poedit
-3. Save the file and compile it to a `.mo` file
-4. Place both files in the `languages` directory
-
-## Contributing
-
-We welcome contributions! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Support
-
-For support, please open an issue on the [GitHub repository](https://github.com/yourusername/athena-ai).
-
-## License
-
-This plugin is licensed under the GPL-2.0+.
+The plugin includes German translations by default. Additional translations can be added by creating new language files in the `languages` directory.
 
 ## Development
 
@@ -98,63 +61,43 @@ This plugin is licensed under the GPL-2.0+.
 
 ```
 athena-ai/
-├── assets/                  # Frontend assets (CSS, JS, images)
+├── assets/
 │   ├── css/
 │   └── js/
-├── includes/                # Core plugin files
-│   ├── Admin/               # Admin-specific functionality
-│   │   ├── Controllers/     # Request handlers
-│   │   ├── Models/          # Data models
-│   │   ├── Services/        # Business logic
-│   │   └── Views/           # View templates
-│   └── class-athena-*.php   # Core plugin classes
-├── languages/               # Translation files
-├── templates/               # Template files
-│   └── admin/               # Admin templates
-├── athena-ai.php            # Main plugin file
-└── README.md                # This file
+├── includes/
+│   ├── Admin/
+│   ├── Core/
+│   └── Services/
+│       ├── FeedParser/
+│       └── FeedProcessor/
+├── languages/
+├── templates/
+│   └── admin/
+└── athena-ai.php
 ```
 
-### Building Assets
+### Release Process
 
-1. Install dependencies:
+The plugin uses GitHub releases for updates. To create a new release:
+
+1. Update version numbers:
+
+   - In `athena-ai.php`: Update both the version comment and `ATHENA_AI_VERSION` constant
+   - Add new section in `CHANGELOG.md` with the changes
+
+2. Commit changes:
+
    ```bash
-   npm install
+   git add athena-ai.php CHANGELOG.md
+   git commit -m "Bump version to X.Y.Z"
    ```
 
-2. Build for development:
+3. Create and push a new tag:
+
    ```bash
-   npm run dev
+   git tag -a vX.Y.Z -m "Version X.Y.Z"
+   git push origin main vX.Y.Z
    ```
-
-3. Build for production:
-   ```bash
-   npm run build
-   ```
-
-### Coding Standards
-
-This plugin follows the [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/).
-
-### Testing
-
-1. Run PHPUnit tests:
-   ```bash
-   composer test
-   ```
-
-2. Run PHP_CodeSniffer:
-   ```bash
-   composer lint
-   ```
-
-## Changelog
-
-### 1.0.0
-* Initial release with content generation and profile management
-* Support for multiple AI providers
-* Modern, responsive admin interface
-* Translation-ready with .pot file
 
 4. On GitHub:
    - Go to Releases
