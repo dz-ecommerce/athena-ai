@@ -178,10 +178,18 @@ class AthenaAI {
      * @param string $hook The current admin page.
      */
     public function enqueue_admin_assets($hook) {
-        // Only load on plugin pages
-        if (strpos($hook, 'athena-ai') === false) {
-            return;
-        }
+        // Debug: Log the hook to see what page we're on
+        error_log('Athena AI Hook: ' . $hook);
+        
+        // Temporarily load on ALL admin pages for debugging
+        // if (strpos($hook, 'athena-ai') === false && 
+        //     strpos($hook, 'athena-feed') === false &&
+        //     strpos($hook, 'profiles') === false) {
+        //     return;
+        // }
+        
+        // Debug: Log that we're loading scripts
+        error_log('Athena AI: Loading scripts on hook: ' . $hook);
 
         // Enqueue styles
         wp_enqueue_style(
