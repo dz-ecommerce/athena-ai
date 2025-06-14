@@ -109,7 +109,28 @@ class AdminModule {
             ATHENA_AI_VERSION
         );
 
-        // Enqueue scripts
+        // Enqueue scripts for profile page
+        if (strpos($hook, 'athena-ai-profile') !== false || strpos($hook, 'athena-ai-profiles') !== false) {
+            // Profile modals JavaScript
+            wp_enqueue_script(
+                'athena-ai-profile-modals',
+                ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-modals.js',
+                ['jquery'],
+                ATHENA_AI_VERSION,
+                true
+            );
+
+            // Profile AJAX JavaScript
+            wp_enqueue_script(
+                'athena-ai-profile-ajax',
+                ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-ajax.js',
+                ['jquery'],
+                ATHENA_AI_VERSION,
+                true
+            );
+        }
+
+        // Enqueue main profile form script
         wp_enqueue_script(
             'athena-ai-admin',
             ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/ProfileForm.js',
@@ -131,6 +152,13 @@ class AdminModule {
                     'saved' => __('Saved!', 'athena-ai'),
                 ]
             ]
+        );
+        
+        // Localize ajaxurl for profile scripts
+        wp_localize_script(
+            'athena-ai-profile-ajax',
+            'ajaxurl',
+            admin_url('admin-ajax.php')
         );
     }
 }

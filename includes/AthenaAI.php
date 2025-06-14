@@ -81,7 +81,6 @@ class AthenaAI {
         require_once ATHENA_AI_PLUGIN_DIR . 'includes/Admin/Services/ProfileService.php';
         require_once ATHENA_AI_PLUGIN_DIR . 'includes/Admin/Services/AIService.php';
         require_once ATHENA_AI_PLUGIN_DIR . 'includes/Admin/Controllers/ProfileController.php';
-        require_once ATHENA_AI_PLUGIN_DIR . 'includes/Admin/Views/ProfileView.php';
 
         $this->loader = new Athena_Loader();
     }
