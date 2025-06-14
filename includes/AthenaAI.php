@@ -191,7 +191,34 @@ class AthenaAI {
             $this->version
         );
 
-        // Enqueue scripts
+        // Profile modals JavaScript
+        wp_enqueue_script(
+            'athena-ai-profile-modals',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-modals.js',
+            ['jquery'],
+            $this->version,
+            true
+        );
+
+        // Profile AJAX JavaScript
+        wp_enqueue_script(
+            'athena-ai-profile-ajax',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-ajax.js',
+            ['jquery'],
+            $this->version,
+            true
+        );
+
+        // Debug script for troubleshooting
+        wp_enqueue_script(
+            'athena-ai-profile-debug',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-debug.js',
+            ['jquery'],
+            $this->version,
+            true
+        );
+
+        // Enqueue main profile form script
         wp_enqueue_script(
             $this->plugin_name . '-admin',
             ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/ProfileForm.js',
@@ -200,7 +227,35 @@ class AthenaAI {
             true
         );
 
+        // Localize ajaxurl for all profile scripts
+        wp_localize_script(
+            'athena-ai-profile-modals',
+            'ajaxurl',
+            admin_url('admin-ajax.php')
+        );
+        
+        wp_localize_script(
+            'athena-ai-profile-ajax',
+            'ajaxurl',
+            admin_url('admin-ajax.php')
+        );
+
         // Localize script with AJAX URL and nonce
+        wp_localize_script(
+            $this->plugin_name . '-admin',
+            'athenaAiAdmin',
+            [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('athena_ai_ajax_nonce'),
+                'i18n' => [
+                    'error' => __('An error occurred', 'athena-ai'),
+                    'saving' => __('Saving...', 'athena-ai'),
+                    'saved' => __('Saved!', 'athena-ai'),
+                ]
+            ]
+        );
+
+        // Also localize the old variable name for compatibility
         wp_localize_script(
             $this->plugin_name . '-admin',
             'athenaAi',
