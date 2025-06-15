@@ -80,6 +80,28 @@ $prompt_types = [
 athena_ai_render_multiple_modals($prompt_types);
 ?>
 
+<!-- Debug-Bereich (nur für Entwicklung) -->
+<?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+<div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded">
+    <h3 class="text-lg font-semibold mb-2">🔧 Debug-Informationen</h3>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+            <strong>Prompt-Typen:</strong>
+            <ul class="list-disc list-inside">
+                <?php foreach ($prompt_types as $type): ?>
+                    <li><?php echo esc_html($type); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <div>
+            <strong>JavaScript-Tests:</strong>
+            <button type="button" onclick="athenaAIDebugFloatingLabels()" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Test Floating Labels</button>
+            <button type="button" onclick="console.log('Prompt Manager:', window.athenaAiPromptManager)" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Test Prompt Manager</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Beispiel für einzelne Modal-Erstellung (falls benötigt) -->
 <?php 
 /*

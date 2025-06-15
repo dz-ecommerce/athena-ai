@@ -98,74 +98,57 @@ function athena_ai_render_multiple_modals($modal_configs) {
  */
 function athena_ai_button($args = []) {
     $defaults = [
-        'modal_type' => 'company_description',
+        'prompt_type' => 'company_description',
         'text' => __('AI Assistent', 'athena-ai'),
-        'icon' => 'fa-magic',
+        'icon' => 'fas fa-magic',
         'class' => 'athena-ai-btn',
         'style' => 'primary'
     ];
     
     $args = wp_parse_args($args, $defaults);
-    $modal_id = 'athena-ai-' . $args['modal_type'] . '-modal';
+    $modal_id = 'athena-ai-' . $args['prompt_type'] . '-modal';
     
     $button_classes = [
-        'athena-ai-btn',
-        'athena-ai-btn-' . $args['style'],
-        $args['class']
+        'bg-purple-600',
+        'hover:bg-purple-700',
+        'text-white',
+        'font-semibold',
+        'py-2',
+        'px-4',
+        'rounded',
+        'shadow-sm',
+        'transition-colors',
+        'inline-flex',
+        'items-center',
+        'gap-2'
     ];
     
     ?>
     <button type="button" 
             class="<?php echo esc_attr(implode(' ', $button_classes)); ?>" 
             data-modal-target="<?php echo esc_attr($modal_id); ?>"
+            data-prompt-type="<?php echo esc_attr($args['prompt_type']); ?>"
             title="<?php echo esc_attr($args['text']); ?>">
         <?php if (!empty($args['icon'])): ?>
-            <i class="fas <?php echo esc_attr($args['icon']); ?>"></i>
+            <i class="<?php echo esc_attr($args['icon']); ?>"></i>
         <?php endif; ?>
         <span><?php echo esc_html($args['text']); ?></span>
     </button>
     
-    <style>
-    .athena-ai-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .athena-ai-btn-primary {
-        background-color: #3b82f6;
-        color: white;
-    }
-    
-    .athena-ai-btn-primary:hover {
-        background-color: #2563eb;
-    }
-    
-    .athena-ai-btn-secondary {
-        background-color: #6b7280;
-        color: white;
-    }
-    
-    .athena-ai-btn-secondary:hover {
-        background-color: #4b5563;
-    }
-    
-    .athena-ai-btn i {
-        font-size: 1rem;
-    }
-    </style>
-    
     <script>
     jQuery(document).ready(function($) {
+        // Handler für AI-Button
         $('[data-modal-target="<?php echo esc_js($modal_id); ?>"]').on('click', function() {
-            $('#<?php echo esc_js($modal_id); ?>').removeClass('hidden').addClass('flex');
+            var promptType = $(this).data('prompt-type');
+            var $modal = $('#<?php echo esc_js($modal_id); ?>');
+            
+            // Modal öffnen
+            $modal.removeClass('hidden').addClass('flex');
+            
+            // Modal-Typ setzen (für JavaScript-Verarbeitung)
+            $modal.attr('data-modal-type', promptType);
+            
+            console.log('Athena AI: Modal geöffnet für Typ:', promptType);
         });
     });
     </script>

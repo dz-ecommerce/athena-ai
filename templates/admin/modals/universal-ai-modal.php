@@ -147,7 +147,7 @@ jQuery(document).ready(function($) {
             model_provider: modelProvider,
             custom_prompt: fullPrompt,
             nonce: '<?php echo wp_create_nonce('athena_ai_nonce'); ?>'
-        }, function(response) {
+        }, function (response) {
             var parts = response.split('--- OPENAI ANTWORT ---');
             var debugInfo = parts[0];
             var aiResponse = parts.length > 1 ? parts[1] : '';
