@@ -152,7 +152,7 @@ if (!defined('ABSPATH')) {
 
                         <div class="md:col-span-2">
                             <div class="flex justify-end mb-2">
-                                <button type="button" id="athena-ai-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
+                                <button type="button" id="athena-ai-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors" onclick="console.log('Button clicked!'); document.getElementById('athena-ai-modal').classList.remove('hidden'); document.getElementById('athena-ai-modal').classList.add('flex');">
                                     Athena AI Assistent
                                 </button>
                             </div>
@@ -175,7 +175,7 @@ if (!defined('ABSPATH')) {
                     <div class="grid grid-cols-1 gap-6">
                         <div class="md:col-span-2">
                             <div class="flex justify-end mb-2">
-                                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
+                                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors" onclick="console.log('Products button clicked!'); document.getElementById('athena-ai-products-modal').classList.remove('hidden'); document.getElementById('athena-ai-products-modal').classList.add('flex');">
                                     Athena AI Produkte
                                 </button>
                             </div>
