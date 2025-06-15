@@ -109,6 +109,15 @@ class AdminModule {
             ATHENA_AI_VERSION
         );
 
+        // Enqueue Prompt Manager
+        wp_enqueue_script(
+            'athena-ai-prompt-manager',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/PromptManager.js',
+            [],
+            ATHENA_AI_VERSION,
+            true
+        );
+
         // Profile modals JavaScript (always load on athena-ai pages)
         wp_enqueue_script(
             'athena-ai-profile-modals',
@@ -135,6 +144,9 @@ class AdminModule {
             ATHENA_AI_VERSION,
             true
         );
+
+        // Prompt-Konfiguration laden
+        $this->enqueue_prompt_config();
 
         // Localize ajaxurl globally for all profile scripts
         wp_localize_script(
@@ -163,5 +175,48 @@ class AdminModule {
                 ]
             ]
         );
+    }
+
+    /**
+     * Prompt-Konfiguration ins Frontend laden
+     */
+    private function enqueue_prompt_config() {
+        $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
+        
+        // Prompt-Konfiguration als JSON ins DOM einbetten
+        $config = [
+            'prompts' => [],
+            'global' => [],
+            'validation' => []
+        ];
+        
+        // Alle verfügbaren Modals laden
+        foreach ($prompt_manager->get_available_modals() as $modal_type) {
+            $config['prompts'][$modal_type] = $prompt_manager->get_prompt($modal_type);
+        }
+        
+        // Globale Einstellungen
+        $config['global'] = [
+            'default_provider' => $prompt_manager->get_global_setting('default_provider'),
+            'test_mode_available' => $prompt_manager->get_global_setting('test_mode_available'),
+            'debug_mode' => $prompt_manager->get_global_setting('debug_mode')
+        ];
+        
+        // Validierungsregeln
+        $config['validation'] = $prompt_manager->get_validation_rules();
+        
+        // JSON-Konfiguration ins DOM einbetten
+        wp_add_inline_script(
+            'athena-ai-prompt-manager',
+            'window.athenaAiPromptConfig = ' . wp_json_encode($config) . ';',
+            'before'
+        );
+        
+        // Alternativ: Als verstecktes DOM-Element
+        add_action('admin_footer', function() use ($config) {
+            echo '<script type="application/json" id="athena-ai-prompt-config">' . 
+                 wp_json_encode($config) . 
+                 '</script>';
+        });
     }
 }

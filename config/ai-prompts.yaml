@@ -1,0 +1,81 @@
+# AI Prompts Configuration
+# Diese Datei enthält alle AI-Prompts für die verschiedenen Modals
+# Format: modal_id -> prompt_type -> content
+
+company_description:
+    intro: 'Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.'
+    limit: 'Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.'
+    target_field: 'company_description'
+    max_words: 100
+    style: 'professional_seo'
+
+products:
+    intro: 'Analysiere den bereitgestellten Text und identifiziere alle darin genannten Produkte und Dienstleistungen. Liste diese in einer klaren, durch Komma und Leerzeichen getrennten Aufzählung auf. Füge keine zusätzlichen Informationen hinzu und fasse die Begriffe präzise zusammen.'
+    limit: 'Maximal 20 Produkte oder Dienstleistungen.'
+    target_field: 'company_products'
+    max_items: 20
+    format: 'comma_separated'
+
+company_values:
+    intro: 'Analysiere den bereitgestellten Text und identifiziere die wichtigsten Unternehmenswerte. Extrahiere maximal 3 prägnante Werte, die das Unternehmen charakterisieren.'
+    limit: 'Maximal 3 Werte, je ein Wert pro Zeile. Keine zusätzlichen Erklärungen.'
+    target_field: 'company_values'
+    max_items: 3
+    format: 'line_separated'
+
+target_audience:
+    intro: 'Analysiere den bereitgestellten Text und beschreibe die Zielgruppe des Unternehmens. Fokussiere dich auf demografische Merkmale, Bedürfnisse und Charakteristika der idealen Kunden.'
+    limit: 'Maximal 80 Wörter. Präzise und zielgruppenorientierte Beschreibung.'
+    target_field: 'target_audience'
+    max_words: 80
+    style: 'target_focused'
+
+company_usps:
+    intro: 'Identifiziere die einzigartigen Verkaufsargumente (USPs) des Unternehmens basierend auf den bereitgestellten Informationen. Konzentriere dich auf das, was das Unternehmen von der Konkurrenz unterscheidet.'
+    limit: 'Maximal 5 USPs, je ein USP pro Zeile. Kurz und prägnant formuliert.'
+    target_field: 'company_usps'
+    max_items: 5
+    format: 'line_separated'
+
+expertise_areas:
+    intro: 'Extrahiere die Hauptkompetenzbereiche und Fachgebiete des Unternehmens aus den bereitgestellten Informationen. Fokussiere dich auf konkrete Expertise und Fähigkeiten.'
+    limit: 'Maximal 8 Kompetenzbereiche, durch Komma getrennt.'
+    target_field: 'expertise_areas'
+    max_items: 8
+    format: 'comma_separated'
+
+seo_keywords:
+    intro: 'Generiere relevante SEO-Keywords für das Unternehmen basierend auf den bereitgestellten Informationen. Fokussiere dich auf branchenspezifische und lokale Keywords.'
+    limit: 'Maximal 15 Keywords, durch Komma getrennt. Keine Keyword-Stuffing.'
+    target_field: 'seo_keywords'
+    max_items: 15
+    format: 'comma_separated'
+
+# Globale Einstellungen
+global:
+    default_provider: 'openai'
+    test_mode_available: true
+    debug_mode: true
+
+# Provider-spezifische Einstellungen
+providers:
+    openai:
+        model: 'gpt-3.5-turbo'
+        temperature: 0.7
+        max_tokens: 500
+
+    gemini:
+        model: 'gemini-pro'
+        temperature: 0.7
+        max_tokens: 500
+
+# Spracheinstellungen
+language:
+    default: 'de'
+    fallback: 'en'
+
+# Validierung
+validation:
+    min_input_length: 10
+    max_input_length: 2000
+    required_fields: ['extra_info']

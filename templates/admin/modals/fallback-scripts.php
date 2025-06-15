@@ -73,9 +73,16 @@ jQuery(document).ready(function($) {
                 '<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>'
             );
 
-            var promptIntro = $('#athena-ai-prompt-intro').val();
-            var promptLimit = $('#athena-ai-prompt-limit').val();
-            var fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+            // Prompt aus Prompt Manager abrufen
+            var fullPrompt = '';
+            if (window.athenaAiPromptManager && window.athenaAiPromptManager.loaded) {
+                fullPrompt = window.athenaAiPromptManager.buildFullPrompt('company_description', extraInfo);
+            } else {
+                // Fallback zu hidden inputs
+                var promptIntro = $('#athena-ai-prompt-intro').val();
+                var promptLimit = $('#athena-ai-prompt-limit').val();
+                fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+            }
 
             if (testOnly) {
                 var debugInfo =

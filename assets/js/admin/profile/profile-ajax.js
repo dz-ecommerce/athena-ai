@@ -23,9 +23,19 @@ jQuery(function ($) {
                 '<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>'
             );
 
-        var promptIntro = $('#athena-ai-prompt-intro').val();
-        var promptLimit = $('#athena-ai-prompt-limit').val();
-        var fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        // Prompt aus Prompt Manager abrufen
+        var fullPrompt = '';
+        if (window.athenaAiPromptManager && window.athenaAiPromptManager.loaded) {
+            fullPrompt = window.athenaAiPromptManager.buildFullPrompt(
+                'company_description',
+                extraInfo
+            );
+        } else {
+            // Fallback zu hidden inputs
+            var promptIntro = $('#athena-ai-prompt-intro').val();
+            var promptLimit = $('#athena-ai-prompt-limit').val();
+            fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        }
 
         if (testOnly) {
             var debugInfo =
@@ -114,7 +124,15 @@ jQuery(function ($) {
     // Transfer Content Handler
     $('#athena-ai-transfer-content').on('click', function () {
         if (window.athenaAiResponse) {
-            var targetField = $('#athena-ai-target-field').val();
+            // Zielfeld aus Prompt Manager abrufen
+            var targetField = '';
+            if (window.athenaAiPromptManager && window.athenaAiPromptManager.loaded) {
+                targetField = window.athenaAiPromptManager.getTargetField('company_description');
+            } else {
+                // Fallback zu hidden input
+                targetField = $('#athena-ai-target-field').val();
+            }
+
             if (targetField) {
                 var fieldSelector = 'textarea[name="athena_ai_profiles[' + targetField + ']"]';
                 var targetElement = $(fieldSelector);
@@ -149,9 +167,16 @@ jQuery(function ($) {
                 '<div class="p-3 text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><div class="mt-2">AI-Antwort wird generiert...</div></div>'
             );
 
-        var promptIntro = $('#athena-ai-prompt-intro-products').val();
-        var promptLimit = $('#athena-ai-prompt-limit-products').val();
-        var fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        // Prompt aus Prompt Manager abrufen
+        var fullPrompt = '';
+        if (window.athenaAiPromptManager && window.athenaAiPromptManager.loaded) {
+            fullPrompt = window.athenaAiPromptManager.buildFullPrompt('products', extraInfo);
+        } else {
+            // Fallback zu hidden inputs
+            var promptIntro = $('#athena-ai-prompt-intro-products').val();
+            var promptLimit = $('#athena-ai-prompt-limit-products').val();
+            fullPrompt = promptIntro + '\n\n' + extraInfo + '\n\n' + promptLimit;
+        }
 
         if (testOnly) {
             var debugInfo =
