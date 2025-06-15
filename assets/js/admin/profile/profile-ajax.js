@@ -259,4 +259,7 @@ jQuery(function ($) {
             alert('Kein AI-Content verfügbar. Bitte zuerst Content generieren.');
         }
     });
+
+    // Set flag to indicate AJAX script loaded
+    window.athenaAiAjaxLoaded = true;
 });
