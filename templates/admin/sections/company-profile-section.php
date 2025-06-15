@@ -116,13 +116,16 @@
                     Athena AI Assistent
                 </button>
             </div>
-            <div class="relative">
-                <div class="form-group">
-                    <label class="floating-label" for="company_description"><?php esc_html_e('Kurzbeschreibung des Unternehmens', 'athena-ai'); ?></label>
-                    <textarea name="athena_ai_profiles[company_description]" id="company_description" rows="5" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_description']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_description'] ?? ''); ?></textarea>
-                    <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 200 Wörter', 'athena-ai'); ?></p>
-                </div>
-            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[company_description]',
+                'id' => 'company_description',
+                'label' => 'Kurzbeschreibung des Unternehmens',
+                'value' => $profile_data['company_description'] ?? '',
+                'rows' => 5,
+                'help_text' => 'Maximal 200 Wörter'
+            ]); 
+            ?>
         </div>
     </div>
 </fieldset> 

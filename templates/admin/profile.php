@@ -7,6 +7,9 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Lade Component Helper Funktionen
+include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helpers.php';
 ?>
 <div class="wrap athena-ai-admin">
     <!-- Header -->

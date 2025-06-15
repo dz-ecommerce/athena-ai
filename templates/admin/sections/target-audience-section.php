@@ -23,12 +23,15 @@
                 </div>
             </div>
         </div>
-        <div class="relative">
-            <div class="form-group">
-                <label class="floating-label" for="target_audience"><?php esc_html_e('Beschreibung der Zielgruppe', 'athena-ai'); ?></label>
-                <textarea name="athena_ai_profiles[target_audience]" id="target_audience" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['target_audience']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['target_audience'] ?? ''); ?></textarea>
-            </div>
-        </div>
+        <?php 
+        athena_ai_floating_textarea([
+            'name' => 'athena_ai_profiles[target_audience]',
+            'id' => 'target_audience',
+            'label' => 'Beschreibung der Zielgruppe',
+            'value' => $profile_data['target_audience'] ?? '',
+            'rows' => 3
+        ]); 
+        ?>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
                 <?php esc_html_e('Altersgruppe der Zielkunden', 'athena-ai'); ?>

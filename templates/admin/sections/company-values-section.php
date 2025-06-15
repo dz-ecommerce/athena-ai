@@ -4,13 +4,16 @@
         <?php esc_html_e('Unternehmenswerte und Kommunikation', 'athena-ai'); ?>
     </legend>
     <div class="grid grid-cols-1 gap-6">
-        <div class="relative">
-            <div class="form-group">
-                <label class="floating-label" for="company_values"><?php esc_html_e('Unternehmenswerte', 'athena-ai'); ?></label>
-                <textarea name="athena_ai_profiles[company_values]" id="company_values" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_values']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_values'] ?? ''); ?></textarea>
-                <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Maximal 3 Werte, je ein Wert pro Zeile', 'athena-ai'); ?></p>
-            </div>
-        </div>
+        <?php 
+        athena_ai_floating_textarea([
+            'name' => 'athena_ai_profiles[company_values]',
+            'id' => 'company_values',
+            'label' => 'Unternehmenswerte',
+            'value' => $profile_data['company_values'] ?? '',
+            'rows' => 3,
+            'help_text' => 'Maximal 3 Werte, je ein Wert pro Zeile'
+        ]); 
+        ?>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
                 <?php esc_html_e('Bevorzugte Ansprache', 'athena-ai'); ?>

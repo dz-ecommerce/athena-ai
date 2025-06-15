@@ -11,21 +11,27 @@
                     Athena AI Produkte
                 </button>
             </div>
-            <div class="relative">
-                <div class="form-group">
-                    <label class="floating-label" for="company_products"><?php esc_html_e('Hauptprodukte/Dienstleistungen', 'athena-ai'); ?></label>
-                    <textarea name="athena_ai_profiles[company_products]" id="company_products" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_products']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_products'] ?? ''); ?></textarea>
-                    <p class="mt-1 text-sm text-gray-500"><?php esc_html_e('Produkte und Dienstleistungen durch Komma und Leerzeichen getrennt', 'athena-ai'); ?></p>
-                </div>
-            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[company_products]',
+                'id' => 'company_products',
+                'label' => 'Hauptprodukte/Dienstleistungen',
+                'value' => $profile_data['company_products'] ?? '',
+                'rows' => 3,
+                'help_text' => 'Produkte und Dienstleistungen durch Komma und Leerzeichen getrennt'
+            ]); 
+            ?>
         </div>
         <div class="md:col-span-2">
-            <div class="relative">
-                <div class="form-group">
-                    <label class="floating-label" for="company_usps"><?php esc_html_e('Alleinstellungsmerkmale', 'athena-ai'); ?></label>
-                    <textarea name="athena_ai_profiles[company_usps]" id="company_usps" rows="3" class="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md py-2.5 px-4" <?php echo !empty($profile_data['company_usps']) ? 'data-filled' : ''; ?>><?php echo esc_textarea($profile_data['company_usps'] ?? ''); ?></textarea>
-                </div>
-            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[company_usps]',
+                'id' => 'company_usps',
+                'label' => 'Alleinstellungsmerkmale',
+                'value' => $profile_data['company_usps'] ?? '',
+                'rows' => 3
+            ]); 
+            ?>
         </div>
     </div>
 </fieldset> 
