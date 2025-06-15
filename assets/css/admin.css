@@ -33,12 +33,65 @@
     pointer-events: none;
     transform-origin: left top;
     z-index: 10;
-    opacity: 0;
+    opacity: 1;
 }
 
-.form-group.focused label,
-.form-group.filled label,
-.form-group .floating-label.floating {
+/* Enhanced floating label states */
+.form-group.focused .floating-label,
+.form-group.has-value .floating-label,
+.form-group input[data-filled] + .floating-label,
+.form-group textarea[data-filled] + .floating-label,
+.form-group select[data-filled] + .floating-label,
+.form-group input:focus + .floating-label,
+.form-group textarea:focus + .floating-label,
+.form-group select:focus + .floating-label {
+    transform: translateY(-1.1rem) scale(0.85);
+    color: #4f46e5;
+    background-color: white;
+    padding: 0 0.5rem;
+    left: 0.75rem;
+    opacity: 1;
+}
+
+/* Alternative selector for when label comes before input */
+.form-group .floating-label:has(+ input[data-filled]),
+.form-group .floating-label:has(+ textarea[data-filled]),
+.form-group .floating-label:has(+ select[data-filled]) {
+    transform: translateY(-1.1rem) scale(0.85);
+    color: #4f46e5;
+    background-color: white;
+    padding: 0 0.5rem;
+    left: 0.75rem;
+    opacity: 1;
+}
+
+/* Fallback for browsers that don't support :has() */
+.form-group input:not(:placeholder-shown) ~ .floating-label,
+.form-group textarea:not(:placeholder-shown) ~ .floating-label,
+.form-group select:not([value='']) ~ .floating-label {
+    transform: translateY(-1.1rem) scale(0.85);
+    color: #4f46e5;
+    background-color: white;
+    padding: 0 0.5rem;
+    left: 0.75rem;
+    opacity: 1;
+}
+
+/* Additional rules for pre-filled inputs */
+.form-group input:not([value='']) ~ .floating-label,
+.form-group textarea:not(:empty) ~ .floating-label,
+.form-group select:not([value='']):not([value='0']) ~ .floating-label {
+    transform: translateY(-1.1rem) scale(0.85);
+    color: #4f46e5;
+    background-color: white;
+    padding: 0 0.5rem;
+    left: 0.75rem;
+    opacity: 1;
+}
+
+/* Force floating state for inputs with content */
+.form-group input[value]:not([value='']) ~ .floating-label,
+.form-group textarea:not(:empty) ~ .floating-label {
     transform: translateY(-1.1rem) scale(0.85);
     color: #4f46e5;
     background-color: white;
@@ -52,13 +105,15 @@
     opacity: 1;
 }
 
-.form-group.focused .floating-label,
-.form-group.has-value .floating-label {
+.form-group.focused label,
+.form-group.filled label,
+.form-group .floating-label.floating {
     transform: translateY(-1.1rem) scale(0.85);
     color: #4f46e5;
     background-color: white;
     padding: 0 0.5rem;
     left: 0.75rem;
+    opacity: 1;
 }
 
 /* Hide the static label when the floating label is present */
@@ -66,19 +121,19 @@
     display: none;
 }
 
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="url"],
-.form-group input[type="password"],
-.form-group input[type="number"],
-.form-group input[type="date"],
-.form-group input[type="datetime-local"],
-.form-group input[type="month"],
-.form-group input[type="search"],
-.form-group input[type="tel"],
-.form-group input[type="time"],
-.form-group input[type="week"],
-.form-group input[type="datetime"],
+.form-group input[type='text'],
+.form-group input[type='email'],
+.form-group input[type='url'],
+.form-group input[type='password'],
+.form-group input[type='number'],
+.form-group input[type='date'],
+.form-group input[type='datetime-local'],
+.form-group input[type='month'],
+.form-group input[type='search'],
+.form-group input[type='tel'],
+.form-group input[type='time'],
+.form-group input[type='week'],
+.form-group input[type='datetime'],
 .form-group select,
 .form-group textarea {
     padding-top: 1.25rem;
