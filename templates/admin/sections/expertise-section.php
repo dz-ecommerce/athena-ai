@@ -4,16 +4,25 @@
         <?php esc_html_e('Fachwissen und Expertise', 'athena-ai'); ?>
     </legend>
     <div class="grid grid-cols-1 gap-6">
-        <?php 
-        athena_ai_floating_textarea([
-            'name' => 'athena_ai_profiles[expertise_areas]',
-            'id' => 'expertise_areas',
-            'label' => 'Fachgebiete',
-            'value' => $profile_data['expertise_areas'] ?? '',
-            'rows' => 3,
-            'help_text' => 'Stichpunkte, ein Eintrag pro Zeile'
-        ]); 
-        ?>
+        <div class="md:col-span-2">
+            <div class="flex justify-end mb-2">
+                <?php athena_ai_button([
+                    'prompt_type' => 'expertise_areas',
+                    'text' => 'Athena AI Expertise',
+                    'icon' => 'fas fa-brain'
+                ]); ?>
+            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[expertise_areas]',
+                'id' => 'expertise_areas',
+                'label' => 'Fachgebiete',
+                'value' => $profile_data['expertise_areas'] ?? '',
+                'rows' => 3,
+                'help_text' => 'Stichpunkte, ein Eintrag pro Zeile'
+            ]); 
+            ?>
+        </div>
         <?php 
         athena_ai_floating_textarea([
             'name' => 'athena_ai_profiles[certifications]',

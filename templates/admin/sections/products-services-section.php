@@ -6,10 +6,11 @@
     <div class="grid grid-cols-1 gap-6">
         <div class="md:col-span-2">
             <div class="flex justify-end mb-2">
-                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
-                    <i class="fas fa-boxes mr-2"></i>
-                    Athena AI Produkte
-                </button>
+                <?php athena_ai_button([
+                    'prompt_type' => 'products',
+                    'text' => 'Athena AI Produkte',
+                    'icon' => 'fas fa-boxes'
+                ]); ?>
             </div>
             <?php 
             athena_ai_floating_textarea([
@@ -23,6 +24,13 @@
             ?>
         </div>
         <div class="md:col-span-2">
+            <div class="flex justify-end mb-2">
+                <?php athena_ai_button([
+                    'prompt_type' => 'company_usps',
+                    'text' => 'Athena AI USPs',
+                    'icon' => 'fas fa-star'
+                ]); ?>
+            </div>
             <?php 
             athena_ai_floating_textarea([
                 'name' => 'athena_ai_profiles[company_usps]',

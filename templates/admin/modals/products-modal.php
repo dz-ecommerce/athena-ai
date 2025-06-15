@@ -42,10 +42,7 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
             </div>
         </div>
         
-        <!-- Hidden Input Fields für Prompt-Teile -->
-        <input type="hidden" id="athena-ai-prompt-intro-products" value="Analysiere den bereitgestellten Text und identifiziere alle darin genannten Produkte und Dienstleistungen. Liste diese in einer klaren, durch Komma und Leerzeichen getrennten Aufzählung auf. Füge keine zusätzlichen Informationen hinzu und fasse die Begriffe präzise zusammen.">
-        <input type="hidden" id="athena-ai-prompt-limit-products" value="Maximal 20 Proukte oder Dienstleistungen.">
-        <input type="hidden" id="athena-ai-target-field-products" value="company_products">
+        <!-- Prompt-Konfiguration wird jetzt über YAML und PromptManager geladen -->
         
         <select id="athena-ai-page-select-products" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4 flex-grow max-w-full box-border">
             <option value="">-- Seite wählen (optional) --</option>

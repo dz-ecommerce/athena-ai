@@ -4,16 +4,25 @@
         <?php esc_html_e('Unternehmenswerte und Kommunikation', 'athena-ai'); ?>
     </legend>
     <div class="grid grid-cols-1 gap-6">
-        <?php 
-        athena_ai_floating_textarea([
-            'name' => 'athena_ai_profiles[company_values]',
-            'id' => 'company_values',
-            'label' => 'Unternehmenswerte',
-            'value' => $profile_data['company_values'] ?? '',
-            'rows' => 3,
-            'help_text' => 'Maximal 3 Werte, je ein Wert pro Zeile'
-        ]); 
-        ?>
+        <div class="md:col-span-2">
+            <div class="flex justify-end mb-2">
+                <?php athena_ai_button([
+                    'prompt_type' => 'company_values',
+                    'text' => 'Athena AI Werte',
+                    'icon' => 'fas fa-heart'
+                ]); ?>
+            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[company_values]',
+                'id' => 'company_values',
+                'label' => 'Unternehmenswerte',
+                'value' => $profile_data['company_values'] ?? '',
+                'rows' => 3,
+                'help_text' => 'Maximal 3 Werte, je ein Wert pro Zeile'
+            ]); 
+            ?>
+        </div>
         <?php 
         athena_ai_radio_group([
             'name' => 'athena_ai_profiles[preferred_tone]',

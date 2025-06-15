@@ -72,4 +72,7 @@ function athena_ai_fieldset_wrapper($args, $content_callback = null) {
  */
 function athena_ai_assistant_button($args) {
     include ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/ai-button.php';
-} 
+}
+
+// AI Modal Helper Functions laden
+include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/ai-modal-helper.php'; 

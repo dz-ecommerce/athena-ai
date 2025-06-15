@@ -17,15 +17,24 @@
             'layout' => 'horizontal'
         ]); 
         ?>
-        <?php 
-        athena_ai_floating_textarea([
-            'name' => 'athena_ai_profiles[target_audience]',
-            'id' => 'target_audience',
-            'label' => 'Beschreibung der Zielgruppe',
-            'value' => $profile_data['target_audience'] ?? '',
-            'rows' => 3
-        ]); 
-        ?>
+        <div class="md:col-span-2">
+            <div class="flex justify-end mb-2">
+                <?php athena_ai_button([
+                    'prompt_type' => 'target_audience',
+                    'text' => 'Athena AI Zielgruppe',
+                    'icon' => 'fas fa-users'
+                ]); ?>
+            </div>
+            <?php 
+            athena_ai_floating_textarea([
+                'name' => 'athena_ai_profiles[target_audience]',
+                'id' => 'target_audience',
+                'label' => 'Beschreibung der Zielgruppe',
+                'value' => $profile_data['target_audience'] ?? '',
+                'rows' => 3
+            ]); 
+            ?>
+        </div>
         <?php 
         athena_ai_checkbox_group([
             'name' => 'athena_ai_profiles[age_group]',

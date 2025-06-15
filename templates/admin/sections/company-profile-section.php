@@ -102,10 +102,11 @@
 
         <div class="md:col-span-2">
             <div class="flex justify-end mb-2">
-                <button type="button" id="athena-ai-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
-                    <i class="fas fa-magic mr-2"></i>
-                    Athena AI Assistent
-                </button>
+                <?php athena_ai_button([
+                    'prompt_type' => 'company_description',
+                    'text' => 'Athena AI Assistent',
+                    'icon' => 'fas fa-magic'
+                ]); ?>
             </div>
             <?php 
             athena_ai_floating_textarea([

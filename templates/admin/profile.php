@@ -63,11 +63,32 @@ include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helper
     </div>
 </div>
 
-<?php
-// Include modal templates
-include ATHENA_AI_PLUGIN_DIR . 'templates/admin/modals/company-description-modal.php';
-include ATHENA_AI_PLUGIN_DIR . 'templates/admin/modals/products-modal.php';
-include ATHENA_AI_PLUGIN_DIR . 'templates/admin/modals/fallback-scripts.php';
+<!-- AI Modals für alle Prompt-Typen -->
+<?php 
+// Alle verfügbaren Prompt-Typen aus der YAML-Konfiguration
+$prompt_types = [
+    'company_description',
+    'products', 
+    'company_values',
+    'target_audience',
+    'company_usps',
+    'expertise_areas',
+    'seo_keywords'
+];
+
+// Rendere alle Modals
+athena_ai_render_multiple_modals($prompt_types);
+?>
+
+<!-- Beispiel für einzelne Modal-Erstellung (falls benötigt) -->
+<?php 
+/*
+// Einzelne Modals können auch so erstellt werden:
+athena_ai_render_modal('company_description');
+athena_ai_render_modal('products');
+athena_ai_render_modal('company_values');
+// etc.
+*/
 ?>
 
 
