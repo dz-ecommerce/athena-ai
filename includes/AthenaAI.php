@@ -178,18 +178,12 @@ class AthenaAI {
      * @param string $hook The current admin page.
      */
     public function enqueue_admin_assets($hook) {
-        // Debug: Log the hook to see what page we're on
-        error_log('Athena AI Hook: ' . $hook);
-        
-        // Temporarily load on ALL admin pages for debugging
-        // if (strpos($hook, 'athena-ai') === false && 
-        //     strpos($hook, 'athena-feed') === false &&
-        //     strpos($hook, 'profiles') === false) {
-        //     return;
-        // }
-        
-        // Debug: Log that we're loading scripts
-        error_log('Athena AI: Loading scripts on hook: ' . $hook);
+        // Only load on Athena AI admin pages
+        if (strpos($hook, 'athena-ai') === false && 
+            strpos($hook, 'athena-feed') === false &&
+            strpos($hook, 'profiles') === false) {
+            return;
+        }
 
         // Enqueue styles
         wp_enqueue_style(
@@ -217,15 +211,6 @@ class AthenaAI {
             true
         );
 
-        // Debug script for troubleshooting
-        wp_enqueue_script(
-            'athena-ai-profile-debug',
-            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-debug.js',
-            ['jquery'],
-            $this->version,
-            true
-        );
-
         // Enqueue main profile form script
         wp_enqueue_script(
             $this->plugin_name . '-admin',
@@ -235,13 +220,7 @@ class AthenaAI {
             true
         );
 
-        // Localize ajaxurl for all profile scripts
-        wp_localize_script(
-            'athena-ai-profile-modals',
-            'ajaxurl',
-            admin_url('admin-ajax.php')
-        );
-        
+        // Localize ajaxurl for profile scripts
         wp_localize_script(
             'athena-ai-profile-ajax',
             'ajaxurl',

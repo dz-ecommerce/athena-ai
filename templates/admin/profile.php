@@ -152,7 +152,8 @@ if (!defined('ABSPATH')) {
 
                         <div class="md:col-span-2">
                             <div class="flex justify-end mb-2">
-                                <button type="button" id="athena-ai-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors" onclick="console.log('Button clicked!'); document.getElementById('athena-ai-modal').classList.remove('hidden'); document.getElementById('athena-ai-modal').classList.add('flex');">
+                                <button type="button" id="athena-ai-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
+                                    <i class="fas fa-magic mr-2"></i>
                                     Athena AI Assistent
                                 </button>
                             </div>
@@ -175,7 +176,8 @@ if (!defined('ABSPATH')) {
                     <div class="grid grid-cols-1 gap-6">
                         <div class="md:col-span-2">
                             <div class="flex justify-end mb-2">
-                                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors" onclick="console.log('Products button clicked!'); document.getElementById('athena-ai-products-modal').classList.remove('hidden'); document.getElementById('athena-ai-products-modal').classList.add('flex');">
+                                <button type="button" id="athena-ai-products-assistant-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded shadow-sm transition-colors">
+                                    <i class="fas fa-boxes mr-2"></i>
                                     Athena AI Produkte
                                 </button>
                             </div>
@@ -515,9 +517,9 @@ if (!defined('ABSPATH')) {
 // Modal HTML am Ende der Seite einfügen
 $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
 ?>
-<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden" onclick="if(event.target === this) { this.classList.add('hidden'); this.classList.remove('flex'); }">
+<div id="athena-ai-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden">
     <div class="bg-white rounded-lg shadow-lg w-[50vw] p-6 relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
-        <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold" onclick="document.getElementById('athena-ai-modal').classList.add('hidden'); document.getElementById('athena-ai-modal').classList.remove('flex');">&times;</button>
+        <button type="button" id="athena-ai-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
         <h2 class="text-lg font-semibold mb-4">Athena AI Assistent</h2>
         
         <!-- KI-Anbieter auswählen -->
@@ -554,28 +556,8 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         </select>
         <textarea id="athena-ai-modal-extra-info" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
         <div class="flex space-x-2">
-            <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2" onclick="
-                var extraInfo = document.getElementById('athena-ai-modal-extra-info').value;
-                if (!extraInfo.trim()) {
-                    alert('Bitte gib zusätzliche Informationen ein');
-                    return;
-                }
-                var debugDiv = document.getElementById('athena-ai-modal-debug');
-                debugDiv.style.display = 'block';
-                debugDiv.innerHTML = '<div class=\'p-3 text-center\'><strong>Demo-Modus:</strong><br/>In der vollständigen Version würde hier AI-Content generiert werden.<br/><br/>Eingabe: ' + extraInfo + '</div>';
-                document.getElementById('athena-ai-transfer-content').disabled = false;
-                document.getElementById('athena-ai-transfer-content').classList.remove('opacity-50', 'cursor-not-allowed');
-                document.getElementById('athena-ai-transfer-content').classList.add('bg-green-600', 'hover:bg-green-700');
-            ">Create Content (Demo)</button>
-            <button type="button" id="athena-ai-transfer-content" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled onclick="
-                var extraInfo = document.getElementById('athena-ai-modal-extra-info').value;
-                if (extraInfo.trim()) {
-                    document.getElementById('company_description').value = 'Demo-Content basierend auf: ' + extraInfo;
-                    document.getElementById('athena-ai-modal').classList.add('hidden');
-                    document.getElementById('athena-ai-modal').classList.remove('flex');
-                    alert('Demo-Content wurde in das Beschreibungsfeld übertragen!');
-                }
-            ">Transfer Content</button>
+            <button type="button" id="athena-ai-create-content" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2">Create Content</button>
+            <button type="button" id="athena-ai-transfer-content" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled>Transfer Content</button>
         </div>
         <div id="athena-ai-modal-debug" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
@@ -584,9 +566,9 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
 
 
 <!-- Produkte und Dienstleistungen Modal -->
-<div id="athena-ai-products-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden" onclick="if(event.target === this) { this.classList.add('hidden'); this.classList.remove('flex'); }">
+<div id="athena-ai-products-modal" class="fixed z-50 inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden overflow-y-auto overflow-x-hidden">
     <div class="bg-white rounded-lg shadow-lg w-[50vw] p-6 relative max-h-[80vh] overflow-y-auto overflow-x-hidden">
-        <button type="button" id="athena-ai-products-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold" onclick="document.getElementById('athena-ai-products-modal').classList.add('hidden'); document.getElementById('athena-ai-products-modal').classList.remove('flex');">&times;</button>
+        <button type="button" id="athena-ai-products-modal-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
         <h2 class="text-lg font-semibold mb-4">Athena AI Assistent für Produkte und Dienstleistungen</h2>
         
         <!-- KI-Anbieter auswählen -->
@@ -623,28 +605,8 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
         </select>
         <textarea id="athena-ai-modal-extra-info-products" class="block w-full border border-gray-300 rounded px-3 py-2 mb-4" rows="4" placeholder="Zusätzliche Informationen hinterlegen"></textarea>
         <div class="flex space-x-2">
-            <button type="button" id="athena-ai-create-content-products" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2" onclick="
-                var extraInfo = document.getElementById('athena-ai-modal-extra-info-products').value;
-                if (!extraInfo.trim()) {
-                    alert('Bitte gib zusätzliche Informationen ein');
-                    return;
-                }
-                var debugDiv = document.getElementById('athena-ai-modal-debug-products');
-                debugDiv.style.display = 'block';
-                debugDiv.innerHTML = '<div class=\'p-3 text-center\'><strong>Demo-Modus:</strong><br/>In der vollständigen Version würden hier Produkte extrahiert werden.<br/><br/>Eingabe: ' + extraInfo + '</div>';
-                document.getElementById('athena-ai-transfer-content-products').disabled = false;
-                document.getElementById('athena-ai-transfer-content-products').classList.remove('opacity-50', 'cursor-not-allowed');
-                document.getElementById('athena-ai-transfer-content-products').classList.add('bg-green-600', 'hover:bg-green-700');
-            ">Create Content (Demo)</button>
-            <button type="button" id="athena-ai-transfer-content-products" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled onclick="
-                var extraInfo = document.getElementById('athena-ai-modal-extra-info-products').value;
-                if (extraInfo.trim()) {
-                    document.getElementById('company_products').value = 'Demo-Produkte basierend auf: ' + extraInfo;
-                    document.getElementById('athena-ai-products-modal').classList.add('hidden');
-                    document.getElementById('athena-ai-products-modal').classList.remove('flex');
-                    alert('Demo-Produkte wurden in das Produktfeld übertragen!');
-                }
-            ">Transfer Content</button>
+            <button type="button" id="athena-ai-create-content-products" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2">Create Content</button>
+            <button type="button" id="athena-ai-transfer-content-products" class="bg-gray-400 text-white font-semibold py-2 px-4 rounded shadow-sm w-1/2 opacity-50 cursor-not-allowed" disabled>Transfer Content</button>
         </div>
         <div id="athena-ai-modal-debug-products" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700" style="display:none;"></div>
     </div>
