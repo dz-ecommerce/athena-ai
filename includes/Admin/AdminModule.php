@@ -127,15 +127,6 @@ class AdminModule {
             true
         );
 
-        // Debug script for troubleshooting
-        wp_enqueue_script(
-            'athena-ai-profile-debug',
-            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-debug.js',
-            ['jquery'],
-            ATHENA_AI_VERSION,
-            true
-        );
-
         // Enqueue main profile form script
         wp_enqueue_script(
             'athena-ai-admin',

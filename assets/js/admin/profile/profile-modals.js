@@ -35,4 +35,7 @@ jQuery(function ($) {
             $(this).addClass('hidden').removeClass('flex');
         }
     });
+
+    // Set flag to indicate external script loaded
+    window.athenaAiModalsLoaded = true;
 });

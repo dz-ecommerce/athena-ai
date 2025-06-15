@@ -612,4 +612,46 @@ $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'asc']);
     </div>
 </div>
 
+<script>
+// Fallback JavaScript - wird nur ausgeführt, wenn die externen Dateien nicht geladen werden
+jQuery(document).ready(function($) {
+    // Prüfen ob die externen Scripts geladen wurden
+    if (typeof window.athenaAiModalsLoaded === 'undefined') {
+        console.log('Athena AI: Loading fallback modal handlers');
+        
+        // Company Description Modal
+        $('#athena-ai-assistant-btn').on('click', function () {
+            $('#athena-ai-modal').removeClass('hidden').addClass('flex');
+        });
+
+        $('#athena-ai-modal-close').on('click', function () {
+            $('#athena-ai-modal').addClass('hidden').removeClass('flex');
+        });
+
+        // Close modal on backdrop click
+        $('#athena-ai-modal').on('click', function (e) {
+            if (e.target === this) {
+                $(this).addClass('hidden').removeClass('flex');
+            }
+        });
+
+        // Products Modal
+        $('#athena-ai-products-assistant-btn').on('click', function () {
+            $('#athena-ai-products-modal').removeClass('hidden').addClass('flex');
+        });
+
+        $('#athena-ai-products-modal-close').on('click', function () {
+            $('#athena-ai-products-modal').addClass('hidden').removeClass('flex');
+        });
+
+        // Close products modal on backdrop click
+        $('#athena-ai-products-modal').on('click', function (e) {
+            if (e.target === this) {
+                $(this).addClass('hidden').removeClass('flex');
+            }
+        });
+    }
+});
+</script>
+
 

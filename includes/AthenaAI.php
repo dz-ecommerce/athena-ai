@@ -104,8 +104,9 @@ class AthenaAI {
         // Initialize admin module
         $this->loader->add_action('admin_init', $this->admin_module, 'init');
         
-        // Enqueue admin scripts and styles
+        // Enqueue admin scripts and styles (both from main class and admin module)
         $this->loader->add_action('admin_enqueue_scripts', $this, 'enqueue_admin_assets');
+        $this->loader->add_action('admin_enqueue_scripts', $this->admin_module, 'enqueue_admin_assets');
         
         // Add admin menu
         $this->loader->add_action('admin_menu', $this->admin_module, 'add_admin_menu');
@@ -178,12 +179,18 @@ class AthenaAI {
      * @param string $hook The current admin page.
      */
     public function enqueue_admin_assets($hook) {
-        // Only load on Athena AI admin pages
-        if (strpos($hook, 'athena-ai') === false && 
-            strpos($hook, 'athena-feed') === false &&
-            strpos($hook, 'profiles') === false) {
-            return;
-        }
+        // Debug: Log the hook to see what page we're on
+        error_log('Athena AI Hook: ' . $hook);
+        
+        // Temporarily load on ALL admin pages for debugging
+        // if (strpos($hook, 'athena-ai') === false && 
+        //     strpos($hook, 'athena-feed') === false &&
+        //     strpos($hook, 'profiles') === false) {
+        //     return;
+        // }
+        
+        // Debug: Log that we're loading scripts
+        error_log('Athena AI: Loading scripts on hook: ' . $hook);
 
         // Enqueue styles
         wp_enqueue_style(
