@@ -180,10 +180,16 @@ class ProfilePage {
      * @return void
      */
     public static function enqueue_assets($hook_suffix): void {
-        // Nur auf der Profile-Seite laden
-        if ($hook_suffix !== 'athena-feed-items_page_athena-ai-profiles') {
-            return;
-        }
+        // Debug: Zeige immer welcher Hook aufgerufen wird
+        error_log('Athena AI Debug: Hook called: ' . $hook_suffix);
+        
+        // TEMPORÄR: Lade Scripts auf allen Admin-Seiten für Debug
+        // if ($hook_suffix !== 'athena-feed-items_page_athena-ai-profiles') {
+        //     error_log('Athena AI Debug: Hook does not match, expected: athena-feed-items_page_athena-ai-profiles');
+        //     return;
+        // }
+        
+        error_log('Athena AI Debug: Enqueuing scripts for profile page');
 
         // AJAX Handler registrieren
         add_action('wp_ajax_athena_ai_prompt', ['\AthenaAI\Admin\AjaxHandler', 'handle_prompt_request']);

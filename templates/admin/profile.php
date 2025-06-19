@@ -100,6 +100,14 @@ athena_ai_render_multiple_modals($prompt_types);
             <button type="button" onclick="athenaAIDebugScripts()" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Check Scripts</button>
         </div>
     </div>
+    
+    <!-- DEBUG: Zeige ob Scripts geladen werden -->
+    <div class="mt-4 p-3 bg-blue-50 border">
+        <strong>Script Loading Status:</strong><br>
+        Hook Suffix: <?php echo esc_html($_GET['page'] ?? 'unknown'); ?><br>
+        Current Screen: <?php echo esc_html(get_current_screen()->id ?? 'unknown'); ?><br>
+        Scripts should be loaded: <?php echo wp_script_is('athena-ai-profile-modals', 'enqueued') ? 'YES' : 'NO'; ?>
+    </div>
 </div>
 
 <script>
