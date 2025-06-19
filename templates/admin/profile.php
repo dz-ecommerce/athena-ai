@@ -97,9 +97,27 @@ athena_ai_render_multiple_modals($prompt_types);
             <strong>JavaScript-Tests:</strong>
             <button type="button" onclick="athenaAIDebugFloatingLabels()" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Test Floating Labels</button>
             <button type="button" onclick="console.log('Prompt Manager:', window.athenaAiPromptManager)" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Test Prompt Manager</button>
+            <button type="button" onclick="athenaAIDebugScripts()" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Check Scripts</button>
         </div>
     </div>
 </div>
+
+<script>
+function athenaAIDebugScripts() {
+    console.log('=== ATHENA AI DEBUG ===');
+    console.log('jQuery loaded:', typeof jQuery !== 'undefined' ? 'YES' : 'NO');
+    console.log('Modals script loaded:', typeof window.athenaAiModalsLoaded !== 'undefined' ? 'YES' : 'NO');
+    console.log('Prompt Config available:', typeof window.athenaAiPromptConfig !== 'undefined' ? 'YES' : 'NO');
+    console.log('AI-Buttons found:', jQuery('[data-modal-target]').length);
+    console.log('Modals found:', jQuery('.fixed.hidden').length);
+    
+    // Test AI-Button Click
+    if (jQuery('[data-modal-target]').length > 0) {
+        console.log('Testing first AI-Button...');
+        jQuery('[data-modal-target]').first().trigger('click');
+    }
+}
+</script>
 <?php endif; ?>
 
 <!-- Beispiel für einzelne Modal-Erstellung (falls benötigt) -->

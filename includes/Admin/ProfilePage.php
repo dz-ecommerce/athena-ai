@@ -11,6 +11,21 @@ declare(strict_types=1);
 
 namespace AthenaAI\Admin;
 
+// WordPress-Funktionen importieren
+use function add_action;
+use function add_submenu_page;
+use function register_setting;
+use function sanitize_text_field;
+use function sanitize_textarea_field;
+use function wp_enqueue_script;
+use function wp_localize_script;
+use function wp_add_inline_script;
+use function wp_json_encode;
+use function wp_create_nonce;
+use function admin_url;
+use function __;
+use function plugin_dir_path;
+
 if (!defined('ABSPATH')) {
     exit();
 }
@@ -27,6 +42,7 @@ class ProfilePage {
     public static function register(): void {
         add_action('admin_menu', [self::class, 'add_profile_page'], 20);
         add_action('admin_init', [self::class, 'register_settings']);
+        add_action('admin_enqueue_scripts', [self::class, 'enqueue_assets']);
     }
 
     /**
@@ -155,5 +171,149 @@ class ProfilePage {
     public static function render_page(): void {
         // Template für die Profilseite laden
         require_once plugin_dir_path(dirname(__DIR__)) . 'templates/admin/profile.php';
+    }
+
+    /**
+     * Lädt JavaScript und CSS-Dateien für die Profile-Seite.
+     *
+     * @param string $hook_suffix Der aktuelle Admin-Hook
+     * @return void
+     */
+    public static function enqueue_assets($hook_suffix): void {
+        // Nur auf der Profile-Seite laden
+        if ($hook_suffix !== 'athena-feed-items_page_athena-ai-profiles') {
+            return;
+        }
+
+        // AJAX Handler registrieren
+        add_action('wp_ajax_athena_ai_prompt', ['\AthenaAI\Admin\AjaxHandler', 'handle_prompt_request']);
+
+        // Enqueue Prompt Manager
+        wp_enqueue_script(
+            'athena-ai-prompt-manager',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/PromptManager.js',
+            [],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // AI Modal JavaScript
+        wp_enqueue_script(
+            'athena-ai-ai-modal',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/AIModal.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Modal Base JavaScript
+        wp_enqueue_script(
+            'athena-ai-modal',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/Modal.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Profile modals JavaScript
+        wp_enqueue_script(
+            'athena-ai-profile-modals',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-modals.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Profile AJAX JavaScript
+        wp_enqueue_script(
+            'athena-ai-profile-ajax',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/profile-ajax.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Profile Form JavaScript
+        wp_enqueue_script(
+            'athena-ai-profile-form',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/ProfileForm.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Products Modal JavaScript
+        wp_enqueue_script(
+            'athena-ai-products-modal',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/ProductsModal.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Company Description Modal JavaScript
+        wp_enqueue_script(
+            'athena-ai-company-description-modal',
+            ATHENA_AI_PLUGIN_URL . 'assets/js/admin/profile/CompanyDescriptionModal.js',
+            ['jquery'],
+            ATHENA_AI_VERSION,
+            true
+        );
+
+        // Localize script with AJAX URL and nonce
+        wp_localize_script(
+            'athena-ai-profile-ajax',
+            'athenaAiAdmin',
+            [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('athena_ai_ajax_nonce'),
+                'i18n' => [
+                    'error' => __('An error occurred', 'athena-ai'),
+                    'saving' => __('Saving...', 'athena-ai'),
+                    'saved' => __('Saved!', 'athena-ai'),
+                ]
+            ]
+        );
+
+        // Prompt-Konfiguration laden
+        self::enqueue_prompt_config();
+    }
+
+    /**
+     * Prompt-Konfiguration ins Frontend laden
+     *
+     * @return void
+     */
+    private static function enqueue_prompt_config(): void {
+        $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
+        
+        // Prompt-Konfiguration als JSON ins DOM einbetten
+        $config = [
+            'prompts' => [],
+            'global' => [],
+            'validation' => []
+        ];
+        
+        // Alle verfügbaren Modals laden
+        foreach ($prompt_manager->get_available_modals() as $modal_type) {
+            $config['prompts'][$modal_type] = $prompt_manager->get_prompt($modal_type);
+        }
+        
+        // Globale Einstellungen
+        $config['global'] = [
+            'default_provider' => $prompt_manager->get_global_setting('default_provider'),
+            'test_mode_available' => $prompt_manager->get_global_setting('test_mode_available'),
+            'debug_mode' => $prompt_manager->get_global_setting('debug_mode')
+        ];
+        
+        // Validierungsregeln
+        $config['validation'] = $prompt_manager->get_validation_rules();
+        
+        // JSON-Konfiguration ins DOM einbetten
+        wp_add_inline_script(
+            'athena-ai-prompt-manager',
+            'window.athenaAiPromptConfig = ' . wp_json_encode($config) . ';',
+            'before'
+        );
     }
 }

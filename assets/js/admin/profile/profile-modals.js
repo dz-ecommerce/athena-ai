@@ -4,38 +4,54 @@
  */
 
 jQuery(function ($) {
-    // Company Description Modal
-    $('#athena-ai-assistant-btn').on('click', function () {
-        $('#athena-ai-modal').removeClass('hidden').addClass('flex');
+    // Universal Modal Handler für alle AI-Buttons mit data-modal-target
+    $(document).on('click', '[data-modal-target]', function (e) {
+        e.preventDefault();
+        var modalTarget = $(this).data('modal-target');
+        var promptType = $(this).data('prompt-type');
+
+        if (modalTarget) {
+            var $modal = $('#' + modalTarget);
+            if ($modal.length) {
+                $modal.removeClass('hidden').addClass('flex');
+
+                // Optional: Prompt-Typ für weitere Verarbeitung setzen
+                if (promptType) {
+                    $modal.attr('data-modal-type', promptType);
+                }
+
+                console.log('Athena AI: Modal geöffnet für Typ:', promptType);
+            } else {
+                console.warn('Athena AI: Modal nicht gefunden:', modalTarget);
+            }
+        }
     });
 
-    $('#athena-ai-modal-close').on('click', function () {
-        $('#athena-ai-modal').addClass('hidden').removeClass('flex');
+    // Universal Close Handler für alle Modals
+    $(document).on('click', '[data-modal-close], .modal-close', function (e) {
+        e.preventDefault();
+        var $modal = $(this).closest('.fixed'); // Annahme: Modals haben .fixed Klasse
+        if ($modal.length) {
+            $modal.addClass('hidden').removeClass('flex');
+        }
     });
 
-    // Close modal on backdrop click
-    $('#athena-ai-modal').on('click', function (e) {
+    // Close modals on backdrop click (Klick außerhalb des Modal-Inhalts)
+    $(document).on('click', '.fixed.flex', function (e) {
         if (e.target === this) {
             $(this).addClass('hidden').removeClass('flex');
         }
     });
 
-    // Products Modal
-    $('#athena-ai-products-assistant-btn').on('click', function () {
-        $('#athena-ai-products-modal').removeClass('hidden').addClass('flex');
-    });
-
-    $('#athena-ai-products-modal-close').on('click', function () {
-        $('#athena-ai-products-modal').addClass('hidden').removeClass('flex');
-    });
-
-    // Close products modal on backdrop click
-    $('#athena-ai-products-modal').on('click', function (e) {
-        if (e.target === this) {
-            $(this).addClass('hidden').removeClass('flex');
+    // Close modals on ESC key
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape') {
+            $('.fixed.flex').addClass('hidden').removeClass('flex');
         }
     });
 
     // Set flag to indicate external script loaded
     window.athenaAiModalsLoaded = true;
+
+    console.log('Athena AI: Profile Modals JavaScript loaded');
 });
