@@ -58,17 +58,6 @@ function athena_ai_render_modal($args = []) {
     if ($args['auto_render']) {
         athena_ai_render_modal_html($args);
     }
-    
-    // JavaScript für Button-Handler
-    ?>
-    <script>
-    jQuery(document).ready(function($) {
-        $('[data-modal-target="<?php echo esc_js($args['modal_id']); ?>"]').on('click', function() {
-            $('#<?php echo esc_js($args['modal_id']); ?>').removeClass('hidden').addClass('flex');
-        });
-    });
-    </script>
-    <?php
 }
 
 /**
@@ -134,24 +123,6 @@ function athena_ai_button($args = []) {
         <?php endif; ?>
         <span><?php echo esc_html($args['text']); ?></span>
     </button>
-    
-    <script>
-    jQuery(document).ready(function($) {
-        // Handler für AI-Button
-        $('[data-modal-target="<?php echo esc_js($modal_id); ?>"]').on('click', function() {
-            var promptType = $(this).data('prompt-type');
-            var $modal = $('#<?php echo esc_js($modal_id); ?>');
-            
-            // Modal öffnen
-            $modal.removeClass('hidden').addClass('flex');
-            
-            // Modal-Typ setzen (für JavaScript-Verarbeitung)
-            $modal.attr('data-modal-type', promptType);
-            
-            console.log('Athena AI: Modal geöffnet für Typ:', promptType);
-        });
-    });
-    </script>
     <?php
 }
 

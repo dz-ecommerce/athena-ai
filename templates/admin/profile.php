@@ -76,8 +76,14 @@ $prompt_types = [
     'seo_keywords'
 ];
 
-// Rendere alle Modals
-athena_ai_render_multiple_modals($prompt_types);
+// Rendere nur die Modals ohne Buttons (Buttons sind bereits in den Sections)
+foreach ($prompt_types as $prompt_type) {
+    $args = [
+        'modal_type' => $prompt_type,
+        'modal_id' => 'athena-ai-' . $prompt_type . '-modal'
+    ];
+    athena_ai_render_modal_html($args);
+}
 ?>
 
 <!-- Debug-Bereich (nur für Entwicklung) -->
