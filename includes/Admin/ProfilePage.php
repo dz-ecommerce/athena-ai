@@ -191,8 +191,8 @@ class ProfilePage {
         
         error_log('Athena AI Debug: Enqueuing scripts for profile page');
 
-        // AJAX Handler registrieren
-        add_action('wp_ajax_athena_ai_prompt', ['\AthenaAI\Admin\AjaxHandler', 'handle_prompt_request']);
+        // AJAX Handler wird bereits im AjaxHandler Constructor registriert
+        // add_action('wp_ajax_athena_ai_prompt', ['\AthenaAI\Admin\AjaxHandler', 'handle_prompt_request']);
 
         // Enqueue Prompt Manager
         wp_enqueue_script(

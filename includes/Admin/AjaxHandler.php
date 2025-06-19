@@ -36,6 +36,10 @@ class AjaxHandler {
         add_action('wp_ajax_athena_ai_generate_content', [$this, 'handleGenerateContent']);
         add_action('wp_ajax_nopriv_athena_ai_generate_content', [$this, 'handleGenerateContent']);
         
+        // Universeller Prompt Handler (für profile-modals.js)
+        add_action('wp_ajax_athena_ai_prompt', [$this, 'handle_prompt_request']);
+        add_action('wp_ajax_nopriv_athena_ai_prompt', [$this, 'handle_prompt_request']);
+        
         // Initialisiere die Services
         $this->openai_service = new OpenAIService();
         $this->gemini_service = new GeminiService();
@@ -428,5 +432,83 @@ class AjaxHandler {
         }
         
         return $prompt;
+    }
+    
+    /**
+     * Universeller AJAX-Handler für profile-modals.js
+     * Behandelt alle Prompt-Requests mit JSON-Response
+     */
+    public function handle_prompt_request() {
+        // Nonce-Prüfung (optional, falls verwendet)
+        $nonce = $_POST['nonce'] ?? '';
+        if (!empty($nonce) && !wp_verify_nonce($nonce, 'athena_ai_ajax_nonce')) {
+            wp_send_json_error(['message' => 'Security check failed']);
+            return;
+        }
+        
+        $modal_type = sanitize_text_field($_POST['modal_type'] ?? '');
+        $page_id = intval($_POST['page_id'] ?? 0);
+        $extra_info = sanitize_textarea_field($_POST['extra_info'] ?? '');
+        $model_provider = sanitize_text_field($_POST['model_provider'] ?? 'openai');
+        
+        // Validierung
+        if (empty($modal_type) || empty($extra_info)) {
+            wp_send_json_error(['message' => 'Modal-Typ und zusätzliche Informationen sind erforderlich']);
+            return;
+        }
+        
+        // Prompt erstellen
+        $prompt = $this->buildFallbackPrompt($modal_type, $extra_info, $page_id > 0 ? $page_id : null);
+        
+        // AI-Service auswählen und Content generieren
+        if ($model_provider === 'gemini') {
+            $ai_result = $this->gemini_service->generate_content($prompt);
+            
+            if (!is_wp_error($ai_result)) {
+                $content = $this->gemini_service->extract_content($ai_result);
+                wp_send_json_success([
+                    'content' => $content,
+                    'provider' => 'gemini',
+                    'modal_type' => $modal_type,
+                    'debug' => [
+                        'prompt_length' => strlen($prompt),
+                        'page_id' => $page_id
+                    ]
+                ]);
+            } else {
+                wp_send_json_error([
+                    'message' => 'Gemini API Fehler: ' . $ai_result->get_error_message(),
+                    'provider' => 'gemini'
+                ]);
+            }
+        } else {
+            // OpenAI (Standard)
+            $ai_result = $this->openai_service->generate_content($prompt);
+            
+            if (!is_wp_error($ai_result)) {
+                if (isset($ai_result['choices'][0]['message']['content'])) {
+                    $content = $ai_result['choices'][0]['message']['content'];
+                    wp_send_json_success([
+                        'content' => $content,
+                        'provider' => 'openai',
+                        'modal_type' => $modal_type,
+                        'debug' => [
+                            'prompt_length' => strlen($prompt),
+                            'page_id' => $page_id
+                        ]
+                    ]);
+                } else {
+                    wp_send_json_error([
+                        'message' => 'Unerwartetes OpenAI-Antwortformat',
+                        'provider' => 'openai'
+                    ]);
+                }
+            } else {
+                wp_send_json_error([
+                    'message' => 'OpenAI API Fehler: ' . $ai_result->get_error_message(),
+                    'provider' => 'openai'
+                ]);
+            }
+        }
     }
 } 
