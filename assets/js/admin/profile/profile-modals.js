@@ -90,6 +90,7 @@ jQuery(function ($) {
     $(document).on('click', '.athena-ai-create-content', function (e) {
         e.preventDefault();
         console.log('Athena AI: Content erstellen button clicked');
+        alert('Content erstellen Button wurde geklickt!'); // TEMPORÄRER TEST
 
         var $modal = $(this).closest('.fixed');
         var modalType = $modal.data('modal-type');
@@ -280,6 +281,8 @@ jQuery(function ($) {
         setTimeout(function () {
             var $aiButtons = $('[data-modal-target]');
             var $modals = $('.fixed');
+            var $createButtons = $('.athena-ai-create-content');
+            var $transferButtons = $('.athena-ai-transfer-content');
 
             console.log('=== ATHENA AI MODAL DEBUG ===');
             console.log('AI-Buttons gefunden:', $aiButtons.length);
@@ -305,8 +308,25 @@ jQuery(function ($) {
                     $(this).data('modal-type')
                 );
             });
+
+            console.log('Content erstellen Buttons gefunden:', $createButtons.length);
+            $createButtons.each(function (index) {
+                console.log('  Create Button', index + 1, '- Classes:', this.className);
+            });
+
+            console.log('Content übertragen Buttons gefunden:', $transferButtons.length);
+            $transferButtons.each(function (index) {
+                console.log('  Transfer Button', index + 1, '- Classes:', this.className);
+            });
+
             console.log('==============================');
-        }, 500);
+
+            // Test ob Event-Handler funktioniert
+            if ($createButtons.length > 0) {
+                console.log('Testing Content erstellen Button click handler...');
+                $createButtons.first().trigger('click');
+            }
+        }, 1000); // Erhöhe Timeout auf 1 Sekunde
     });
 
     // Set flag to indicate external script loaded
