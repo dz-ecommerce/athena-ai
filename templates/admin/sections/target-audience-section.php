@@ -19,21 +19,5 @@
             ]); 
             ?>
         </div>
-        <?php 
-        athena_ai_checkbox_group([
-            'name' => 'athena_ai_profiles[age_group]',
-            'label' => 'Altersgruppe der Zielkunden',
-            'values' => $profile_data['age_group'] ?? [],
-            'options' => [
-                '18-24' => '18-24',
-                '25-34' => '25-34',
-                '35-44' => '35-44',
-                '45-54' => '45-54',
-                '55-64' => '55-64',
-                '65+' => '65+'
-            ],
-            'layout' => 'horizontal'
-        ]); 
-        ?>
     </div>
 </fieldset> 

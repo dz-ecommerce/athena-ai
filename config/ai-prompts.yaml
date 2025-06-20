@@ -58,14 +58,6 @@ company_industry:
     max_words: 3
     format: 'single_term'
 
-age_group:
-    intro: 'Analysiere die Zielgruppenbeschreibung und identifiziere die relevanten Altersgruppen. Wähle aus: 18-24, 25-34, 35-44, 45-54, 55-64, 65+.'
-    limit: 'Maximal 3 Altersgruppen, durch Komma getrennt. Nur die angegebenen Kategorien verwenden.'
-    target_field: 'age_group'
-    max_items: 3
-    format: 'comma_separated'
-    options: ['18-24', '25-34', '35-44', '45-54', '55-64', '65+']
-
 # Globale Einstellungen
 global:
     default_provider: 'openai'

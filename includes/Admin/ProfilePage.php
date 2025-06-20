@@ -117,10 +117,6 @@ class ProfilePage {
             $sanitized['target_audience'] = sanitize_textarea_field($input['target_audience']);
         }
         
-        if (isset($input['age_group']) && is_array($input['age_group'])) {
-            $sanitized['age_group'] = array_map('sanitize_text_field', $input['age_group']);
-        }
-        
         // Fachwissen und Expertise
         if (isset($input['expertise_areas'])) {
             $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);

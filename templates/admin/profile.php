@@ -104,8 +104,7 @@ foreach ($prompt_types as $prompt_type) {
             <button type="button" onclick="athenaAIDebugFloatingLabels()" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Test Floating Labels</button>
             <button type="button" onclick="console.log('Prompt Manager:', window.athenaAiPromptManager)" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Test Prompt Manager</button>
             <button type="button" onclick="athenaAIDebugScripts()" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Check Scripts</button>
-            <button type="button" onclick="debugAgeGroupCheckboxes()" class="bg-purple-500 text-white px-2 py-1 rounded text-xs">Debug Age Group Checkboxes</button>
-            <button type="button" onclick="testAgeGroupSelection()" class="bg-orange-500 text-white px-2 py-1 rounded text-xs">Test Age Group Selection</button>
+
         </div>
     </div>
     
@@ -193,14 +192,7 @@ function setDefaultFormValues() {
         triggerFloatingLabelUpdate(industryField);
     }
     
-    // Set age group checkboxes
-    const ageGroups = ['25-34', '35-44'];
-    ageGroups.forEach(age => {
-        const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${age}"]`);
-        if (checkbox && !isAnyCheckboxChecked('athena_ai_profiles[age_group]')) {
-            checkbox.checked = true;
-        }
-    });
+
     
 }
 
@@ -305,14 +297,7 @@ function executeAIPrompt(promptType, targetField, callback) {
         targetField.value = demoContent;
         triggerFloatingLabelUpdate(targetField);
         
-        // Automatische Altersgruppen-Auswahl auch im Test-Modus
-        if (promptType === 'target_audience') {
-            console.log('🎯 Target audience Demo-Content gesetzt, starte automatische Altersgruppen-Auswahl...');
-            setTimeout(() => {
-                console.log('🎯 Führe executeAgeGroupSelection aus mit Demo-Text:', demoContent.substring(0, 100) + '...');
-                executeAgeGroupSelection(demoContent);
-            }, 1000); // Kurzes Timeout für Demo-Modus
-        }
+
         
         callback(true);
         return;
@@ -340,14 +325,7 @@ function executeAIPrompt(promptType, targetField, callback) {
                         targetField.value = response.data;
                         triggerFloatingLabelUpdate(targetField);
                         
-                        // Automatische Altersgruppen-Auswahl nach target_audience
-                        if (promptType === 'target_audience') {
-                            console.log('🎯 Target audience generiert, starte automatische Altersgruppen-Auswahl...');
-                            setTimeout(() => {
-                                console.log('🎯 Führe executeAgeGroupSelection aus mit Text:', response.data.substring(0, 100) + '...');
-                                executeAgeGroupSelection(response.data);
-                            }, 1500); // Längeres Timeout für DOM-Stabilität
-                        }
+
                         
                         callback(true);
                     } else {
@@ -395,10 +373,7 @@ function collectProfileData() {
         }
     });
     
-    // Collect checkbox values
-    const ageGroups = Array.from(document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]:checked'))
-        .map(cb => cb.value);
-    if (ageGroups.length) data.age_group = ageGroups;
+
     
     return data;
 }
@@ -409,7 +384,7 @@ function getDemoContent(promptType) {
         'products': 'Webentwicklung, Mobile Apps, Cloud-Lösungen, E-Commerce Plattformen, CRM-Systeme, Datenanalyse-Tools',
         'company_usps': 'Agile Entwicklungsmethoden, 24/7 Support, Kostenlose Beratung, Langjährige Erfahrung, Individuelle Lösungen',
         'target_audience': 'Mittelständische Unternehmen aus verschiedenen Branchen mit berufstätigen Entscheidern im Alter von 25-54 Jahren, die ihre digitalen Prozesse modernisieren möchten. Unsere Kunden schätzen persönliche Betreuung und nachhaltige Lösungen.',
-        'age_group': '25-34, 35-44, 45-54',
+
         'expertise_areas': 'PHP/Laravel Development\nReact/Vue.js Frontend\nAWS Cloud Architecture\nDatabase Design\nAPI Integration\nSEO Optimierung',
         'seo_keywords': 'Webentwicklung\nSoftware Entwicklung\nDigitale Transformation\nIT Beratung\nCloud Lösungen'
     };
@@ -417,194 +392,7 @@ function getDemoContent(promptType) {
     return demoContents[promptType] || `Generierter Inhalt für ${promptType}`;
 }
 
-function executeAgeGroupSelection(targetAudienceText) {
-    // Get AI provider
-    const aiProvider = localStorage.getItem('athena_ai_provider') || 'openai';
-    const testMode = localStorage.getItem('athena_ai_test_mode') === 'true';
-    
-    if (testMode) {
-        // Demo: Set some age groups based on keywords
-        const demoAgeGroups = getDemoAgeGroups(targetAudienceText);
-        setAgeGroupCheckboxes(demoAgeGroups);
-        return;
-    }
-    
-    // Real AI request for age group analysis
-    const requestData = {
-        action: 'athena_ai_generate_content',
-        nonce: window.athenaAiAjax?.nonce || '',
-        prompt_type: 'age_group',
-        provider: aiProvider,
-        extra_info: targetAudienceText
-    };
-    
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', window.athenaAiAjax?.ajaxurl || '/wp-admin/admin-ajax.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success && response.data) {
-                        // Parse AI response to extract age groups
-                        const ageGroups = parseAgeGroupsFromAI(response.data);
-                        setAgeGroupCheckboxes(ageGroups);
-                    } else {
-                        console.log('Age group AI failed, using demo data');
-                        const demoAgeGroups = getDemoAgeGroups(targetAudienceText);
-                        setAgeGroupCheckboxes(demoAgeGroups);
-                    }
-                } catch (e) {
-                    console.error('Age group response parsing error:', e);
-                }
-            }
-        }
-    };
-    
-    // Convert object to URL-encoded string
-    const params = Object.keys(requestData)
-        .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(requestData[key]))
-        .join('&');
-    
-    xhr.send(params);
-}
 
-function parseAgeGroupsFromAI(aiResponse) {
-    // Available age groups from config
-    const availableGroups = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
-    const foundGroups = [];
-    
-    // Simple parsing: look for age group patterns in AI response
-    availableGroups.forEach(group => {
-        if (aiResponse.includes(group)) {
-            foundGroups.push(group);
-        }
-    });
-    
-    // If no direct matches, try keyword matching
-    if (foundGroups.length === 0) {
-        const lowerResponse = aiResponse.toLowerCase();
-        
-        if (lowerResponse.includes('jung') || lowerResponse.includes('student') || lowerResponse.includes('berufseinsteiger')) {
-            foundGroups.push('18-24', '25-34');
-        }
-        if (lowerResponse.includes('mittel') || lowerResponse.includes('familie') || lowerResponse.includes('berufstätig')) {
-            foundGroups.push('25-34', '35-44', '45-54');
-        }
-        if (lowerResponse.includes('erfahren') || lowerResponse.includes('senior') || lowerResponse.includes('älter')) {
-            foundGroups.push('45-54', '55-64', '65+');
-        }
-    }
-    
-    return foundGroups;
-}
-
-function getDemoAgeGroups(targetAudienceText) {
-    const text = targetAudienceText.toLowerCase();
-    const groups = [];
-    
-    // Simple keyword-based demo logic
-    if (text.includes('jung') || text.includes('student') || text.includes('startup')) {
-        groups.push('18-24', '25-34');
-    }
-    if (text.includes('mittelstand') || text.includes('familie') || text.includes('berufstätig')) {
-        groups.push('25-34', '35-44', '45-54');
-    }
-    if (text.includes('erfahren') || text.includes('senior') || text.includes('etabliert')) {
-        groups.push('45-54', '55-64');
-    }
-    
-    // Default fallback
-    if (groups.length === 0) {
-        groups.push('25-34', '35-44');
-    }
-    
-    return groups;
-}
-
-function setAgeGroupCheckboxes(ageGroups) {
-    console.log('🔍 Debug: setAgeGroupCheckboxes aufgerufen mit:', ageGroups);
-    
-    // ERWEITERTE SUCHE: Mehrere Ansätze versuchen
-    const searchStrategies = [
-        // Strategie 1: Original
-        () => document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]'),
-        // Strategie 2: Attribute enthält
-        () => document.querySelectorAll('input[name*="age_group"]'),
-        // Strategie 3: Alle Checkboxen durchsuchen
-        () => Array.from(document.querySelectorAll('input[type="checkbox"]')).filter(cb => 
-            cb.name && cb.name.includes('age_group')
-        ),
-        // Strategie 4: ID-basiert
-        () => document.querySelectorAll('input[id*="age_group"]')
-    ];
-    
-    let allCheckboxes = [];
-    for (let i = 0; i < searchStrategies.length; i++) {
-        allCheckboxes = searchStrategies[i]();
-        console.log(`🔍 Strategie ${i+1}: ${allCheckboxes.length} Checkboxen gefunden`);
-        if (allCheckboxes.length > 0) break;
-    }
-    
-    if (allCheckboxes.length === 0) {
-        console.error('❌ KEINE Age Group Checkboxen mit allen Strategien gefunden!');
-        // Fallback: Alle Checkboxen anzeigen
-        const allCbs = document.querySelectorAll('input[type="checkbox"]');
-        console.log('📋 Alle verfügbaren Checkboxen:');
-        allCbs.forEach((cb, idx) => {
-            console.log(`  [${idx}] name="${cb.name}" value="${cb.value}" id="${cb.id}"`);
-        });
-        return;
-    }
-    
-    // Checkboxen zurücksetzen
-    allCheckboxes.forEach(cb => {
-        console.log('🔍 Debug: Checkbox gefunden mit value:', cb.value, 'name:', cb.name);
-        cb.checked = false;
-    });
-    
-    // Ankreuzen mit mehreren Ansätzen
-    let successCount = 0;
-    ageGroups.forEach(group => {
-        let checkbox = null;
-        
-        // Mehrere Selektoren probieren
-        const selectors = [
-            `input[name="athena_ai_profiles[age_group][]"][value="${group}"]`,
-            `input[name*="age_group"][value="${group}"]`,
-            `input[value="${group}"]`
-        ];
-        
-        for (const selector of selectors) {
-            checkbox = document.querySelector(selector);
-            if (checkbox) {
-                console.log(`✅ Checkbox für "${group}" gefunden mit Selektor: ${selector}`);
-                break;
-            }
-        }
-        
-        if (checkbox) {
-            checkbox.checked = true;
-            successCount++;
-            console.log(`✅ Altersgruppe "${group}" automatisch ausgewählt`);
-            
-            // Event triggern für JavaScript-Frameworks
-            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            console.warn(`❌ Checkbox für Altersgruppe "${group}" nicht gefunden!`);
-        }
-    });
-    
-    // Show notification
-    if (successCount > 0) {
-        showTempNotification(`${successCount} Altersgruppen automatisch ausgewählt: ${ageGroups.join(', ')}`, 'info');
-    } else {
-        console.error('❌ Keine Altersgruppen-Checkboxen konnten ausgewählt werden!');
-        showTempNotification('Fehler: Altersgruppen konnten nicht automatisch ausgewählt werden', 'error');
-    }
-}
 
 function showTempNotification(message, type = 'success') {
     const notification = document.createElement('div');
@@ -669,98 +457,7 @@ function showSuccessMessage(message) {
     }, 4000);
 }
 
-// Debug-Funktionen für Age Group Checkboxes
-function debugAgeGroupCheckboxes() {
-    console.log('🔍 === DEBUG AGE GROUP CHECKBOXES ===');
-    
-    // Alle möglichen Selektoren testen
-    const selectors = [
-        'input[name="athena_ai_profiles[age_group][]"]',
-        'input[name="athena_ai_profiles[age_group]"]',
-        'input[type="checkbox"][value*="24"]',
-        'input[type="checkbox"][value*="34"]',
-        'input[type="checkbox"]'
-    ];
-    
-    selectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        console.log(`Selektor "${selector}": ${elements.length} Elemente gefunden`);
-        elements.forEach((el, index) => {
-            console.log(`  [${index}] name="${el.name}" value="${el.value}" checked=${el.checked}`);
-        });
-    });
-    
-    // HTML-Struktur analysieren
-    const targetSection = document.querySelector('fieldset');
-    if (targetSection) {
-        console.log('🔍 Fieldset HTML:', targetSection.outerHTML.substring(0, 500) + '...');
-    }
-    
-    // Spezifisch nach age_group suchen
-    const ageGroupElements = document.querySelectorAll('*[name*="age_group"]');
-    console.log(`🔍 Elemente mit age_group im name: ${ageGroupElements.length}`);
-    ageGroupElements.forEach(el => {
-        console.log(`  name="${el.name}" type="${el.type}" value="${el.value}"`);
-    });
-}
 
-function testAgeGroupSelection() {
-    console.log('🧪 === TEST AGE GROUP SELECTION ===');
-    
-    // Test mit bekannten Werten
-    const testGroups = ['25-34', '35-44'];
-    console.log('Test mit Gruppen:', testGroups);
-    
-    // Direct Test
-    testGroups.forEach(group => {
-        const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${group}"]`);
-        console.log(`Direct Test für "${group}":`, checkbox ? 'GEFUNDEN' : 'NICHT GEFUNDEN');
-        if (checkbox) {
-            console.log(`  Element:`, checkbox);
-            console.log(`  Aktuell checked:`, checkbox.checked);
-            checkbox.checked = true;
-            console.log(`  Nach Setzen checked:`, checkbox.checked);
-        }
-    });
-    
-    // Trigger actual function
-    setAgeGroupCheckboxes(testGroups);
-}
-
-// DIRECT TEST beim DOM-Load
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM geladen - starte Checkbox-Analyse...');
-    
-    setTimeout(() => {
-        console.log('🔍 === SOFORTIGER CHECKBOX-TEST ===');
-        
-        // Alle Checkboxen finden
-        const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
-        console.log(`Alle Checkboxen gefunden: ${allCheckboxes.length}`);
-        
-        allCheckboxes.forEach((cb, index) => {
-            console.log(`Checkbox ${index}: name="${cb.name}" value="${cb.value}" id="${cb.id}"`);
-        });
-        
-        // Spezifisch nach age_group suchen
-        const ageCheckboxes = document.querySelectorAll('input[name*="age_group"]');
-        console.log(`Age group Checkboxen: ${ageCheckboxes.length}`);
-        
-        // Test: Direkte Checkbox-Manipulation
-        console.log('🧪 Teste direkte Checkbox-Manipulation...');
-        const testCheckbox = document.querySelector('input[type="checkbox"]');
-        if (testCheckbox) {
-            console.log('Test-Checkbox gefunden:', testCheckbox);
-            testCheckbox.checked = true;
-            console.log('Test-Checkbox gesetzt auf:', testCheckbox.checked);
-        }
-        
-        // Test unsere Funktion
-        console.log('🧪 Teste setAgeGroupCheckboxes Funktion...');
-        setAgeGroupCheckboxes(['25-34']);
-        
-    }, 2000); // 2 Sekunden warten
-});
 </script>
 
 <!-- Beispiel für einzelne Modal-Erstellung (falls benötigt) -->
