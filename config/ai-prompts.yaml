@@ -16,13 +16,6 @@ products:
     max_items: 20
     format: 'comma_separated'
 
-company_values:
-    intro: 'Analysiere den bereitgestellten Text und identifiziere die wichtigsten Unternehmenswerte. Extrahiere maximal 3 prägnante Werte, die das Unternehmen charakterisieren.'
-    limit: 'Maximal 3 Werte, je ein Wert pro Zeile. Keine zusätzlichen Erklärungen.'
-    target_field: 'company_values'
-    max_items: 3
-    format: 'line_separated'
-
 target_audience:
     intro: 'Analysiere den bereitgestellten Text und beschreibe die Zielgruppe des Unternehmens. Fokussiere dich auf demografische Merkmale, Bedürfnisse und Charakteristika der idealen Kunden.'
     limit: 'Maximal 80 Wörter. Präzise und zielgruppenorientierte Beschreibung.'

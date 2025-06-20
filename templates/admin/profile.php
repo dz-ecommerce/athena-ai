@@ -53,8 +53,6 @@ include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helper
 
                 <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/target-audience-section.php'; ?>
 
-                <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/company-values-section.php'; ?>
-
                 <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/expertise-section.php'; ?>
 
                 <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/keywords-section.php'; ?>
@@ -72,7 +70,6 @@ include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helper
 $prompt_types = [
     'company_description',
     'products', 
-    'company_values',
     'target_audience',
     'company_usps',
     'expertise_areas',
@@ -165,7 +162,6 @@ function executeFullAssistant() {
         'products',
         'company_usps', 
         'target_audience',
-        'company_values',
         'expertise_areas',
         'seo_keywords'
     ];
@@ -195,12 +191,6 @@ function setDefaultFormValues() {
         triggerFloatingLabelUpdate(industryField);
     }
     
-    // Set preferred tone radio button
-    const toneInformal = document.querySelector('input[name="athena_ai_profiles[preferred_tone]"][value="informal"]');
-    if (toneInformal && !isAnyRadioChecked('athena_ai_profiles[preferred_tone]')) {
-        toneInformal.checked = true;
-    }
-    
     // Set age group checkboxes
     const ageGroups = ['26-35', '36-45'];
     ageGroups.forEach(age => {
@@ -210,14 +200,6 @@ function setDefaultFormValues() {
         }
     });
     
-    // Set tonality checkboxes
-    const tonalities = ['professional', 'friendly', 'informative'];
-    tonalities.forEach(tone => {
-        const checkbox = document.querySelector(`input[name="athena_ai_profiles[tonality][]"][value="${tone}"]`);
-        if (checkbox && !isAnyCheckboxChecked('athena_ai_profiles[tonality]')) {
-            checkbox.checked = true;
-        }
-    });
 }
 
 function isAnyRadioChecked(name) {
@@ -279,7 +261,6 @@ function getTargetFieldForPrompt(promptType) {
         'products': 'company_products',
         'company_usps': 'company_usps',
         'target_audience': 'target_audience',
-        'company_values': 'company_values',
         'expertise_areas': 'expertise_areas',
         'seo_keywords': 'seo_keywords'
     };
@@ -294,7 +275,6 @@ function getPromptDisplayName(promptType) {
         'products': 'Produkte & Dienstleistungen',
         'company_usps': 'Alleinstellungsmerkmale',
         'target_audience': 'Zielgruppe',
-        'company_values': 'Unternehmenswerte',
         'expertise_areas': 'Expertise-Bereiche',
         'seo_keywords': 'SEO-Keywords'
     };
@@ -383,8 +363,7 @@ function collectProfileData() {
     const fields = [
         'company_name', 'company_industry', 'company_description',
         'company_products', 'company_usps', 'target_audience',
-        'company_values', 'expertise_areas', 'certifications',
-        'seo_keywords'
+        'expertise_areas', 'certifications', 'seo_keywords'
     ];
     
     fields.forEach(fieldId => {
@@ -394,18 +373,10 @@ function collectProfileData() {
         }
     });
     
-    // Collect radio button values
-    const preferredTone = document.querySelector('input[name="athena_ai_profiles[preferred_tone]"]:checked');
-    if (preferredTone) data.preferred_tone = preferredTone.value;
-    
     // Collect checkbox values
     const ageGroups = Array.from(document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]:checked'))
         .map(cb => cb.value);
     if (ageGroups.length) data.age_group = ageGroups;
-    
-    const tonalities = Array.from(document.querySelectorAll('input[name="athena_ai_profiles[tonality][]"]:checked'))
-        .map(cb => cb.value);
-    if (tonalities.length) data.tonality = tonalities;
     
     return data;
 }
@@ -416,7 +387,7 @@ function getDemoContent(promptType) {
         'products': 'Webentwicklung, Mobile Apps, Cloud-Lösungen, E-Commerce Plattformen, CRM-Systeme, Datenanalyse-Tools',
         'company_usps': 'Agile Entwicklungsmethoden, 24/7 Support, Kostenlose Beratung, Langjährige Erfahrung, Individuelle Lösungen',
         'target_audience': 'Mittelständische Unternehmen aus verschiedenen Branchen, die ihre digitalen Prozesse modernisieren möchten. Unsere Kunden schätzen persönliche Betreuung und nachhaltige Lösungen.',
-        'company_values': 'Innovation\nKundenorientierung\nNachhaltigkeit',
+
         'expertise_areas': 'PHP/Laravel Development\nReact/Vue.js Frontend\nAWS Cloud Architecture\nDatabase Design\nAPI Integration\nSEO Optimierung',
         'seo_keywords': 'Webentwicklung\nSoftware Entwicklung\nDigitale Transformation\nIT Beratung\nCloud Lösungen'
     };
@@ -464,7 +435,7 @@ function showSuccessMessage(message) {
 // Einzelne Modals können auch so erstellt werden:
 athena_ai_render_modal('company_description');
 athena_ai_render_modal('products');
-athena_ai_render_modal('company_values');
+
 // etc.
 */
 ?>

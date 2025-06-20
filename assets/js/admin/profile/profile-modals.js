@@ -236,7 +236,7 @@ jQuery(function ($) {
             var fieldMappings = {
                 company_description: 'company_description',
                 products: 'company_products',
-                company_values: 'company_values',
+
                 target_audience: 'target_audience',
                 company_usps: 'company_usps',
                 expertise_areas: 'expertise_areas',

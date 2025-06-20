@@ -121,11 +121,6 @@ class ProfilePage {
             $sanitized['age_group'] = array_map('sanitize_text_field', $input['age_group']);
         }
         
-        // Unternehmenswerte
-        if (isset($input['company_values'])) {
-            $sanitized['company_values'] = sanitize_textarea_field($input['company_values']);
-        }
-        
         // Fachwissen und Expertise
         if (isset($input['expertise_areas'])) {
             $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);
@@ -138,16 +133,6 @@ class ProfilePage {
         // Wichtige Keywords
         if (isset($input['seo_keywords'])) {
             $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);
-        }
-        
-        // Bevorzugte Ansprache
-        if (isset($input['preferred_tone'])) {
-            $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);
-        }
-        
-        // Tonalität
-        if (isset($input['tonality']) && is_array($input['tonality'])) {
-            $sanitized['tonality'] = array_map('sanitize_text_field', $input['tonality']);
         }
         
         return $sanitized;

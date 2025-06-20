@@ -413,7 +413,7 @@ class AjaxHandler {
         $prompts = [
             'company_description' => 'Erstelle eine professionelle Unternehmensbeschreibung (max. 100 Wörter) basierend auf folgenden Informationen: ',
             'products' => 'Analysiere den Text und liste alle Produkte und Dienstleistungen auf (durch Komma getrennt): ',
-            'company_values' => 'Identifiziere die wichtigsten Unternehmenswerte (max. 3, je ein Wert pro Zeile): ',
+
             'target_audience' => 'Beschreibe die Zielgruppe des Unternehmens (max. 80 Wörter): ',
             'company_usps' => 'Identifiziere die Alleinstellungsmerkmale (max. 5 USPs, je ein USP pro Zeile): ',
             'expertise_areas' => 'Extrahiere die Hauptkompetenzbereiche (max. 8, durch Komma getrennt): ',
