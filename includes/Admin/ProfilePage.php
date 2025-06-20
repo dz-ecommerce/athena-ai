@@ -145,11 +145,6 @@ class ProfilePage {
             $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
         }
         
-        // B2B oder B2C
-        if (isset($input['customer_type'])) {
-            $sanitized['customer_type'] = sanitize_text_field($input['customer_type']);
-        }
-        
         // Bevorzugte Ansprache
         if (isset($input['preferred_tone'])) {
             $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);

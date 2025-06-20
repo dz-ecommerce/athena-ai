@@ -1,8 +1,5 @@
 <!-- Produkte und Dienstleistungen -->
 <fieldset class="mb-6 border border-gray-200 rounded-lg p-5">
-    <legend class="text-md font-medium text-gray-700 px-2">
-        <?php esc_html_e('Produkte und Dienstleistungen', 'athena-ai'); ?>
-    </legend>
     <div class="grid grid-cols-1 gap-6">
         <div class="md:col-span-2">
             <div class="flex justify-end mb-2">

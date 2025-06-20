@@ -197,12 +197,6 @@ function setDefaultFormValues() {
         triggerFloatingLabelUpdate(industryField);
     }
     
-    // Set customer type radio button
-    const customerTypeB2B = document.querySelector('input[name="athena_ai_profiles[customer_type]"][value="b2b"]');
-    if (customerTypeB2B && !isAnyRadioChecked('athena_ai_profiles[customer_type]')) {
-        customerTypeB2B.checked = true;
-    }
-    
     // Set preferred tone radio button
     const toneInformal = document.querySelector('input[name="athena_ai_profiles[preferred_tone]"][value="informal"]');
     if (toneInformal && !isAnyRadioChecked('athena_ai_profiles[preferred_tone]')) {
@@ -403,9 +397,6 @@ function collectProfileData() {
     });
     
     // Collect radio button values
-    const customerType = document.querySelector('input[name="athena_ai_profiles[customer_type]"]:checked');
-    if (customerType) data.customer_type = customerType.value;
-    
     const preferredTone = document.querySelector('input[name="athena_ai_profiles[preferred_tone]"]:checked');
     if (preferredTone) data.preferred_tone = preferredTone.value;
     

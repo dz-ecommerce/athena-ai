@@ -1,8 +1,5 @@
 <!-- Unternehmensprofil -->
 <fieldset class="mb-6 border border-gray-200 rounded-lg p-5">
-    <legend class="text-md font-medium text-gray-700 px-2">
-        <?php esc_html_e('Unternehmensprofil', 'athena-ai'); ?>
-    </legend>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <?php 
         athena_ai_floating_input([
