@@ -20,14 +20,5 @@
             ]); 
             ?>
         </div>
-        <?php 
-        athena_ai_floating_textarea([
-            'name' => 'athena_ai_profiles[certifications]',
-            'id' => 'certifications',
-            'label' => 'Besondere Qualifikationen oder Zertifizierungen',
-            'value' => $profile_data['certifications'] ?? '',
-            'rows' => 3
-        ]); 
-        ?>
     </div>
 </fieldset> 

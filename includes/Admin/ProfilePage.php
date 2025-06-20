@@ -126,10 +126,6 @@ class ProfilePage {
             $sanitized['expertise_areas'] = sanitize_textarea_field($input['expertise_areas']);
         }
         
-        if (isset($input['certifications'])) {
-            $sanitized['certifications'] = sanitize_textarea_field($input['certifications']);
-        }
-        
         // Wichtige Keywords
         if (isset($input['seo_keywords'])) {
             $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);

@@ -363,7 +363,7 @@ function collectProfileData() {
     const fields = [
         'company_name', 'company_industry', 'company_description',
         'company_products', 'company_usps', 'target_audience',
-        'expertise_areas', 'certifications', 'seo_keywords'
+        'expertise_areas', 'seo_keywords'
     ];
     
     fields.forEach(fieldId => {

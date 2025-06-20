@@ -2,6 +2,13 @@
 # Diese Datei enthält alle AI-Prompts für die verschiedenen Modals
 # Format: modal_id -> prompt_type -> content
 
+company_name:
+    intro: 'Analysiere den bereitgestellten Text oder Webseiten-Inhalt und extrahiere den offiziellen Firmennamen des Unternehmens. Achte auf den vollständigen, korrekten Firmennamen ohne Zusätze wie "GmbH", "AG" etc., es sei denn, diese sind wesentlicher Bestandteil der Marke.'
+    limit: 'Nur der exakte Firmenname, keine Zusätze oder Erklärungen. Maximal 5 Wörter.'
+    target_field: 'company_name'
+    max_words: 5
+    format: 'company_name'
+
 company_description:
     intro: 'Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.'
     limit: 'Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.'
@@ -43,6 +50,21 @@ seo_keywords:
     target_field: 'seo_keywords'
     max_items: 15
     format: 'comma_separated'
+
+company_industry:
+    intro: 'Analysiere den bereitgestellten Text und identifiziere die Hauptbranche bzw. den Wirtschaftszweig des Unternehmens. Wähle die präziseste Branchenbezeichnung.'
+    limit: 'Ein einziger, präziser Branchenbegriff. Maximal 3 Wörter.'
+    target_field: 'company_industry'
+    max_words: 3
+    format: 'single_term'
+
+age_group:
+    intro: 'Analysiere die Zielgruppenbeschreibung und identifiziere die relevanten Altersgruppen. Wähle aus: 18-24, 25-34, 35-44, 45-54, 55-64, 65+.'
+    limit: 'Maximal 3 Altersgruppen, durch Komma getrennt. Nur die angegebenen Kategorien verwenden.'
+    target_field: 'age_group'
+    max_items: 3
+    format: 'comma_separated'
+    options: ['18-24', '25-34', '35-44', '45-54', '55-64', '65+']
 
 # Globale Einstellungen
 global:
