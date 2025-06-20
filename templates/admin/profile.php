@@ -517,23 +517,71 @@ function getDemoAgeGroups(targetAudienceText) {
 function setAgeGroupCheckboxes(ageGroups) {
     console.log('🔍 Debug: setAgeGroupCheckboxes aufgerufen mit:', ageGroups);
     
-    // First, uncheck all age group checkboxes
-    const allCheckboxes = document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]');
-    console.log('🔍 Debug: Gefundene Checkboxen:', allCheckboxes.length);
+    // ERWEITERTE SUCHE: Mehrere Ansätze versuchen
+    const searchStrategies = [
+        // Strategie 1: Original
+        () => document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]'),
+        // Strategie 2: Attribute enthält
+        () => document.querySelectorAll('input[name*="age_group"]'),
+        // Strategie 3: Alle Checkboxen durchsuchen
+        () => Array.from(document.querySelectorAll('input[type="checkbox"]')).filter(cb => 
+            cb.name && cb.name.includes('age_group')
+        ),
+        // Strategie 4: ID-basiert
+        () => document.querySelectorAll('input[id*="age_group"]')
+    ];
+    
+    let allCheckboxes = [];
+    for (let i = 0; i < searchStrategies.length; i++) {
+        allCheckboxes = searchStrategies[i]();
+        console.log(`🔍 Strategie ${i+1}: ${allCheckboxes.length} Checkboxen gefunden`);
+        if (allCheckboxes.length > 0) break;
+    }
+    
+    if (allCheckboxes.length === 0) {
+        console.error('❌ KEINE Age Group Checkboxen mit allen Strategien gefunden!');
+        // Fallback: Alle Checkboxen anzeigen
+        const allCbs = document.querySelectorAll('input[type="checkbox"]');
+        console.log('📋 Alle verfügbaren Checkboxen:');
+        allCbs.forEach((cb, idx) => {
+            console.log(`  [${idx}] name="${cb.name}" value="${cb.value}" id="${cb.id}"`);
+        });
+        return;
+    }
+    
+    // Checkboxen zurücksetzen
     allCheckboxes.forEach(cb => {
-        console.log('🔍 Debug: Checkbox gefunden mit value:', cb.value);
+        console.log('🔍 Debug: Checkbox gefunden mit value:', cb.value, 'name:', cb.name);
         cb.checked = false;
     });
     
-    // Then check the selected ones
+    // Ankreuzen mit mehreren Ansätzen
     let successCount = 0;
     ageGroups.forEach(group => {
-        const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${group}"]`);
-        console.log(`🔍 Debug: Suche Checkbox für "${group}":`, checkbox ? 'GEFUNDEN' : 'NICHT GEFUNDEN');
+        let checkbox = null;
+        
+        // Mehrere Selektoren probieren
+        const selectors = [
+            `input[name="athena_ai_profiles[age_group][]"][value="${group}"]`,
+            `input[name*="age_group"][value="${group}"]`,
+            `input[value="${group}"]`
+        ];
+        
+        for (const selector of selectors) {
+            checkbox = document.querySelector(selector);
+            if (checkbox) {
+                console.log(`✅ Checkbox für "${group}" gefunden mit Selektor: ${selector}`);
+                break;
+            }
+        }
+        
         if (checkbox) {
             checkbox.checked = true;
             successCount++;
             console.log(`✅ Altersgruppe "${group}" automatisch ausgewählt`);
+            
+            // Event triggern für JavaScript-Frameworks
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
             console.warn(`❌ Checkbox für Altersgruppe "${group}" nicht gefunden!`);
         }
@@ -668,6 +716,41 @@ function testAgeGroupSelection() {
     // Trigger actual function
     setAgeGroupCheckboxes(testGroups);
 }
+
+// DIRECT TEST beim DOM-Load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM geladen - starte Checkbox-Analyse...');
+    
+    setTimeout(() => {
+        console.log('🔍 === SOFORTIGER CHECKBOX-TEST ===');
+        
+        // Alle Checkboxen finden
+        const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+        console.log(`Alle Checkboxen gefunden: ${allCheckboxes.length}`);
+        
+        allCheckboxes.forEach((cb, index) => {
+            console.log(`Checkbox ${index}: name="${cb.name}" value="${cb.value}" id="${cb.id}"`);
+        });
+        
+        // Spezifisch nach age_group suchen
+        const ageCheckboxes = document.querySelectorAll('input[name*="age_group"]');
+        console.log(`Age group Checkboxen: ${ageCheckboxes.length}`);
+        
+        // Test: Direkte Checkbox-Manipulation
+        console.log('🧪 Teste direkte Checkbox-Manipulation...');
+        const testCheckbox = document.querySelector('input[type="checkbox"]');
+        if (testCheckbox) {
+            console.log('Test-Checkbox gefunden:', testCheckbox);
+            testCheckbox.checked = true;
+            console.log('Test-Checkbox gesetzt auf:', testCheckbox.checked);
+        }
+        
+        // Test unsere Funktion
+        console.log('🧪 Teste setAgeGroupCheckboxes Funktion...');
+        setAgeGroupCheckboxes(['25-34']);
+        
+    }, 2000); // 2 Sekunden warten
+});
 </script>
 
 <!-- Beispiel für einzelne Modal-Erstellung (falls benötigt) -->
