@@ -304,6 +304,16 @@ function executeAIPrompt(promptType, targetField, callback) {
         const demoContent = getDemoContent(promptType);
         targetField.value = demoContent;
         triggerFloatingLabelUpdate(targetField);
+        
+        // Automatische Altersgruppen-Auswahl auch im Test-Modus
+        if (promptType === 'target_audience') {
+            console.log('🎯 Target audience Demo-Content gesetzt, starte automatische Altersgruppen-Auswahl...');
+            setTimeout(() => {
+                console.log('🎯 Führe executeAgeGroupSelection aus mit Demo-Text:', demoContent.substring(0, 100) + '...');
+                executeAgeGroupSelection(demoContent);
+            }, 1000); // Kurzes Timeout für Demo-Modus
+        }
+        
         callback(true);
         return;
     }
@@ -398,7 +408,7 @@ function getDemoContent(promptType) {
         'company_description': 'Wir sind ein innovatives IT-Unternehmen, das sich auf maßgeschneiderte Softwarelösungen und digitale Transformation spezialisiert hat. Mit über 10 Jahren Erfahrung unterstützen wir Unternehmen dabei, ihre Geschäftsprozesse zu optimieren und erfolgreich in der digitalen Welt zu agieren.',
         'products': 'Webentwicklung, Mobile Apps, Cloud-Lösungen, E-Commerce Plattformen, CRM-Systeme, Datenanalyse-Tools',
         'company_usps': 'Agile Entwicklungsmethoden, 24/7 Support, Kostenlose Beratung, Langjährige Erfahrung, Individuelle Lösungen',
-        'target_audience': 'Mittelständische Unternehmen aus verschiedenen Branchen, die ihre digitalen Prozesse modernisieren möchten. Unsere Kunden schätzen persönliche Betreuung und nachhaltige Lösungen.',
+        'target_audience': 'Mittelständische Unternehmen aus verschiedenen Branchen mit berufstätigen Entscheidern im Alter von 25-54 Jahren, die ihre digitalen Prozesse modernisieren möchten. Unsere Kunden schätzen persönliche Betreuung und nachhaltige Lösungen.',
         'age_group': '25-34, 35-44, 45-54',
         'expertise_areas': 'PHP/Laravel Development\nReact/Vue.js Frontend\nAWS Cloud Architecture\nDatabase Design\nAPI Integration\nSEO Optimierung',
         'seo_keywords': 'Webentwicklung\nSoftware Entwicklung\nDigitale Transformation\nIT Beratung\nCloud Lösungen'
