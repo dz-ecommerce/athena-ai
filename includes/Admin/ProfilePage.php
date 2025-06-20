@@ -140,11 +140,6 @@ class ProfilePage {
             $sanitized['seo_keywords'] = sanitize_textarea_field($input['seo_keywords']);
         }
         
-        // Zusätzliche Informationen
-        if (isset($input['avoided_topics'])) {
-            $sanitized['avoided_topics'] = sanitize_textarea_field($input['avoided_topics']);
-        }
-        
         // Bevorzugte Ansprache
         if (isset($input['preferred_tone'])) {
             $sanitized['preferred_tone'] = sanitize_text_field($input['preferred_tone']);

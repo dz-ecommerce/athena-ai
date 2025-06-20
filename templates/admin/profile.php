@@ -58,8 +58,6 @@ include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helper
                 <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/expertise-section.php'; ?>
 
                 <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/keywords-section.php'; ?>
-
-                <?php include ATHENA_AI_PLUGIN_DIR . 'templates/admin/sections/additional-info-section.php'; ?>
             </div>
 
             
@@ -386,7 +384,7 @@ function collectProfileData() {
         'company_name', 'company_industry', 'company_description',
         'company_products', 'company_usps', 'target_audience',
         'company_values', 'expertise_areas', 'certifications',
-        'seo_keywords', 'avoided_topics'
+        'seo_keywords'
     ];
     
     fields.forEach(fieldId => {
