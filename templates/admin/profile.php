@@ -192,7 +192,7 @@ function setDefaultFormValues() {
     }
     
     // Set age group checkboxes
-    const ageGroups = ['26-35', '36-45'];
+    const ageGroups = ['25-34', '35-44'];
     ageGroups.forEach(age => {
         const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${age}"]`);
         if (checkbox && !isAnyCheckboxChecked('athena_ai_profiles[age_group]')) {
@@ -511,33 +511,47 @@ function getDemoAgeGroups(targetAudienceText) {
 }
 
 function setAgeGroupCheckboxes(ageGroups) {
+    console.log('🔍 Debug: setAgeGroupCheckboxes aufgerufen mit:', ageGroups);
+    
     // First, uncheck all age group checkboxes
     const allCheckboxes = document.querySelectorAll('input[name="athena_ai_profiles[age_group][]"]');
-    allCheckboxes.forEach(cb => cb.checked = false);
+    console.log('🔍 Debug: Gefundene Checkboxen:', allCheckboxes.length);
+    allCheckboxes.forEach(cb => {
+        console.log('🔍 Debug: Checkbox gefunden mit value:', cb.value);
+        cb.checked = false;
+    });
     
     // Then check the selected ones
+    let successCount = 0;
     ageGroups.forEach(group => {
         const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${group}"]`);
+        console.log(`🔍 Debug: Suche Checkbox für "${group}":`, checkbox ? 'GEFUNDEN' : 'NICHT GEFUNDEN');
         if (checkbox) {
             checkbox.checked = true;
-            console.log(`Altersgruppe "${group}" automatisch ausgewählt`);
+            successCount++;
+            console.log(`✅ Altersgruppe "${group}" automatisch ausgewählt`);
+        } else {
+            console.warn(`❌ Checkbox für Altersgruppe "${group}" nicht gefunden!`);
         }
     });
     
     // Show notification
-    if (ageGroups.length > 0) {
-        showTempNotification(`Altersgruppen automatisch ausgewählt: ${ageGroups.join(', ')}`, 'info');
+    if (successCount > 0) {
+        showTempNotification(`${successCount} Altersgruppen automatisch ausgewählt: ${ageGroups.join(', ')}`, 'info');
+    } else {
+        console.error('❌ Keine Altersgruppen-Checkboxen konnten ausgewählt werden!');
+        showTempNotification('Fehler: Altersgruppen konnten nicht automatisch ausgewählt werden', 'error');
     }
 }
 
 function showTempNotification(message, type = 'success') {
     const notification = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-yellow-500';
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : type === 'error' ? 'bg-red-500' : 'bg-yellow-500';
     
     notification.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
     notification.innerHTML = `
         <div class="flex items-center space-x-2">
-            <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i>
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}-circle"></i>
             <span class="text-sm">${message}</span>
         </div>
     `;
