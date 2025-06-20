@@ -104,6 +104,8 @@ foreach ($prompt_types as $prompt_type) {
             <button type="button" onclick="athenaAIDebugFloatingLabels()" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Test Floating Labels</button>
             <button type="button" onclick="console.log('Prompt Manager:', window.athenaAiPromptManager)" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Test Prompt Manager</button>
             <button type="button" onclick="athenaAIDebugScripts()" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Check Scripts</button>
+            <button type="button" onclick="debugAgeGroupCheckboxes()" class="bg-purple-500 text-white px-2 py-1 rounded text-xs">Debug Age Group Checkboxes</button>
+            <button type="button" onclick="testAgeGroupSelection()" class="bg-orange-500 text-white px-2 py-1 rounded text-xs">Test Age Group Selection</button>
         </div>
     </div>
     
@@ -330,9 +332,11 @@ function executeAIPrompt(promptType, targetField, callback) {
                         
                         // Automatische Altersgruppen-Auswahl nach target_audience
                         if (promptType === 'target_audience') {
+                            console.log('🎯 Target audience generiert, starte automatische Altersgruppen-Auswahl...');
                             setTimeout(() => {
+                                console.log('🎯 Führe executeAgeGroupSelection aus mit Text:', response.data.substring(0, 100) + '...');
                                 executeAgeGroupSelection(response.data);
-                            }, 500);
+                            }, 1500); // Längeres Timeout für DOM-Stabilität
                         }
                         
                         callback(true);
@@ -605,6 +609,64 @@ function showSuccessMessage(message) {
             }
         }, 300);
     }, 4000);
+}
+
+// Debug-Funktionen für Age Group Checkboxes
+function debugAgeGroupCheckboxes() {
+    console.log('🔍 === DEBUG AGE GROUP CHECKBOXES ===');
+    
+    // Alle möglichen Selektoren testen
+    const selectors = [
+        'input[name="athena_ai_profiles[age_group][]"]',
+        'input[name="athena_ai_profiles[age_group]"]',
+        'input[type="checkbox"][value*="24"]',
+        'input[type="checkbox"][value*="34"]',
+        'input[type="checkbox"]'
+    ];
+    
+    selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        console.log(`Selektor "${selector}": ${elements.length} Elemente gefunden`);
+        elements.forEach((el, index) => {
+            console.log(`  [${index}] name="${el.name}" value="${el.value}" checked=${el.checked}`);
+        });
+    });
+    
+    // HTML-Struktur analysieren
+    const targetSection = document.querySelector('fieldset');
+    if (targetSection) {
+        console.log('🔍 Fieldset HTML:', targetSection.outerHTML.substring(0, 500) + '...');
+    }
+    
+    // Spezifisch nach age_group suchen
+    const ageGroupElements = document.querySelectorAll('*[name*="age_group"]');
+    console.log(`🔍 Elemente mit age_group im name: ${ageGroupElements.length}`);
+    ageGroupElements.forEach(el => {
+        console.log(`  name="${el.name}" type="${el.type}" value="${el.value}"`);
+    });
+}
+
+function testAgeGroupSelection() {
+    console.log('🧪 === TEST AGE GROUP SELECTION ===');
+    
+    // Test mit bekannten Werten
+    const testGroups = ['25-34', '35-44'];
+    console.log('Test mit Gruppen:', testGroups);
+    
+    // Direct Test
+    testGroups.forEach(group => {
+        const checkbox = document.querySelector(`input[name="athena_ai_profiles[age_group][]"][value="${group}"]`);
+        console.log(`Direct Test für "${group}":`, checkbox ? 'GEFUNDEN' : 'NICHT GEFUNDEN');
+        if (checkbox) {
+            console.log(`  Element:`, checkbox);
+            console.log(`  Aktuell checked:`, checkbox.checked);
+            checkbox.checked = true;
+            console.log(`  Nach Setzen checked:`, checkbox.checked);
+        }
+    });
+    
+    // Trigger actual function
+    setAgeGroupCheckboxes(testGroups);
 }
 </script>
 
