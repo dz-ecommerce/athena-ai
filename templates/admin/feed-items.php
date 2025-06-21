@@ -515,6 +515,10 @@ if (!empty($items)) {
                     'athena-ai'
                 ); ?></th>
                 <th scope="col" class="px-6 py-3"><?php esc_html_e(
+                    'Categories',
+                    'athena-ai'
+                ); ?></th>
+                <th scope="col" class="px-6 py-3"><?php esc_html_e(
                     'Feed Source',
                     'athena-ai'
                 ); ?></th>
@@ -582,6 +586,25 @@ if (!empty($items)) {
                             <?php echo esc_html($title); ?>
                         <?php endif; ?>
                     </div>
+                </td>
+                <td class="px-6 py-4">
+                    <?php
+                    // Extract categories from raw_content JSON
+                    $categories = '';
+                    if (isset($raw_content->categories) && is_array($raw_content->categories)) {
+                        $categories = implode(', ', $raw_content->categories);
+                    }
+                    
+                    if (empty($categories)) {
+                        echo '<span class="text-gray-400 italic text-xs">' . esc_html__('No categories', 'athena-ai') . '</span>';
+                    } else {
+                        // Split categories and create styled tags
+                        $category_list = explode(', ', $categories);
+                        foreach ($category_list as $cat) {
+                            echo '<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">' . esc_html(trim($cat)) . '</span>';
+                        }
+                    }
+                    ?>
                 </td>
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">

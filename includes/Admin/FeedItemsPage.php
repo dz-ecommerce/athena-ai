@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace AthenaAI\Admin;
 
 use AthenaAI\Repositories\SchemaManager;
-use AthenaAI\Admin\FeedItemsList;
 
 /**
  * Admin page for feed items
@@ -278,9 +277,8 @@ class FeedItemsPage {
         $update_checker_status_message = $update_checker->get_status_message();
 
         // Include the template
-        // Use the new FeedItemsList class instead of the old template
-        $list_table = new FeedItemsList();
-        $list_table->render_page();
+        // Include the template
+        include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/feed-items.php';
     }
 
     /**
