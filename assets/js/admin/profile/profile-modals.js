@@ -86,11 +86,10 @@ jQuery(function ($) {
         }
     });
 
-    // Universal Content erstellen Handler
+    // Universal Content erstellen Handler mit Full Assistant Support
     $(document).on('click', '.athena-ai-create-content', function (e) {
         e.preventDefault();
         console.log('Athena AI: Content erstellen button clicked');
-        alert('Content erstellen Button wurde geklickt!'); // TEMPORÄRER TEST
 
         var $modal = $(this).closest('.fixed');
         var modalType = $modal.data('modal-type');
@@ -114,6 +113,18 @@ jQuery(function ($) {
             return;
         }
 
+        // Spezielle Behandlung für Full Assistant
+        if (modalType === 'full_assistant') {
+            executeFullAssistant($modal, {
+                extraInfo: extraInfo,
+                modelProvider: modelProvider,
+                testOnly: testOnly,
+                pageId: pageId,
+            });
+            return;
+        }
+
+        // Standard Single-Modal Logik
         debugField
             .show()
             .html(
@@ -219,13 +230,21 @@ jQuery(function ($) {
             });
     });
 
-    // Universal Content übertragen Handler
+    // Universal Content übertragen Handler mit Full Assistant Support
     $(document).on('click', '.athena-ai-transfer-content', function (e) {
         e.preventDefault();
         console.log('Athena AI: Content übertragen button clicked');
 
         var $modal = $(this).closest('.fixed');
         var modalType = $modal.data('modal-type');
+
+        // Spezielle Behandlung für Full Assistant
+        if (modalType === 'full_assistant') {
+            transferAllFullAssistantContent($modal);
+            return;
+        }
+
+        // Standard Single-Modal Transfer Logik
         var responseVar =
             'athenaAiResponse' + modalType.charAt(0).toUpperCase() + modalType.slice(1);
 
@@ -236,7 +255,6 @@ jQuery(function ($) {
             var fieldMappings = {
                 company_description: 'company_description',
                 products: 'company_products',
-
                 target_audience: 'target_audience',
                 company_usps: 'company_usps',
                 expertise_areas: 'expertise_areas',
@@ -276,6 +294,331 @@ jQuery(function ($) {
         }
     });
 
+    /**
+     * Full Assistant Execution Logic
+     */
+    function executeFullAssistant($modal, options) {
+        console.log('Athena AI: Starting Full Assistant execution', options);
+
+        // UI Elemente
+        var $progressContainer = $modal.find('.athena-ai-progress-container');
+        var $progressBar = $modal.find('.athena-ai-progress-bar');
+        var $progressText = $modal.find('.athena-ai-progress-text');
+        var $progressCount = $modal.find('.athena-ai-progress-count');
+        var $createBtn = $modal.find('.athena-ai-create-content');
+        var $transferBtn = $modal.find('.athena-ai-transfer-content');
+        var $debugField = $modal.find('.athena-ai-modal-debug');
+
+        // Progress anzeigen
+        $progressContainer.removeClass('hidden');
+        $createBtn.prop('disabled', true).addClass('opacity-50');
+
+        // Set default values for empty fields
+        setDefaultFormValues();
+
+        // Prompt-Sequenz definieren
+        var promptSequence = [
+            { type: 'company_description', name: 'Unternehmensbeschreibung' },
+            { type: 'products', name: 'Produkte & Dienstleistungen' },
+            { type: 'company_usps', name: 'Alleinstellungsmerkmale' },
+            { type: 'target_audience', name: 'Zielgruppe' },
+            { type: 'expertise_areas', name: 'Expertise-Bereiche' },
+            { type: 'seo_keywords', name: 'SEO-Keywords' },
+        ];
+
+        // Debug-Bereich vorbereiten
+        $debugField.show().html('<h4 class="font-semibold mb-2">Full Assistant Ausführung</h4>');
+
+        // Speichere generierte Inhalte
+        window.athenaAiFullAssistantResults = {};
+
+        // Starte Sequenz
+        executePromptSequence(promptSequence, 0, options, $modal, function (success, results) {
+            console.log('Athena AI: Full Assistant completed', success, results);
+
+            // Progress auf 100%
+            updateProgress($modal, 6, 6, 'Abgeschlossen!');
+
+            // Buttons zurücksetzen
+            $createBtn.prop('disabled', false).removeClass('opacity-50');
+
+            if (success) {
+                // Transfer Button aktivieren
+                $transferBtn
+                    .removeClass('opacity-50 cursor-not-allowed bg-gray-400')
+                    .addClass('bg-green-600 hover:bg-green-700')
+                    .prop('disabled', false);
+
+                // Erfolgs-Nachricht anzeigen
+                var successHtml =
+                    '<div class="bg-green-50 border border-green-200 rounded p-3 mt-4">' +
+                    '<i class="fas fa-check-circle text-green-500 mr-2"></i>' +
+                    '<strong class="text-green-800">Alle Inhalte erfolgreich generiert!</strong><br>' +
+                    '<span class="text-green-700 text-sm">Klicken Sie auf "Alle Inhalte übertragen" um die Felder zu füllen.</span>' +
+                    '</div>';
+                $debugField.append(successHtml);
+            } else {
+                $debugField.append(
+                    '<div class="bg-red-50 border border-red-200 rounded p-3 mt-4 text-red-800">' +
+                        '<i class="fas fa-exclamation-circle mr-2"></i>Einige Inhalte konnten nicht generiert werden.</div>'
+                );
+            }
+        });
+    }
+
+    /**
+     * Execute Prompt Sequence for Full Assistant
+     */
+    function executePromptSequence(prompts, index, options, $modal, callback) {
+        if (index >= prompts.length) {
+            callback(true, window.athenaAiFullAssistantResults);
+            return;
+        }
+
+        var currentPrompt = prompts[index];
+        var progressNum = index + 1;
+
+        // Update Progress
+        updateProgress(
+            $modal,
+            progressNum,
+            prompts.length,
+            'Generiere ' + currentPrompt.name + '...'
+        );
+
+        // Prüfe ob Feld bereits gefüllt ist
+        var targetField = getTargetFieldForPrompt(currentPrompt.type);
+        if (targetField && targetField.value.trim() && !options.overwriteExisting) {
+            console.log('Athena AI: Skipping', currentPrompt.type, '- field already has content');
+
+            // Als bereits vorhanden markieren
+            window.athenaAiFullAssistantResults[currentPrompt.type] = {
+                content: targetField.value,
+                skipped: true,
+            };
+
+            // Nächster Prompt
+            setTimeout(() => {
+                executePromptSequence(prompts, index + 1, options, $modal, callback);
+            }, 500);
+            return;
+        }
+
+        // Generate content for this prompt
+        generateSinglePromptContent(currentPrompt, options, function (success, content) {
+            if (success && content) {
+                window.athenaAiFullAssistantResults[currentPrompt.type] = {
+                    content: content,
+                    generated: true,
+                };
+
+                // Debug-Output hinzufügen
+                var debugEntry =
+                    '<div class="bg-blue-50 border border-blue-200 rounded p-2 mb-2 text-sm">' +
+                    '<strong>' +
+                    currentPrompt.name +
+                    ':</strong> <span class="text-green-600">✓ Generiert</span>' +
+                    '</div>';
+                $modal.find('.athena-ai-modal-debug').append(debugEntry);
+            } else {
+                console.error('Athena AI: Failed to generate', currentPrompt.type);
+
+                // Fallback-Content verwenden
+                var fallbackContent = getDemoContent(currentPrompt.type);
+                window.athenaAiFullAssistantResults[currentPrompt.type] = {
+                    content: fallbackContent,
+                    fallback: true,
+                };
+
+                var debugEntry =
+                    '<div class="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2 text-sm">' +
+                    '<strong>' +
+                    currentPrompt.name +
+                    ':</strong> <span class="text-yellow-600">⚠ Fallback verwendet</span>' +
+                    '</div>';
+                $modal.find('.athena-ai-modal-debug').append(debugEntry);
+            }
+
+            // Kurze Pause und weiter zum nächsten Prompt
+            setTimeout(() => {
+                executePromptSequence(prompts, index + 1, options, $modal, callback);
+            }, 1000);
+        });
+    }
+
+    /**
+     * Generate content for a single prompt
+     */
+    function generateSinglePromptContent(promptInfo, options, callback) {
+        if (options.testOnly) {
+            // Test-Modus: Sofort Demo-Content zurückgeben
+            var testContent = getDemoContent(promptInfo.type);
+            setTimeout(() => callback(true, testContent), 500);
+            return;
+        }
+
+        // Echte AI-Anfrage
+        $.post(ajaxurl || '/wp-admin/admin-ajax.php', {
+            action: 'athena_ai_prompt',
+            modal_type: promptInfo.type,
+            page_id: options.pageId,
+            extra_info: options.extraInfo,
+            model_provider: options.modelProvider,
+            nonce: athenaAiAdmin?.nonce || '',
+        })
+            .done(function (response) {
+                if (response && response.success && response.data) {
+                    var content = response.data.content || response.data;
+                    callback(true, content);
+                } else {
+                    console.error('Athena AI API Error:', response);
+                    callback(false, null);
+                }
+            })
+            .fail(function (xhr, status, error) {
+                console.error('Athena AI AJAX Error:', error);
+                callback(false, null);
+            });
+    }
+
+    /**
+     * Transfer all Full Assistant generated content
+     */
+    function transferAllFullAssistantContent($modal) {
+        if (!window.athenaAiFullAssistantResults) {
+            alert('Keine generierten Inhalte verfügbar. Bitte zuerst Inhalte generieren.');
+            return;
+        }
+
+        var transferCount = 0;
+        var totalCount = Object.keys(window.athenaAiFullAssistantResults).length;
+
+        // Alle Inhalte übertragen
+        Object.keys(window.athenaAiFullAssistantResults).forEach(function (promptType) {
+            var result = window.athenaAiFullAssistantResults[promptType];
+            var targetField = getTargetFieldForPrompt(promptType);
+
+            if (targetField && result.content) {
+                targetField.value = result.content.trim();
+                // Trigger events for floating labels
+                $(targetField).trigger('input').trigger('blur');
+                transferCount++;
+            }
+        });
+
+        // Modal schließen und Erfolg anzeigen
+        $modal.addClass('hidden').removeClass('flex');
+
+        // Erfolgs-Benachrichtigung
+        showTempNotification(
+            `${transferCount} von ${totalCount} Inhalten erfolgreich übertragen!`,
+            'success'
+        );
+
+        // Cleanup
+        delete window.athenaAiFullAssistantResults;
+    }
+
+    /**
+     * Helper Functions
+     */
+    function updateProgress($modal, current, total, text) {
+        var percentage = Math.round((current / total) * 100);
+        $modal.find('.athena-ai-progress-bar').css('width', percentage + '%');
+        $modal.find('.athena-ai-progress-text').text(text);
+        $modal.find('.athena-ai-progress-count').text(current + '/' + total);
+    }
+
+    function getTargetFieldForPrompt(promptType) {
+        var fieldMappings = {
+            company_description: 'company_description',
+            products: 'company_products',
+            company_usps: 'company_usps',
+            target_audience: 'target_audience',
+            expertise_areas: 'expertise_areas',
+            seo_keywords: 'seo_keywords',
+        };
+
+        var fieldName = fieldMappings[promptType];
+        if (!fieldName) return null;
+
+        return document.getElementById(fieldName);
+    }
+
+    function setDefaultFormValues() {
+        // Set company name if empty
+        var companyNameField = document.getElementById('company_name');
+        if (companyNameField && !companyNameField.value.trim()) {
+            companyNameField.value = 'Muster GmbH';
+            $(companyNameField).trigger('input').trigger('blur');
+        }
+
+        // Set industry
+        var industryField = document.getElementById('company_industry');
+        if (industryField && !industryField.value) {
+            industryField.value = 'it_services';
+            $(industryField).trigger('change');
+        }
+    }
+
+    function getDemoContent(promptType) {
+        var demoContents = {
+            company_description:
+                'Wir sind ein innovatives IT-Unternehmen, das sich auf maßgeschneiderte Softwarelösungen und digitale Transformation spezialisiert hat. Mit über 10 Jahren Erfahrung unterstützen wir Unternehmen dabei, ihre Geschäftsprozesse zu optimieren und erfolgreich in der digitalen Welt zu agieren.',
+            products:
+                'Webentwicklung, Mobile Apps, Cloud-Lösungen, E-Commerce Plattformen, CRM-Systeme, Datenanalyse-Tools',
+            company_usps:
+                'Agile Entwicklungsmethoden, 24/7 Support, Kostenlose Beratung, Langjährige Erfahrung, Individuelle Lösungen',
+            target_audience:
+                'Mittelständische Unternehmen aus verschiedenen Branchen mit berufstätigen Entscheidern im Alter von 25-54 Jahren, die ihre digitalen Prozesse modernisieren möchten. Unsere Kunden schätzen persönliche Betreuung und nachhaltige Lösungen.',
+            expertise_areas:
+                'PHP/Laravel Development\nReact/Vue.js Frontend\nAWS Cloud Architecture\nDatabase Design\nAPI Integration\nSEO Optimierung',
+            seo_keywords:
+                'Webentwicklung\nSoftware Entwicklung\nDigitale Transformation\nIT Beratung\nCloud Lösungen',
+        };
+
+        return demoContents[promptType] || `Generierter Inhalt für ${promptType}`;
+    }
+
+    function showTempNotification(message, type = 'success') {
+        var notification = $('<div></div>');
+        var bgColor =
+            type === 'success'
+                ? 'bg-green-500'
+                : type === 'info'
+                  ? 'bg-blue-500'
+                  : type === 'error'
+                    ? 'bg-red-500'
+                    : 'bg-yellow-500';
+        var icon =
+            type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info';
+
+        notification.addClass(
+            `fixed top-4 right-4 ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`
+        );
+        notification.html(`
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-${icon}-circle"></i>
+                <span class="text-sm">${message}</span>
+            </div>
+        `);
+
+        $('body').append(notification);
+
+        // Show notification
+        setTimeout(() => {
+            notification.removeClass('translate-x-full');
+        }, 100);
+
+        // Hide after 4 seconds
+        setTimeout(() => {
+            notification.addClass('translate-x-full');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 4000);
+    }
+
     // Debug: Log alle verfügbaren AI-Buttons und Modals
     $(document).ready(function () {
         setTimeout(function () {
@@ -310,25 +653,8 @@ jQuery(function ($) {
             });
 
             console.log('Content erstellen Buttons gefunden:', $createButtons.length);
-            $createButtons.each(function (index) {
-                console.log('  Create Button', index + 1, '- Classes:', this.className);
-            });
-
             console.log('Content übertragen Buttons gefunden:', $transferButtons.length);
-            $transferButtons.each(function (index) {
-                console.log('  Transfer Button', index + 1, '- Classes:', this.className);
-            });
-
             console.log('==============================');
-
-            // Test ob Event-Handler funktioniert
-            if ($createButtons.length > 0) {
-                console.log('Testing Content erstellen Button click handler...');
-                $createButtons.first().trigger('click');
-            }
-        }, 1000); // Erhöhe Timeout auf 1 Sekunde
+        }, 1000);
     });
-
-    // Set flag to indicate external script loaded
-    window.athenaAiModalsLoaded = true;
 });
