@@ -60,6 +60,9 @@ class FeedItemsPage {
             }
         }
 
+        // Ensure categories table exists and migrate existing data
+        self::ensure_categories_table_and_migrate();
+
         // Process actions
         self::process_actions();
 
@@ -501,5 +504,80 @@ class FeedItemsPage {
 
         wp_redirect($redirect_url);
         exit();
+    }
+
+    /**
+     * Ensure categories table exists and migrate existing data
+     */
+    private static function ensure_categories_table_and_migrate(): void {
+        global $wpdb;
+        
+        // Check if categories table exists
+        $categories_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_item_categories'");
+        
+        if (!$categories_table_exists) {
+            // Force table creation
+            SchemaManager::setup_tables();
+            
+            // Check again
+            $categories_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}feed_item_categories'");
+        }
+        
+        if ($categories_table_exists) {
+            // Check if we need to migrate existing data
+            $categories_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_item_categories");
+            $items_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+            
+            // If we have items but no categories, migrate
+            if ($items_count > 0 && $categories_count == 0) {
+                self::migrate_categories_from_json();
+            }
+        }
+    }
+    
+    /**
+     * Migrate categories from JSON data to separate table
+     */
+    private static function migrate_categories_from_json(): void {
+        global $wpdb;
+        
+        // Get all feed items with categories in JSON
+        $items = $wpdb->get_results("
+            SELECT id, raw_content 
+            FROM {$wpdb->prefix}feed_raw_items 
+            WHERE raw_content IS NOT NULL 
+            AND JSON_EXTRACT(raw_content, '$.categories') IS NOT NULL
+        ");
+        
+        $migrated_count = 0;
+        
+        foreach ($items as $item) {
+            $raw_data = json_decode($item->raw_content, true);
+            
+            if (isset($raw_data['categories']) && is_array($raw_data['categories'])) {
+                foreach ($raw_data['categories'] as $category) {
+                    if (!empty(trim($category))) {
+                        $result = $wpdb->insert(
+                            $wpdb->prefix . 'feed_item_categories',
+                            [
+                                'item_id' => $item->id,
+                                'category' => substr(trim($category), 0, 255),
+                                'created_at' => current_time('mysql'),
+                            ],
+                            ['%d', '%s', '%s']
+                        );
+                        
+                        if ($result !== false) {
+                            $migrated_count++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Log migration result (optional)
+        if ($migrated_count > 0) {
+            error_log("Athena AI: Migrated {$migrated_count} categories for " . count($items) . " feed items");
+        }
     }
 }
