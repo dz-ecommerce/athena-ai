@@ -2,13 +2,6 @@
 # Diese Datei enthält alle AI-Prompts für die verschiedenen Modals
 # Format: modal_id -> prompt_type -> content
 
-company_name:
-    intro: 'Analysiere den bereitgestellten Text oder Webseiten-Inhalt und extrahiere den offiziellen Firmennamen des Unternehmens. Achte auf den vollständigen, korrekten Firmennamen ohne Zusätze wie "GmbH", "AG" etc., es sei denn, diese sind wesentlicher Bestandteil der Marke.'
-    limit: 'Nur der exakte Firmenname, keine Zusätze oder Erklärungen. Maximal 5 Wörter.'
-    target_field: 'company_name'
-    max_words: 5
-    format: 'company_name'
-
 company_description:
     intro: 'Erstelle einen professionellen SEO-Text. Du agierst als WordPress-SEO-Experte. Beschreibe das Unternehmen anhand folgender Informationen so überzeugend wie möglich.'
     limit: 'Maximal 100 Wörter. Reiner Absatztext ohne Kommentare.'
