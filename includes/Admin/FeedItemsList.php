@@ -36,6 +36,7 @@ class FeedItemsList extends \WP_List_Table {
     public function get_columns(): array {
         return [
             'title' => __('Title', 'athena-ai'),
+            'categories' => __('Categories', 'athena-ai'),
             'feed_url' => __('Feed Source', 'athena-ai'),
             'pub_date' => __('Published', 'athena-ai'),
             'status' => __('Status', 'athena-ai'),
@@ -65,11 +66,14 @@ class FeedItemsList extends \WP_List_Table {
         $items = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
-                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title
+                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
+                GROUP_CONCAT(DISTINCT fic.category SEPARATOR ', ') as categories
                 FROM {$wpdb->prefix}feed_raw_items ri
                 JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
                 JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_url'
+                LEFT JOIN {$wpdb->prefix}feed_item_categories fic ON ri.id = fic.item_id
                 WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
+                GROUP BY ri.id
                 ORDER BY {$orderby} {$order}
                 LIMIT %d OFFSET %d",
                 $per_page,
@@ -132,6 +136,32 @@ class FeedItemsList extends \WP_List_Table {
             esc_attr(date('Y-m-d H:i:s', $timestamp ?: time())),
             esc_html(human_time_diff($timestamp ?: time()) . ' ' . __('ago', 'athena-ai'))
         );
+    }
+
+    public function column_categories($item): string {
+        $categories = $item['categories'] ?? '';
+        
+        if (empty($categories)) {
+            // Fallback: Try to extract categories from raw_content JSON
+            if (isset($item['raw_content']) && is_string($item['raw_content'])) {
+                $raw_data = json_decode($item['raw_content'], true);
+                if (isset($raw_data['categories']) && is_array($raw_data['categories'])) {
+                    $categories = implode(', ', $raw_data['categories']);
+                }
+            }
+        }
+        
+        if (empty($categories)) {
+            return '<span class="no-categories">' . esc_html__('No categories', 'athena-ai') . '</span>';
+        }
+        
+        // Split categories and create spans for better styling
+        $category_list = explode(', ', $categories);
+        $category_spans = array_map(function($cat) {
+            return '<span class="category-tag">' . esc_html(trim($cat)) . '</span>';
+        }, $category_list);
+        
+        return implode(' ', $category_spans);
     }
 
     public function column_status($item): string {

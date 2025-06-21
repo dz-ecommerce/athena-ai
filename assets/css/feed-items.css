@@ -159,7 +159,11 @@
 }
 
 .feed-items-table .column-title {
-    width: 40%;
+    width: 30%;
+}
+
+.feed-items-table .column-categories {
+    width: 25%;
 }
 
 .feed-items-table .column-feed_url {
@@ -167,7 +171,7 @@
 }
 
 .feed-items-table .column-pub_date {
-    width: 20%;
+    width: 15%;
 }
 
 .feed-items-table .column-status {
@@ -182,4 +186,29 @@
     color: #fff;
     font-size: 0.8rem;
     font-weight: 500;
+}
+
+/* Category Tags */
+.category-tag {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    margin: 0.1rem 0.2rem 0.1rem 0;
+    border-radius: 12px;
+    background: #f0f6fc;
+    border: 1px solid #c3c4c7;
+    color: #2c3338;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.category-tag:hover {
+    background: #e7f3ff;
+    border-color: #8c8f94;
+}
+
+.no-categories {
+    color: #8c8f94;
+    font-style: italic;
+    font-size: 0.85rem;
 }
