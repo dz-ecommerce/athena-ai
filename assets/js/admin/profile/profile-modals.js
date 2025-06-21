@@ -313,8 +313,8 @@ jQuery(function ($) {
         $progressContainer.removeClass('hidden');
         $createBtn.prop('disabled', true).addClass('opacity-50');
 
-        // Set default values for empty fields
-        setDefaultFormValues();
+        // Set smart default values based on modal input
+        setDefaultFormValues(options);
 
         // Prompt-Sequenz definieren
         var promptSequence = [
@@ -545,19 +545,88 @@ jQuery(function ($) {
         return document.getElementById(fieldName);
     }
 
-    function setDefaultFormValues() {
-        // Set company name if empty
-        var companyNameField = document.getElementById('company_name');
-        if (companyNameField && !companyNameField.value.trim()) {
-            companyNameField.value = 'Muster GmbH';
-            $(companyNameField).trigger('input').trigger('blur');
+    function setDefaultFormValues(modalData) {
+        // Intelligente Standardwerte basierend auf Modal-Eingaben
+        if (!modalData || !modalData.extraInfo) {
+            console.log('Athena AI: No modal data provided for smart defaults');
+            return;
         }
 
-        // Set industry
+        // Versuche Firmenname aus den Extra-Informationen zu extrahieren
+        var extraInfo = modalData.extraInfo.toLowerCase();
+        var companyNameField = document.getElementById('company_name');
+
+        // Nur setzen wenn das Feld wirklich leer ist
+        if (companyNameField && !companyNameField.value.trim()) {
+            // Suche nach Firmennamen-Indikatoren in den Extra-Infos
+            var companyPatterns = [
+                /(?:unternehmen|firma|company|gmbh|ag|ug|kg|ohg)\s+([a-zA-ZäöüÄÖÜß\s]+)/i,
+                /([a-zA-ZäöüÄÖÜß\s]+)\s+(?:gmbh|ag|ug|kg|ohg)/i,
+                /^([a-zA-ZäöüÄÖÜß\s]+)/i, // Fallback: Erster Begriff
+            ];
+
+            var extractedName = null;
+            for (var pattern of companyPatterns) {
+                var match = extraInfo.match(pattern);
+                if (match && match[1] && match[1].trim().length > 2) {
+                    extractedName = match[1].trim();
+                    // Ersten Buchstaben großschreiben
+                    extractedName = extractedName
+                        .split(' ')
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                    break;
+                }
+            }
+
+            if (extractedName) {
+                companyNameField.value = extractedName;
+                $(companyNameField).trigger('input').trigger('blur');
+                console.log('Athena AI: Smart company name extracted:', extractedName);
+            }
+        }
+
+        // Intelligente Branchenerkennung
         var industryField = document.getElementById('company_industry');
         if (industryField && !industryField.value) {
-            industryField.value = 'it_services';
-            $(industryField).trigger('change');
+            var industryKeywords = {
+                it_services: [
+                    'it',
+                    'software',
+                    'programmierung',
+                    'webentwicklung',
+                    'app',
+                    'digital',
+                    'tech',
+                ],
+                consulting: ['beratung', 'consulting', 'strategie', 'analyse'],
+                marketing: ['marketing', 'werbung', 'social media', 'seo'],
+                healthcare: ['gesundheit', 'medizin', 'arzt', 'pflege', 'therapie'],
+                education: ['bildung', 'schule', 'ausbildung', 'kurs', 'training'],
+                finance: ['finanzen', 'bank', 'versicherung', 'steuer'],
+                retail: ['handel', 'verkauf', 'shop', 'einzelhandel'],
+                manufacturing: ['produktion', 'fertigung', 'herstellung', 'fabrik'],
+            };
+
+            var detectedIndustry = null;
+            var maxMatches = 0;
+
+            Object.keys(industryKeywords).forEach(function (industry) {
+                var matches = industryKeywords[industry].filter((keyword) =>
+                    extraInfo.includes(keyword.toLowerCase())
+                ).length;
+
+                if (matches > maxMatches) {
+                    maxMatches = matches;
+                    detectedIndustry = industry;
+                }
+            });
+
+            if (detectedIndustry) {
+                industryField.value = detectedIndustry;
+                $(industryField).trigger('change');
+                console.log('Athena AI: Smart industry detected:', detectedIndustry);
+            }
         }
     }
 
