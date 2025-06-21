@@ -73,51 +73,191 @@ class FeedItemsList extends \WP_List_Table {
             }
         }
 
+        // Build filter conditions
+        $where_conditions = ["p.post_type = 'athena-feed' AND p.post_status = 'publish'"];
+        $query_params = [];
+
+        // Feed filter
+        $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
+        if ($feed_filter) {
+            $where_conditions[] = 'ri.feed_id = %d';
+            $query_params[] = $feed_filter;
+        }
+
+        // Date filter
+        $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) 
+            ? sanitize_text_field($_GET['date_filter']) : '';
+        if ($date_filter) {
+            $today = date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day'));
+            $week_start = date('Y-m-d', strtotime('this week'));
+            $last_week_start = date('Y-m-d', strtotime('last week'));
+            $last_week_end = date('Y-m-d', strtotime('last week +6 days'));
+            $month_start = date('Y-m-01');
+            $last_month_start = date('Y-m-01', strtotime('last month'));
+            $last_month_end = date('Y-m-t', strtotime('last month'));
+
+            switch ($date_filter) {
+                case 'today':
+                    $where_conditions[] = 'DATE(ri.pub_date) = %s';
+                    $query_params[] = $today;
+                    break;
+                case 'yesterday':
+                    $where_conditions[] = 'DATE(ri.pub_date) = %s';
+                    $query_params[] = $yesterday;
+                    break;
+                case 'this_week':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s';
+                    $query_params[] = $week_start;
+                    break;
+                case 'last_week':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s';
+                    $query_params[] = $last_week_start;
+                    $query_params[] = $last_week_end;
+                    break;
+                case 'this_month':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s';
+                    $query_params[] = $month_start;
+                    break;
+                case 'last_month':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s';
+                    $query_params[] = $last_month_start;
+                    $query_params[] = $last_month_end;
+                    break;
+            }
+        }
+
+        // Search filter
+        $search_term = isset($_GET['search_term']) && !empty($_GET['search_term']) 
+            ? sanitize_text_field($_GET['search_term']) : '';
+        if (!empty($search_term)) {
+            $where_conditions[] = "(
+                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) LIKE %s 
+                OR JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) LIKE %s
+            )";
+            $search_like = '%' . $wpdb->esc_like($search_term) . '%';
+            $query_params[] = $search_like;
+            $query_params[] = $search_like;
+        }
+
+        $where_clause = implode(' AND ', $where_conditions);
+
         if ($has_id_column) {
-            // Use id column for JOIN
-            $items = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
+            // Use id column for JOIN with categories
+            $sql = "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
                     JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
                     GROUP_CONCAT(DISTINCT fic.category SEPARATOR ', ') as categories
                     FROM {$wpdb->prefix}feed_raw_items ri
                     JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
                     JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_url'
                     LEFT JOIN {$wpdb->prefix}feed_item_categories fic ON ri.id = fic.item_id
-                    WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
+                    WHERE {$where_clause}
                     GROUP BY ri.id
-                    ORDER BY {$orderby} {$order}
-                    LIMIT %d OFFSET %d",
-                    $per_page,
-                    $offset
-                ),
-                ARRAY_A
-            );
+                    ORDER BY ri.{$orderby} {$order}
+                    LIMIT %d OFFSET %d";
         } else {
-            // Fallback: No JOIN with categories table, extract from JSON
-            $items = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
+            // Fallback: No JOIN with categories table
+            $sql = "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
                     JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title
                     FROM {$wpdb->prefix}feed_raw_items ri
                     JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
                     JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_url'
-                    WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
-                    ORDER BY {$orderby} {$order}
-                    LIMIT %d OFFSET %d",
-                    $per_page,
-                    $offset
-                ),
-                ARRAY_A
-            );
+                    WHERE {$where_clause}
+                    ORDER BY ri.{$orderby} {$order}
+                    LIMIT %d OFFSET %d";
         }
+
+        // Add pagination parameters
+        $query_params[] = $per_page;
+        $query_params[] = $offset;
+
+        $items = $wpdb->get_results($wpdb->prepare($sql, $query_params), ARRAY_A);
 
         return $items ?: [];
     }
 
     private function get_total_items(): int {
         global $wpdb;
-        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        
+        // Build same filter conditions as get_feed_items
+        $where_conditions = ["p.post_type = 'athena-feed' AND p.post_status = 'publish'"];
+        $query_params = [];
+
+        // Feed filter
+        $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
+        if ($feed_filter) {
+            $where_conditions[] = 'ri.feed_id = %d';
+            $query_params[] = $feed_filter;
+        }
+
+        // Date filter
+        $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) 
+            ? sanitize_text_field($_GET['date_filter']) : '';
+        if ($date_filter) {
+            $today = date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day'));
+            $week_start = date('Y-m-d', strtotime('this week'));
+            $last_week_start = date('Y-m-d', strtotime('last week'));
+            $last_week_end = date('Y-m-d', strtotime('last week +6 days'));
+            $month_start = date('Y-m-01');
+            $last_month_start = date('Y-m-01', strtotime('last month'));
+            $last_month_end = date('Y-m-t', strtotime('last month'));
+
+            switch ($date_filter) {
+                case 'today':
+                    $where_conditions[] = 'DATE(ri.pub_date) = %s';
+                    $query_params[] = $today;
+                    break;
+                case 'yesterday':
+                    $where_conditions[] = 'DATE(ri.pub_date) = %s';
+                    $query_params[] = $yesterday;
+                    break;
+                case 'this_week':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s';
+                    $query_params[] = $week_start;
+                    break;
+                case 'last_week':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s';
+                    $query_params[] = $last_week_start;
+                    $query_params[] = $last_week_end;
+                    break;
+                case 'this_month':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s';
+                    $query_params[] = $month_start;
+                    break;
+                case 'last_month':
+                    $where_conditions[] = 'DATE(ri.pub_date) >= %s AND DATE(ri.pub_date) <= %s';
+                    $query_params[] = $last_month_start;
+                    $query_params[] = $last_month_end;
+                    break;
+            }
+        }
+
+        // Search filter
+        $search_term = isset($_GET['search_term']) && !empty($_GET['search_term']) 
+            ? sanitize_text_field($_GET['search_term']) : '';
+        if (!empty($search_term)) {
+            $where_conditions[] = "(
+                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) LIKE %s 
+                OR JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) LIKE %s
+            )";
+            $search_like = '%' . $wpdb->esc_like($search_term) . '%';
+            $query_params[] = $search_like;
+            $query_params[] = $search_like;
+        }
+
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        $sql = "SELECT COUNT(*) 
+                FROM {$wpdb->prefix}feed_raw_items ri
+                JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
+                WHERE {$where_clause}";
+
+        if (empty($query_params)) {
+            return (int) $wpdb->get_var($sql);
+        } else {
+            return (int) $wpdb->get_var($wpdb->prepare($sql, $query_params));
+        }
     }
 
     public function column_default($item, $column_name): string {
@@ -208,23 +348,143 @@ class FeedItemsList extends \WP_List_Table {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 
+        // Get statistics
+        global $wpdb;
+        $feed_count = $wpdb->get_var(
+            "SELECT COUNT(*) 
+            FROM {$wpdb->posts} 
+            WHERE post_type = 'athena-feed' 
+            AND post_status = 'publish'"
+        );
+        
+        $total_items = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}feed_raw_items");
+        
+        $last_fetch = get_option('athena_last_feed_fetch');
+        $last_fetch_text = $last_fetch
+            ? human_time_diff($last_fetch, time()) . ' ' . __('ago', 'athena-ai')
+            : __('Never', 'athena-ai');
+
+        // Get feeds for filter dropdown
+        $feeds = get_posts([
+            'post_type' => 'athena-feed',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'orderby' => 'title',
+            'order' => 'ASC',
+        ]);
+
+        // Get filter values
+        $feed_filter = isset($_GET['feed_id']) && !empty($_GET['feed_id']) ? intval($_GET['feed_id']) : 0;
+        $date_filter = isset($_GET['date_filter']) && !empty($_GET['date_filter']) 
+            ? sanitize_text_field($_GET['date_filter']) : '';
+        $search_term = isset($_GET['search_term']) && !empty($_GET['search_term']) 
+            ? sanitize_text_field($_GET['search_term']) : '';
+
+        // Support for multiple feed selection
+        $feed_filter_ids = isset($_GET['feed_ids']) && is_array($_GET['feed_ids'])
+            ? array_map('intval', $_GET['feed_ids']) : [];
+        $feed_filter_array = !empty($feed_filter_ids) ? $feed_filter_ids : ($feed_filter ? [$feed_filter] : []);
+
         // Create an instance of our list table
         $list_table = new self();
         $list_table->prepare_items();
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <h1 class="wp-heading-inline"><?php esc_html_e('Feed Items', 'athena-ai'); ?></h1>
             
-            <div class="feed-items-stats">
-                <?php self::render_stats(); ?>
+            <!-- Action Buttons -->
+            <div class="page-title-action" style="margin-left: 10px;">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display: inline;">
+                    <?php wp_nonce_field('athena_fetch_feeds_nonce'); ?>
+                    <input type="hidden" name="action" value="athena_fetch_feeds">
+                    <button type="submit" class="button button-primary">
+                        <i class="fa-solid fa-sync-alt"></i> <?php esc_html_e('Fetch Feeds Now', 'athena-ai'); ?>
+                    </button>
+                </form>
+                
+                <a href="<?php echo esc_url(admin_url('admin.php?page=athena-feed-maintenance')); ?>" class="button">
+                    <i class="fa-solid fa-tools"></i> <?php esc_html_e('Debug Cron Health', 'athena-ai'); ?>
+                </a>
+                
+                <a href="<?php echo esc_url(admin_url('post-new.php?post_type=athena-feed')); ?>" class="button button-secondary">
+                    <i class="fa-solid fa-plus"></i> <?php esc_html_e('Add New Feed', 'athena-ai'); ?>
+                </a>
+            </div>
+            
+            <hr class="wp-header-end">
+
+            <!-- Statistics Boxes -->
+            <div class="feed-stats-container">
+                <div class="stats-box">
+                    <div class="stats-number"><?php echo esc_html(number_format_i18n($feed_count)); ?></div>
+                    <div class="stats-label"><?php esc_html_e('Feed Sources', 'athena-ai'); ?></div>
+                </div>
+                <div class="stats-box">
+                    <div class="stats-number"><?php echo esc_html(number_format_i18n($total_items)); ?></div>
+                    <div class="stats-label"><?php esc_html_e('Total Items', 'athena-ai'); ?></div>
+                </div>
+                <div class="stats-box">
+                    <div class="stats-number"><?php echo esc_html($last_fetch_text); ?></div>
+                    <div class="stats-label"><?php esc_html_e('Last Fetch', 'athena-ai'); ?></div>
+                </div>
             </div>
 
+            <!-- Filter Section -->
+            <div class="tablenav top">
+                <div class="alignleft actions">
+                    <form method="get" id="feed-filter-form">
+                        <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page'] ?? ''); ?>" />
+                        
+                        <!-- Date Filter -->
+                        <label for="date-filter" class="screen-reader-text"><?php esc_html_e('Filter by Date', 'athena-ai'); ?></label>
+                        <select name="date_filter" id="date-filter">
+                            <option value=""><?php esc_html_e('All Time', 'athena-ai'); ?></option>
+                            <option value="today" <?php selected($date_filter, 'today'); ?>><?php esc_html_e('Today', 'athena-ai'); ?></option>
+                            <option value="yesterday" <?php selected($date_filter, 'yesterday'); ?>><?php esc_html_e('Yesterday', 'athena-ai'); ?></option>
+                            <option value="this_week" <?php selected($date_filter, 'this_week'); ?>><?php esc_html_e('This Week', 'athena-ai'); ?></option>
+                            <option value="last_week" <?php selected($date_filter, 'last_week'); ?>><?php esc_html_e('Last Week', 'athena-ai'); ?></option>
+                            <option value="this_month" <?php selected($date_filter, 'this_month'); ?>><?php esc_html_e('This Month', 'athena-ai'); ?></option>
+                            <option value="last_month" <?php selected($date_filter, 'last_month'); ?>><?php esc_html_e('Last Month', 'athena-ai'); ?></option>
+                        </select>
+
+                        <!-- Search Field -->
+                        <label for="post-search-input" class="screen-reader-text"><?php esc_html_e('Search Items', 'athena-ai'); ?></label>
+                        <input type="search" id="post-search-input" name="search_term" value="<?php echo esc_attr($search_term); ?>" placeholder="<?php esc_attr_e('Search items...', 'athena-ai'); ?>" />
+
+                        <!-- Feed Filter -->
+                        <label for="feed-filter-select" class="screen-reader-text"><?php esc_html_e('Filter by Feed', 'athena-ai'); ?></label>
+                        <select name="feed_id" id="feed-filter-select">
+                            <option value=""><?php esc_html_e('All Feeds', 'athena-ai'); ?></option>
+                            <?php foreach ($feeds as $feed): ?>
+                                <option value="<?php echo esc_attr($feed->ID); ?>" <?php selected($feed_filter, $feed->ID); ?>>
+                                    <?php echo esc_html($feed->post_title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+
+                        <input type="submit" name="filter_action" id="post-query-submit" class="button" value="<?php esc_attr_e('Apply Filters', 'athena-ai'); ?>" />
+                        
+                        <?php if ($date_filter || $search_term || $feed_filter): ?>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=' . ($_REQUEST['page'] ?? ''))); ?>" class="button">
+                                <?php esc_html_e('Clear Filters', 'athena-ai'); ?>
+                            </a>
+                        <?php endif; ?>
+                    </form>
+                </div>
+            </div>
+
+            <!-- List Table -->
             <form method="get">
-                <input type="hidden" name="page" value="<?php echo esc_attr(
-                    isset($_REQUEST['page']) && is_string($_REQUEST['page'])
-                        ? $_REQUEST['page']
-                        : ''
-                ); ?>" />
+                <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page'] ?? ''); ?>" />
+                <?php if ($date_filter): ?>
+                    <input type="hidden" name="date_filter" value="<?php echo esc_attr($date_filter); ?>" />
+                <?php endif; ?>
+                <?php if ($search_term): ?>
+                    <input type="hidden" name="search_term" value="<?php echo esc_attr($search_term); ?>" />
+                <?php endif; ?>
+                <?php if ($feed_filter): ?>
+                    <input type="hidden" name="feed_id" value="<?php echo esc_attr($feed_filter); ?>" />
+                <?php endif; ?>
                 <?php $list_table->display(); ?>
             </form>
         </div>
