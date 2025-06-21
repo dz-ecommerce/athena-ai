@@ -61,7 +61,17 @@ include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/components/component-helper
             </div>
 
             
-            <?php submit_button(__('Einstellungen speichern', 'athena-ai'), 'primary', 'submit', false, ['class' => 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 text-white rounded-lg px-4 py-2']); ?>
+            <!-- Action Buttons -->
+            <div class="flex justify-between items-center space-x-4">
+                <button type="button" 
+                        id="athena-clear-settings-btn"
+                        class="bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500 text-white rounded-lg px-4 py-2 font-medium flex items-center space-x-2 transition-colors duration-200">
+                    <i class="fas fa-trash-alt"></i>
+                    <span><?php esc_html_e('Einstellungen löschen', 'athena-ai'); ?></span>
+                </button>
+                
+                <?php submit_button(__('Einstellungen speichern', 'athena-ai'), 'primary', 'submit', false, ['class' => 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 text-white rounded-lg px-4 py-2 font-medium flex items-center space-x-2']); ?>
+            </div>
         </form>
     </div>
 </div>
@@ -144,6 +154,117 @@ function athenaAIDebugScripts() {
 }
 </script>
 <?php endif; ?>
+
+<!-- Clear Settings Functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clearSettingsBtn = document.getElementById('athena-clear-settings-btn');
+    if (clearSettingsBtn) {
+        clearSettingsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            clearAllSettings();
+        });
+    }
+});
+
+function clearAllSettings() {
+    // Bestätigungsdialog anzeigen
+    if (!confirm('Sind Sie sicher, dass Sie alle Einstellungen löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+        return;
+    }
+    
+    // Alle Formularfelder identifizieren und leeren
+    const fieldIds = [
+        'company_name',
+        'company_industry', 
+        'company_description',
+        'company_products',
+        'company_usps',
+        'target_audience',
+        'expertise_areas',
+        'seo_keywords'
+    ];
+    
+    let clearedCount = 0;
+    
+    // Text-Felder und Textareas leeren
+    fieldIds.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && field.value.trim()) {
+            field.value = '';
+            // Trigger events für floating labels
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('blur', { bubbles: true }));
+            clearedCount++;
+        }
+    });
+    
+    // Select-Felder zurücksetzen
+    const selectFields = document.querySelectorAll('select[name^="athena_ai_profiles"]');
+    selectFields.forEach(select => {
+        if (select.selectedIndex > 0) {
+            select.selectedIndex = 0;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            clearedCount++;
+        }
+    });
+    
+    // Radio-Buttons zurücksetzen
+    const radioButtons = document.querySelectorAll('input[type="radio"][name^="athena_ai_profiles"]:checked');
+    radioButtons.forEach(radio => {
+        radio.checked = false;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+        clearedCount++;
+    });
+    
+    // Checkboxen zurücksetzen
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="athena_ai_profiles"]:checked');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        clearedCount++;
+    });
+    
+    // Erfolgs-Benachrichtigung anzeigen
+    if (clearedCount > 0) {
+        showClearNotification(`${clearedCount} Felder wurden geleert.`, 'success');
+    } else {
+        showClearNotification('Keine Felder zum Leeren gefunden.', 'info');
+    }
+}
+
+function showClearNotification(message, type = 'success') {
+    // Erstelle Benachrichtigung
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-yellow-500';
+    const icon = type === 'success' ? 'check' : type === 'info' ? 'info-circle' : 'exclamation-triangle';
+    
+    notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+    notification.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-${icon}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Benachrichtigung anzeigen
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Nach 3 Sekunden ausblenden
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
 
 <!-- Full Assistant funktioniert jetzt über das universelle Modal-System -->
 
