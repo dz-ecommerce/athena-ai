@@ -526,10 +526,6 @@ if (!empty($items)) {
                     'Publication Date',
                     'athena-ai'
                 ); ?></th>
-                <th scope="col" class="px-6 py-3"><?php esc_html_e(
-                    'Imported Date',
-                    'athena-ai'
-                ); ?></th>
                 <th scope="col" class="px-6 py-3"><?php esc_html_e('Actions', 'athena-ai'); ?></th>
             </tr>
         </thead>
@@ -619,20 +615,6 @@ if (!empty($items)) {
                         ? date_i18n(
                             get_option('date_format') . ' ' . get_option('time_format'),
                             $pub_date
-                        )
-                        : '–';
-                    ?>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
-                    <?php
-                    $import_date =
-                        isset($item->import_date) && !empty($item->import_date)
-                            ? strtotime($item->import_date)
-                            : false;
-                    echo $import_date
-                        ? date_i18n(
-                            get_option('date_format') . ' ' . get_option('time_format'),
-                            $import_date
                         )
                         : '–';
                     ?>
