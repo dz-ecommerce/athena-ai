@@ -402,9 +402,20 @@ async function generatePost() {
         
         updateProgress(60, 'Antwort wird verarbeitet...');
         
-        const result = await response.json();
+        // Get raw response text first
+        const responseText = await response.text();
+        console.log('Raw response:', responseText); // Debug log
         
-        console.log('AJAX Response:', result); // Debug log
+        // Try to parse as JSON
+        let result;
+        try {
+            result = JSON.parse(responseText);
+            console.log('AJAX Response:', result); // Debug log
+        } catch (parseError) {
+            console.error('JSON Parse Error:', parseError);
+            console.error('Response was:', responseText);
+            throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 200) + '...');
+        }
         
         updateProgress(80, 'Content wird aufbereitet...');
         
