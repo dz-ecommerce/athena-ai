@@ -548,7 +548,7 @@ function generatePost() {
                             <!-- Content Selection Section -->
                             <div class="section-card">
                                 <h3><i class="fa-solid fa-layer-group"></i>Content Selection</h3>
-                                <div class="content-selection-grid">
+                                <div class="space-y-6">
                                     <!-- Feed Items Selection -->
                                     <div class="form-field">
                                         <label>
@@ -667,7 +667,7 @@ function generatePost() {
                             <!-- Customization Section -->
                             <div class="section-card">
                                 <h3><i class="fa-solid fa-palette"></i>Content Customization</h3>
-                                <div class="content-selection-grid">
+                                <div class="space-y-6">
                                     <div class="form-field">
                                         <label>
                                             <i class="fa-solid fa-microphone text-purple-600 mr-2"></i>
