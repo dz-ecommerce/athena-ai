@@ -23,8 +23,8 @@ error_log("New AI Post page hook: " . $hook_suffix);
 
 // Ensure TailwindCSS and other assets are loaded
 wp_enqueue_style(
-    'athena-ai-tailwind',
-    ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css',
+    'athena-ai-new-ai-post',
+    ATHENA_AI_PLUGIN_URL . 'assets/css/new-ai-post.css',
     [],
     ATHENA_AI_VERSION
 );
@@ -46,36 +46,36 @@ wp_enqueue_style(
 
 <!-- Inline CSS to ensure styling works -->
 <style>
-/* Force Inter font family */
-.wrap.athena-ai-admin {
+/* Force Inter font family only on New AI Post page */
+.wrap.athena-ai-admin.new-ai-post-page {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* Ensure TailwindCSS classes work */
-.athena-ai-admin .bg-white { background-color: #ffffff !important; }
-.athena-ai-admin .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
-.athena-ai-admin .font-bold { font-weight: 700 !important; }
-.athena-ai-admin .text-gray-800 { color: #1f2937 !important; }
-.athena-ai-admin .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
-.athena-ai-admin .px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-.athena-ai-admin .py-5 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
-.athena-ai-admin .mb-6 { margin-bottom: 1.5rem !important; }
-.athena-ai-admin .rounded-lg { border-radius: 0.5rem !important; }
-.athena-ai-admin .border { border-width: 1px !important; }
-.athena-ai-admin .border-gray-100 { border-color: #f3f4f6 !important; }
-.athena-ai-admin .flex { display: flex !important; }
-.athena-ai-admin .justify-between { justify-content: space-between !important; }
-.athena-ai-admin .items-center { align-items: center !important; }
-.athena-ai-admin .m-0 { margin: 0 !important; }
-.athena-ai-admin .bg-purple-100 { background-color: #f3e8ff !important; }
-.athena-ai-admin .text-purple-600 { color: #9333ea !important; }
-.athena-ai-admin .p-2 { padding: 0.5rem !important; }
-.athena-ai-admin .mr-3 { margin-right: 0.75rem !important; }
-.athena-ai-admin .p-8 { padding: 2rem !important; }
-.athena-ai-admin .max-w-4xl { max-width: 56rem !important; }
-.athena-ai-admin .mx-auto { margin-left: auto !important; margin-right: auto !important; }
-.athena-ai-admin .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem !important; }
-.athena-ai-admin .min-h-screen { min-height: 100vh !important; }
+/* Ensure TailwindCSS classes work only on New AI Post page */
+.athena-ai-admin.new-ai-post-page .bg-white { background-color: #ffffff !important; }
+.athena-ai-admin.new-ai-post-page .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+.athena-ai-admin.new-ai-post-page .font-bold { font-weight: 700 !important; }
+.athena-ai-admin.new-ai-post-page .text-gray-800 { color: #1f2937 !important; }
+.athena-ai-admin.new-ai-post-page .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+.athena-ai-admin.new-ai-post-page .px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+.athena-ai-admin.new-ai-post-page .py-5 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+.athena-ai-admin.new-ai-post-page .mb-6 { margin-bottom: 1.5rem !important; }
+.athena-ai-admin.new-ai-post-page .rounded-lg { border-radius: 0.5rem !important; }
+.athena-ai-admin.new-ai-post-page .border { border-width: 1px !important; }
+.athena-ai-admin.new-ai-post-page .border-gray-100 { border-color: #f3f4f6 !important; }
+.athena-ai-admin.new-ai-post-page .flex { display: flex !important; }
+.athena-ai-admin.new-ai-post-page .justify-between { justify-content: space-between !important; }
+.athena-ai-admin.new-ai-post-page .items-center { align-items: center !important; }
+.athena-ai-admin.new-ai-post-page .m-0 { margin: 0 !important; }
+.athena-ai-admin.new-ai-post-page .bg-purple-100 { background-color: #f3e8ff !important; }
+.athena-ai-admin.new-ai-post-page .text-purple-600 { color: #9333ea !important; }
+.athena-ai-admin.new-ai-post-page .p-2 { padding: 0.5rem !important; }
+.athena-ai-admin.new-ai-post-page .mr-3 { margin-right: 0.75rem !important; }
+.athena-ai-admin.new-ai-post-page .p-8 { padding: 2rem !important; }
+.athena-ai-admin.new-ai-post-page .max-w-4xl { max-width: 56rem !important; }
+.athena-ai-admin.new-ai-post-page .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.athena-ai-admin.new-ai-post-page .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem !important; }
+.athena-ai-admin.new-ai-post-page .min-h-screen { min-height: 100vh !important; }
 
 /* Debug info styling */
 .debug-info {
@@ -89,8 +89,8 @@ wp_enqueue_style(
     color: #991b1b;
 }
 
-/* Enhanced styling for the step navigation and form */
-.athena-ai-admin .step-navigation {
+/* Enhanced styling for the step navigation and form - only on New AI Post page */
+.athena-ai-admin.new-ai-post-page .step-navigation {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
@@ -98,14 +98,14 @@ wp_enqueue_style(
     padding: 0 1rem !important;
 }
 
-.athena-ai-admin .step-navigation .step-item {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-item {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     position: relative !important;
 }
 
-.athena-ai-admin .step-navigation .step-number {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number {
     width: 2.5rem !important;
     height: 2.5rem !important;
     border-radius: 50% !important;
@@ -118,42 +118,42 @@ wp_enqueue_style(
     transition: all 0.2s ease-in-out !important;
 }
 
-.athena-ai-admin .step-navigation .step-number.active {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number.active {
     background-color: #9333ea !important;
     color: white !important;
 }
 
-.athena-ai-admin .step-navigation .step-number.completed {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number.completed {
     background-color: #22c55e !important;
     color: white !important;
 }
 
-.athena-ai-admin .step-navigation .step-number.inactive {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number.inactive {
     background-color: #e5e7eb !important;
     color: #6b7280 !important;
 }
 
-.athena-ai-admin .step-navigation .step-text {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-text {
     font-size: 0.75rem !important;
     font-weight: 500 !important;
     text-align: center !important;
     white-space: nowrap !important;
 }
 
-.athena-ai-admin .step-navigation .step-text.active {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-text.active {
     color: #9333ea !important;
 }
 
-.athena-ai-admin .step-navigation .step-text.completed {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-text.completed {
     color: #22c55e !important;
 }
 
-.athena-ai-admin .step-navigation .step-text.inactive {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-text.inactive {
     color: #6b7280 !important;
 }
 
 /* Connection lines */
-.athena-ai-admin .connection-line {
+.athena-ai-admin.new-ai-post-page .connection-line {
     flex: 1 !important;
     height: 2px !important;
     background-color: #e5e7eb !important;
@@ -162,31 +162,31 @@ wp_enqueue_style(
     top: 1.25rem !important;
 }
 
-.athena-ai-admin .connection-line.completed {
+.athena-ai-admin.new-ai-post-page .connection-line.completed {
     background-color: #22c55e !important;
 }
 
 /* Clickable step numbers */
-.athena-ai-admin .step-navigation .step-number {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number {
     cursor: pointer !important;
 }
 
-.athena-ai-admin .step-navigation .step-number:hover {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number:hover {
     transform: scale(1.1) !important;
 }
 
-.athena-ai-admin .step-navigation .step-number.clickable {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number.clickable {
     cursor: pointer !important;
     opacity: 1 !important;
 }
 
-.athena-ai-admin .step-navigation .step-number.non-clickable {
+.athena-ai-admin.new-ai-post-page .step-navigation .step-number.non-clickable {
     cursor: not-allowed !important;
     opacity: 0.5 !important;
 }
 
 /* Form actions */
-.athena-ai-admin .form-actions {
+.athena-ai-admin.new-ai-post-page .form-actions {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
@@ -195,7 +195,7 @@ wp_enqueue_style(
     margin-top: 2rem !important;
 }
 
-.athena-ai-admin .btn {
+.athena-ai-admin.new-ai-post-page .btn {
     display: inline-flex !important;
     align-items: center !important;
     gap: 0.5rem !important;
@@ -209,24 +209,24 @@ wp_enqueue_style(
     font-size: 14px !important;
 }
 
-.athena-ai-admin .btn-primary {
+.athena-ai-admin.new-ai-post-page .btn-primary {
     background: linear-gradient(to right, #9333ea, #7c3aed) !important;
     color: white !important;
 }
 
-.athena-ai-admin .btn-primary:hover {
+.athena-ai-admin.new-ai-post-page .btn-primary:hover {
     background: linear-gradient(to right, #7c3aed, #6d28d9) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3) !important;
 }
 
-.athena-ai-admin .btn-secondary {
+.athena-ai-admin.new-ai-post-page .btn-secondary {
     background: white !important;
     color: #6b7280 !important;
     border: 1px solid #d1d5db !important;
 }
 
-.athena-ai-admin .btn-secondary:hover {
+.athena-ai-admin.new-ai-post-page .btn-secondary:hover {
     background: #f9fafb !important;
     color: #374151 !important;
     transform: translateY(-1px) !important;
@@ -453,11 +453,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.body.removeChild(testElement);
     
-    // Force add athena-ai-admin class
-    if (!document.body.classList.contains('athena-ai-admin')) {
-        document.body.classList.add('athena-ai-admin');
-        console.log('Added athena-ai-admin class to body');
-    }
+    // Don't add any global classes that could interfere with other pages
+    console.log('New AI Post page loaded successfully');
     
     // Add interactivity for radio options
     function setupRadioOptions() {
@@ -760,7 +757,7 @@ function generatePost() {
 }
 </script>
 
-<div class="wrap athena-ai-admin min-h-screen">
+<div class="wrap athena-ai-admin new-ai-post-page min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
         <h1 class="text-2xl font-bold text-gray-800 m-0 flex items-center">

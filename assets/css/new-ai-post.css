@@ -1,0 +1,292 @@
+/* New AI Post Page Specific Styles */
+.new-ai-post-page {
+    font-family:
+        'Inter',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        sans-serif !important;
+}
+
+/* TailwindCSS classes for New AI Post page */
+.new-ai-post-page .bg-white {
+    background-color: #ffffff !important;
+}
+.new-ai-post-page .text-2xl {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+}
+.new-ai-post-page .font-bold {
+    font-weight: 700 !important;
+}
+.new-ai-post-page .text-gray-800 {
+    color: #1f2937 !important;
+}
+.new-ai-post-page .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+.new-ai-post-page .px-6 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+}
+.new-ai-post-page .py-5 {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+}
+.new-ai-post-page .mb-6 {
+    margin-bottom: 1.5rem !important;
+}
+.new-ai-post-page .rounded-lg {
+    border-radius: 0.5rem !important;
+}
+.new-ai-post-page .border {
+    border-width: 1px !important;
+}
+.new-ai-post-page .border-gray-100 {
+    border-color: #f3f4f6 !important;
+}
+.new-ai-post-page .flex {
+    display: flex !important;
+}
+.new-ai-post-page .justify-between {
+    justify-content: space-between !important;
+}
+.new-ai-post-page .items-center {
+    align-items: center !important;
+}
+.new-ai-post-page .m-0 {
+    margin: 0 !important;
+}
+.new-ai-post-page .bg-purple-100 {
+    background-color: #f3e8ff !important;
+}
+.new-ai-post-page .text-purple-600 {
+    color: #9333ea !important;
+}
+.new-ai-post-page .p-2 {
+    padding: 0.5rem !important;
+}
+.new-ai-post-page .mr-3 {
+    margin-right: 0.75rem !important;
+}
+.new-ai-post-page .p-8 {
+    padding: 2rem !important;
+}
+.new-ai-post-page .max-w-4xl {
+    max-width: 56rem !important;
+}
+.new-ai-post-page .mx-auto {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+.new-ai-post-page .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.5rem !important;
+}
+.new-ai-post-page .min-h-screen {
+    min-height: 100vh !important;
+}
+
+/* Step Navigation */
+.new-ai-post-page .step-navigation {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-bottom: 2rem !important;
+    padding: 0 1rem !important;
+}
+
+.new-ai-post-page .step-navigation .step-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    position: relative !important;
+}
+
+.new-ai-post-page .step-navigation .step-number {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    margin-bottom: 0.5rem !important;
+    transition: all 0.2s ease-in-out !important;
+    cursor: pointer !important;
+}
+
+.new-ai-post-page .step-navigation .step-number:hover {
+    transform: scale(1.1) !important;
+}
+
+.new-ai-post-page .step-navigation .step-number.active {
+    background-color: #9333ea !important;
+    color: white !important;
+}
+
+.new-ai-post-page .step-navigation .step-number.completed {
+    background-color: #22c55e !important;
+    color: white !important;
+}
+
+.new-ai-post-page .step-navigation .step-number.inactive {
+    background-color: #e5e7eb !important;
+    color: #6b7280 !important;
+}
+
+.new-ai-post-page .step-navigation .step-number.non-clickable {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+.new-ai-post-page .step-navigation .step-text {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+.new-ai-post-page .step-navigation .step-text.active {
+    color: #9333ea !important;
+}
+
+.new-ai-post-page .step-navigation .step-text.completed {
+    color: #22c55e !important;
+}
+
+.new-ai-post-page .step-navigation .step-text.inactive {
+    color: #6b7280 !important;
+}
+
+/* Connection lines */
+.new-ai-post-page .connection-line {
+    flex: 1 !important;
+    height: 2px !important;
+    background-color: #e5e7eb !important;
+    margin: 0 0.5rem !important;
+    position: relative !important;
+    top: 1.25rem !important;
+}
+
+.new-ai-post-page .connection-line.completed {
+    background-color: #22c55e !important;
+}
+
+/* Content type grid */
+.new-ai-post-page .content-type-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 1rem !important;
+    max-width: 42rem !important;
+    margin: 0 auto !important;
+}
+
+.new-ai-post-page .content-type-grid-extended {
+    max-width: 60rem !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+@media (min-width: 768px) {
+    .new-ai-post-page .content-type-grid-extended {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+}
+
+.new-ai-post-page .content-type-option {
+    padding: 1.5rem !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.5rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    background-color: white !important;
+    text-align: center !important;
+}
+
+.new-ai-post-page .content-type-option:hover {
+    border-color: #c084fc !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.new-ai-post-page .content-type-option.selected {
+    border-color: #9333ea !important;
+    background-color: #faf5ff !important;
+}
+
+.new-ai-post-page .content-type-option i {
+    font-size: 2rem !important;
+    margin-bottom: 0.75rem !important;
+    color: #9333ea !important;
+}
+
+.new-ai-post-page .content-type-option h3 {
+    font-size: 1.125rem !important;
+    font-weight: 500 !important;
+    color: #111827 !important;
+    margin: 0 0 0.25rem 0 !important;
+}
+
+.new-ai-post-page .content-type-option p {
+    font-size: 0.875rem !important;
+    color: #6b7280 !important;
+    margin: 0 !important;
+}
+
+/* Form actions */
+.new-ai-post-page .form-actions {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding-top: 1.5rem !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 2rem !important;
+}
+
+.new-ai-post-page .btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+}
+
+.new-ai-post-page .btn-primary {
+    background: linear-gradient(to right, #9333ea, #7c3aed) !important;
+    color: white !important;
+}
+
+.new-ai-post-page .btn-primary:hover {
+    background: linear-gradient(to right, #7c3aed, #6d28d9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3) !important;
+}
+
+.new-ai-post-page .btn-secondary {
+    background: white !important;
+    color: #6b7280 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+.new-ai-post-page .btn-secondary:hover {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Hide/Show utility classes */
+.new-ai-post-page .hidden {
+    display: none !important;
+}
+
+.new-ai-post-page .block {
+    display: block !important;
+}
