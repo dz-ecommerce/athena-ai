@@ -94,30 +94,72 @@ class PromptManager {
         $content = file_get_contents($file);
         $lines = explode("\n", $content);
         $result = [];
-        $current_section = null;
+        $stack = [&$result];
+        $last_indent = -1;
         
-        foreach ($lines as $line) {
+        foreach ($lines as $line_num => $line) {
+            // Kommentare und leere Zeilen überspringen
+            if (empty(trim($line)) || strpos(trim($line), '#') === 0) {
+                continue;
+            }
+            
+            // Einrückung messen
+            $indent = strlen($line) - strlen(ltrim($line));
             $line = trim($line);
             
-            // Kommentare und leere Zeilen überspringen
-            if (empty($line) || strpos($line, '#') === 0) {
-                continue;
-            }
-            
-            // Hauptsektion erkennen (ohne Einrückung)
-            if (!preg_match('/^\s/', $line) && strpos($line, ':') !== false) {
+            // Multi-line String erkennen (|)
+            if (strpos($line, '|') !== false) {
                 $parts = explode(':', $line, 2);
-                $current_section = trim($parts[0]);
-                $result[$current_section] = [];
+                $key = trim($parts[0]);
+                $multiline_content = '';
+                
+                // Folgende Zeilen sammeln bis Einrückung wieder zurückgeht
+                for ($i = $line_num + 1; $i < count($lines); $i++) {
+                    $next_line = $lines[$i];
+                    $next_indent = strlen($next_line) - strlen(ltrim($next_line));
+                    
+                    if (trim($next_line) === '' || strpos(trim($next_line), '#') === 0) {
+                        $multiline_content .= "\n";
+                        continue;
+                    }
+                    
+                    if ($next_indent <= $indent) {
+                        break;
+                    }
+                    
+                    $multiline_content .= trim($next_line) . "\n";
+                }
+                
+                $current = &$stack[count($stack) - 1];
+                $current[$key] = trim($multiline_content);
                 continue;
             }
             
-            // Untersektion erkennen (mit Einrückung)
-            if (preg_match('/^\s+(\w+):\s*"?([^"]*)"?$/', $line, $matches)) {
-                if ($current_section) {
-                    $key = $matches[1];
-                    $value = trim($matches[2], '"');
-                    $result[$current_section][$key] = $value;
+            // Key-Value Paare
+            if (strpos($line, ':') !== false) {
+                $parts = explode(':', $line, 2);
+                $key = trim($parts[0]);
+                $value = trim($parts[1] ?? '');
+                
+                // Anführungszeichen entfernen
+                $value = trim($value, '"\'');
+                
+                // Stack anpassen basierend auf Einrückung
+                while (count($stack) > 1 && $indent <= $last_indent) {
+                    array_pop($stack);
+                    $last_indent -= 4; // Annahme: 4 Leerzeichen pro Ebene
+                }
+                
+                $current = &$stack[count($stack) - 1];
+                
+                if (empty($value)) {
+                    // Neue Sektion
+                    $current[$key] = [];
+                    $stack[] = &$current[$key];
+                    $last_indent = $indent;
+                } else {
+                    // Einfacher Wert
+                    $current[$key] = $value;
                 }
             }
         }
@@ -194,7 +236,11 @@ class PromptManager {
     public function build_ai_post_prompt($form_data, $profile_data, $source_content = []) {
         $config = $this->get_prompt('ai_post_generation');
         
+        // Debug: Log what we found
+        error_log('AI Post Generation Config: ' . print_r($config, true));
+        
         if (empty($config)) {
+            error_log('ai_post_generation config not found, using fallback');
             return "Erstelle Content basierend auf den bereitgestellten Informationen.";
         }
 
