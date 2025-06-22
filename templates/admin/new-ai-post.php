@@ -449,52 +449,40 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add interactivity for radio options
     function setupRadioOptions() {
-        // Content source radio options
-        const sourceOptions = document.querySelectorAll('.radio-option');
-        sourceOptions.forEach(option => {
+        // Both content source and content type now use .content-type-option class
+        const allOptions = document.querySelectorAll('.content-type-option');
+        allOptions.forEach(option => {
             option.addEventListener('click', function() {
-                // Remove selected class from all options
-                sourceOptions.forEach(opt => opt.classList.remove('selected'));
+                // Get the radio button in this option
+                const radio = this.querySelector('input[type="radio"]');
+                if (!radio) return;
                 
-                // Add selected class to current option
+                // Get the radio name to handle groups separately
+                const radioName = radio.name;
+                
+                // Remove selected class from all options in the same group
+                document.querySelectorAll(`input[name="${radioName}"]`).forEach(groupRadio => {
+                    const groupOption = groupRadio.closest('.content-type-option');
+                    if (groupOption) {
+                        groupOption.classList.remove('selected');
+                    }
+                });
+                
+                // Add selected class to clicked option
                 this.classList.add('selected');
                 
                 // Check the radio button
-                const radio = this.querySelector('input[type="radio"]');
-                if (radio) {
-                    radio.checked = true;
-                }
+                radio.checked = true;
             });
         });
         
-        // Content type options
-        const typeOptions = document.querySelectorAll('.content-type-option');
-        typeOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                // Remove selected class from all options
-                typeOptions.forEach(opt => opt.classList.remove('selected'));
-                
-                // Add selected class to current option
-                this.classList.add('selected');
-                
-                // Check the radio button
-                const radio = this.querySelector('input[type="radio"]');
-                if (radio) {
-                    radio.checked = true;
-                }
-            });
+        // Set initial selected states for all checked radios
+        document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+            const option = radio.closest('.content-type-option');
+            if (option) {
+                option.classList.add('selected');
+            }
         });
-        
-        // Set initial selected states
-        const checkedSource = document.querySelector('.radio-option input[type="radio"]:checked');
-        if (checkedSource) {
-            checkedSource.closest('.radio-option').classList.add('selected');
-        }
-        
-        const checkedType = document.querySelector('.content-type-option input[type="radio"]:checked');
-        if (checkedType) {
-            checkedType.closest('.content-type-option').classList.add('selected');
-        }
     }
     
     // Initialize interactive elements
@@ -787,45 +775,33 @@ function generatePost() {
                             </p>
                         </div>
                         
-                        <div class="content-source-options">
-                            <div class="radio-option">
-                                <label>
-                                    <input type="radio" name="content_source" value="feed_items" checked>
-                                    <div class="option-content">
-                                        <h3>Feed Items</h3>
-                                        <p>Generate content based on your existing feed items</p>
-                                    </div>
-                                </label>
+                        <div class="content-type-grid">
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-rss"></i>
+                                <input type="radio" name="content_source" value="feed_items" style="display: none;" checked>
+                                <h3>Feed Items</h3>
+                                <p>Generate from feed sources</p>
                             </div>
                             
-                            <div class="radio-option">
-                                <label>
-                                    <input type="radio" name="content_source" value="page_content">
-                                    <div class="option-content">
-                                        <h3>Page Content</h3>
-                                        <p>Create content based on existing WordPress pages</p>
-                                    </div>
-                                </label>
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-file-alt"></i>
+                                <input type="radio" name="content_source" value="page_content" style="display: none;">
+                                <h3>Page Content</h3>
+                                <p>Based on WordPress pages</p>
                             </div>
                             
-                            <div class="radio-option">
-                                <label>
-                                    <input type="radio" name="content_source" value="post_content">
-                                    <div class="option-content">
-                                        <h3>Post Content</h3>
-                                        <p>Generate content from existing WordPress posts</p>
-                                    </div>
-                                </label>
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-edit"></i>
+                                <input type="radio" name="content_source" value="post_content" style="display: none;">
+                                <h3>Post Content</h3>
+                                <p>From existing blog posts</p>
                             </div>
                             
-                            <div class="radio-option">
-                                <label>
-                                    <input type="radio" name="content_source" value="custom_topic">
-                                    <div class="option-content">
-                                        <h3>Custom Topic</h3>
-                                        <p>Create content from a custom topic or keyword</p>
-                                    </div>
-                                </label>
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <input type="radio" name="content_source" value="custom_topic" style="display: none;">
+                                <h3>Custom Topic</h3>
+                                <p>Create from custom ideas</p>
                             </div>
                         </div>
                     </div>
@@ -853,21 +829,21 @@ function generatePost() {
                             </div>
                             
                             <div class="content-type-option">
-                                <i class="fa-solid fa-share-alt"></i>
+                                <i class="fa-brands fa-twitter"></i>
                                 <input type="radio" name="content_type" value="social_post" style="display: none;">
                                 <h3>Social Post</h3>
                                 <p>Short social media content</p>
                             </div>
                             
                             <div class="content-type-option">
-                                <i class="fa-solid fa-compress-alt"></i>
+                                <i class="fa-solid fa-list-check"></i>
                                 <input type="radio" name="content_type" value="summary" style="display: none;">
                                 <h3>Summary</h3>
                                 <p>Condensed overview</p>
                             </div>
                             
                             <div class="content-type-option">
-                                <i class="fa-solid fa-envelope"></i>
+                                <i class="fa-solid fa-envelope-open-text"></i>
                                 <input type="radio" name="content_type" value="newsletter" style="display: none;">
                                 <h3>Newsletter</h3>
                                 <p>Email newsletter format</p>
