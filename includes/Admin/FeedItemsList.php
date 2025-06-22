@@ -158,10 +158,10 @@ class FeedItemsList extends \WP_List_Table {
         } else {
             // Fallback: No JOIN with categories table
             $sql = "SELECT ri.*, p.post_title as feed_title, pm.meta_value as feed_url, 
-                    JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title
-                    FROM {$wpdb->prefix}feed_raw_items ri
-                    JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
-                    JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_url'
+                JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title
+                FROM {$wpdb->prefix}feed_raw_items ri
+                JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
+                JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_athena_feed_url'
                     WHERE {$where_clause}
                     ORDER BY ri.{$orderby} {$order}
                     LIMIT %d OFFSET %d";
@@ -410,7 +410,7 @@ class FeedItemsList extends \WP_List_Table {
                     <i class="fa-solid fa-plus"></i> <?php esc_html_e('Add New Feed', 'athena-ai'); ?>
                 </a>
             </div>
-            
+
             <hr class="wp-header-end">
 
             <!-- Statistics Boxes -->

@@ -179,22 +179,22 @@ function clearAllSettings() {
         'company_industry', 
         'company_description',
         'company_products',
-        'company_usps',
+        'company_usps', 
         'target_audience',
         'expertise_areas',
         'seo_keywords'
     ];
     
     let clearedCount = 0;
-    
+        
     // Text-Felder und Textareas leeren
     fieldIds.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field && field.value.trim()) {
             field.value = '';
             // Trigger events für floating labels
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-            field.dispatchEvent(new Event('blur', { bubbles: true }));
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('blur', { bubbles: true }));
             clearedCount++;
         }
     });
@@ -206,7 +206,7 @@ function clearAllSettings() {
             select.selectedIndex = 0;
             select.dispatchEvent(new Event('change', { bubbles: true }));
             clearedCount++;
-        }
+}
     });
     
     // Radio-Buttons zurücksetzen
@@ -230,7 +230,7 @@ function clearAllSettings() {
         showClearNotification(`${clearedCount} Felder wurden geleert.`, 'success');
     } else {
         showClearNotification('Keine Felder zum Leeren gefunden.', 'info');
-    }
+}
 }
 
 function showClearNotification(message, type = 'success') {
