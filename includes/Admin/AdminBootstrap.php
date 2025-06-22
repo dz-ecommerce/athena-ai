@@ -53,6 +53,16 @@ class AdminBootstrap {
             31
         );
 
+        // New AI Athena Post als Untermenü
+        \add_submenu_page(
+            'athena-feed-items',
+            \__('New AI Athena Post', 'athena-ai'),
+            \__('New AI Athena Post', 'athena-ai'),
+            'manage_options',
+            'athena-new-ai-post',
+            [self::class, 'render_new_ai_post_page']
+        );
+
         // Maintenance-Seite als Untermenü
         \add_submenu_page(
             'athena-feed-items',
@@ -72,6 +82,18 @@ class AdminBootstrap {
             'athena-database-upgrade',
             [DatabaseUpgrade::class, 'render_upgrade_page']
         );
+    }
+
+    /**
+     * Render the New AI Athena Post page
+     */
+    public static function render_new_ai_post_page(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'athena-ai'));
+        }
+
+        // Include the template for the new AI post page
+        include_once ATHENA_AI_PLUGIN_DIR . 'templates/admin/new-ai-post.php';
     }
 
     /**
