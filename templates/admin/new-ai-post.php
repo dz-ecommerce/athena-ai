@@ -88,6 +88,248 @@ wp_enqueue_style(
     font-size: 0.875rem;
     color: #991b1b;
 }
+
+/* Enhanced styling for the step navigation and form */
+.athena-ai-admin .step-navigation {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-bottom: 2rem !important;
+    padding: 0 1rem !important;
+}
+
+.athena-ai-admin .step-navigation .step-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    position: relative !important;
+}
+
+.athena-ai-admin .step-navigation .step-number {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    margin-bottom: 0.5rem !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.athena-ai-admin .step-navigation .step-number.active {
+    background-color: #9333ea !important;
+    color: white !important;
+}
+
+.athena-ai-admin .step-navigation .step-number.completed {
+    background-color: #22c55e !important;
+    color: white !important;
+}
+
+.athena-ai-admin .step-navigation .step-number.inactive {
+    background-color: #e5e7eb !important;
+    color: #6b7280 !important;
+}
+
+.athena-ai-admin .step-navigation .step-text {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+.athena-ai-admin .step-navigation .step-text.active {
+    color: #9333ea !important;
+}
+
+.athena-ai-admin .step-navigation .step-text.completed {
+    color: #22c55e !important;
+}
+
+.athena-ai-admin .step-navigation .step-text.inactive {
+    color: #6b7280 !important;
+}
+
+/* Form styling */
+.athena-ai-admin .content-source-options {
+    max-width: 42rem !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+}
+
+.athena-ai-admin .radio-option {
+    padding: 1.5rem !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.5rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    background-color: white !important;
+}
+
+.athena-ai-admin .radio-option:hover {
+    border-color: #c084fc !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.athena-ai-admin .radio-option.selected {
+    border-color: #9333ea !important;
+    background-color: #faf5ff !important;
+}
+
+.athena-ai-admin .radio-option label {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+}
+
+.athena-ai-admin .radio-option input[type="radio"] {
+    margin-top: 0.125rem !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    accent-color: #9333ea !important;
+}
+
+.athena-ai-admin .radio-option .option-content h3 {
+    font-size: 1.125rem !important;
+    font-weight: 500 !important;
+    color: #111827 !important;
+    margin: 0 0 0.25rem 0 !important;
+}
+
+.athena-ai-admin .radio-option .option-content p {
+    font-size: 0.875rem !important;
+    color: #6b7280 !important;
+    margin: 0 !important;
+}
+
+/* Center content and improve spacing */
+.athena-ai-admin .step-content {
+    text-align: center !important;
+    margin-bottom: 2rem !important;
+}
+
+.athena-ai-admin .step-header {
+    margin-bottom: 2rem !important;
+}
+
+.athena-ai-admin .step-icon {
+    display: inline-flex !important;
+    padding: 1rem !important;
+    border-radius: 50% !important;
+    margin-bottom: 1rem !important;
+}
+
+.athena-ai-admin .step-icon.blue {
+    background-color: #dbeafe !important;
+    color: #2563eb !important;
+}
+
+.athena-ai-admin .step-header h2 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin: 0 0 0.5rem 0 !important;
+}
+
+.athena-ai-admin .step-header p {
+    color: #6b7280 !important;
+    margin: 0 !important;
+}
+
+/* Button styling */
+.athena-ai-admin .form-actions {
+    display: flex !important;
+    justify-content: center !important;
+    margin-top: 2rem !important;
+}
+
+.athena-ai-admin .btn {
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    border: none !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.athena-ai-admin .btn-primary {
+    background-color: #9333ea !important;
+    color: white !important;
+}
+
+.athena-ai-admin .btn-primary:hover {
+    background-color: #7e22ce !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(147, 51, 234, 0.3) !important;
+}
+
+/* Content type grid for step 2 */
+.athena-ai-admin .content-type-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    gap: 1rem !important;
+    max-width: 42rem !important;
+    margin: 0 auto !important;
+}
+
+.athena-ai-admin .content-type-option {
+    padding: 1.5rem !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.5rem !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    background-color: white !important;
+    text-align: center !important;
+}
+
+.athena-ai-admin .content-type-option:hover {
+    border-color: #c084fc !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.athena-ai-admin .content-type-option.selected {
+    border-color: #9333ea !important;
+    background-color: #faf5ff !important;
+}
+
+.athena-ai-admin .content-type-option i {
+    font-size: 2rem !important;
+    margin-bottom: 0.75rem !important;
+    color: #9333ea !important;
+}
+
+.athena-ai-admin .content-type-option h3 {
+    font-size: 1.125rem !important;
+    font-weight: 500 !important;
+    color: #111827 !important;
+    margin: 0 0 0.25rem 0 !important;
+}
+
+.athena-ai-admin .content-type-option p {
+    font-size: 0.875rem !important;
+    color: #6b7280 !important;
+    margin: 0 !important;
+}
+
+/* Hide elements properly */
+.athena-ai-admin .hidden {
+    display: none !important;
+}
+
+.athena-ai-admin .block {
+    display: block !important;
+}
 </style>
 
 <!-- Debug Information -->
@@ -123,6 +365,59 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('athena-ai-admin');
         console.log('Added athena-ai-admin class to body');
     }
+    
+    // Add interactivity for radio options
+    function setupRadioOptions() {
+        // Content source radio options
+        const sourceOptions = document.querySelectorAll('.radio-option');
+        sourceOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                sourceOptions.forEach(opt => opt.classList.remove('selected'));
+                
+                // Add selected class to current option
+                this.classList.add('selected');
+                
+                // Check the radio button
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+            });
+        });
+        
+        // Content type options
+        const typeOptions = document.querySelectorAll('.content-type-option');
+        typeOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                typeOptions.forEach(opt => opt.classList.remove('selected'));
+                
+                // Add selected class to current option
+                this.classList.add('selected');
+                
+                // Check the radio button
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                }
+            });
+        });
+        
+        // Set initial selected states
+        const checkedSource = document.querySelector('.radio-option input[type="radio"]:checked');
+        if (checkedSource) {
+            checkedSource.closest('.radio-option').classList.add('selected');
+        }
+        
+        const checkedType = document.querySelector('.content-type-option input[type="radio"]:checked');
+        if (checkedType) {
+            checkedType.closest('.content-type-option').classList.add('selected');
+        }
+    }
+    
+    // Initialize interactive elements
+    setupRadioOptions();
 });
 </script>
 
@@ -166,27 +461,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             </p>
                         </div>
                         
-                        <div class="max-w-2xl mx-auto">
-                            <div class="space-y-4">
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex items-start space-x-3 cursor-pointer">
-                                        <input type="radio" name="content_source" value="feed_items" class="mt-1" checked>
-                                        <div>
-                                            <h3 class="text-lg font-medium text-gray-900">Feed Items</h3>
-                                            <p class="text-gray-600 text-sm">Generate content based on your existing feed items</p>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex items-start space-x-3 cursor-pointer">
-                                        <input type="radio" name="content_source" value="custom_topic" class="mt-1">
-                                        <div>
-                                            <h3 class="text-lg font-medium text-gray-900">Custom Topic</h3>
-                                            <p class="text-gray-600 text-sm">Create content from a custom topic or keyword</p>
-                                        </div>
-                                    </label>
-                                </div>
+                        <div class="content-source-options">
+                            <div class="radio-option">
+                                <label>
+                                    <input type="radio" name="content_source" value="feed_items" checked>
+                                    <div class="option-content">
+                                        <h3>Feed Items</h3>
+                                        <p>Generate content based on your existing feed items</p>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="radio-option">
+                                <label>
+                                    <input type="radio" name="content_source" value="custom_topic">
+                                    <div class="option-content">
+                                        <h3>Custom Topic</h3>
+                                        <p>Create content from a custom topic or keyword</p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -205,43 +498,33 @@ document.addEventListener('DOMContentLoaded', function() {
                             </p>
                         </div>
                         
-                        <div class="max-w-2xl mx-auto">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex flex-col items-center text-center cursor-pointer">
-                                        <input type="radio" name="content_type" value="blog_post" class="mb-3" checked>
-                                        <i class="fa-solid fa-newspaper text-2xl text-blue-600 mb-2"></i>
-                                        <h3 class="text-lg font-medium text-gray-900">Blog Post</h3>
-                                        <p class="text-gray-600 text-sm">Long-form article content</p>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex flex-col items-center text-center cursor-pointer">
-                                        <input type="radio" name="content_type" value="social_post" class="mb-3">
-                                        <i class="fa-solid fa-share-alt text-2xl text-green-600 mb-2"></i>
-                                        <h3 class="text-lg font-medium text-gray-900">Social Post</h3>
-                                        <p class="text-gray-600 text-sm">Short social media content</p>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex flex-col items-center text-center cursor-pointer">
-                                        <input type="radio" name="content_type" value="summary" class="mb-3">
-                                        <i class="fa-solid fa-compress-alt text-2xl text-purple-600 mb-2"></i>
-                                        <h3 class="text-lg font-medium text-gray-900">Summary</h3>
-                                        <p class="text-gray-600 text-sm">Condensed overview</p>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-6 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors duration-200">
-                                    <label class="flex flex-col items-center text-center cursor-pointer">
-                                        <input type="radio" name="content_type" value="newsletter" class="mb-3">
-                                        <i class="fa-solid fa-envelope text-2xl text-orange-600 mb-2"></i>
-                                        <h3 class="text-lg font-medium text-gray-900">Newsletter</h3>
-                                        <p class="text-gray-600 text-sm">Email newsletter format</p>
-                                    </label>
-                                </div>
+                        <div class="content-type-grid">
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-newspaper"></i>
+                                <input type="radio" name="content_type" value="blog_post" style="display: none;" checked>
+                                <h3>Blog Post</h3>
+                                <p>Long-form article content</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-share-alt"></i>
+                                <input type="radio" name="content_type" value="social_post" style="display: none;">
+                                <h3>Social Post</h3>
+                                <p>Short social media content</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-compress-alt"></i>
+                                <input type="radio" name="content_type" value="summary" style="display: none;">
+                                <h3>Summary</h3>
+                                <p>Condensed overview</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input type="radio" name="content_type" value="newsletter" style="display: none;">
+                                <h3>Newsletter</h3>
+                                <p>Email newsletter format</p>
                             </div>
                         </div>
                     </div>
