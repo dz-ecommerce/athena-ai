@@ -240,8 +240,8 @@ class PromptManager {
         error_log('AI Post Generation Config: ' . print_r($config, true));
         
         if (empty($config)) {
-            error_log('ai_post_generation config not found, using fallback');
-            return "Erstelle Content basierend auf den bereitgestellten Informationen.";
+            error_log('ai_post_generation config not found, using hardcoded prompt');
+            return $this->build_hardcoded_ai_prompt($form_data, $profile_data, $source_content);
         }
 
         // Start with base introduction
@@ -386,6 +386,112 @@ class PromptManager {
         $prompt .= "Beginne jetzt mit der Content-Erstellung:";
 
                 return $prompt;
+    }
+
+    /**
+     * Build hardcoded AI prompt when YAML config fails
+     */
+    private function build_hardcoded_ai_prompt($form_data, $profile_data, $source_content = []) {
+        $prompt = "Du bist ein professioneller Content-Marketing-Experte und WordPress-Redakteur.\n";
+        $prompt .= "Erstelle hochwertigen, SEO-optimierten Content basierend auf den folgenden Informationen.\n\n";
+        
+        // Content Type
+        $content_type = $form_data['content_type'] ?? 'blog_post';
+        $prompt .= "CONTENT-TYP: " . strtoupper(str_replace('_', ' ', $content_type)) . "\n";
+        
+        if ($content_type === 'blog_post') {
+            $prompt .= "Erstelle einen professionellen Blog-Artikel mit Einleitung, Hauptteil mit Zwischenüberschriften und Fazit.\n\n";
+        } else {
+            $prompt .= "Erstelle Content entsprechend dem gewählten Format.\n\n";
+        }
+        
+        // Company Information
+        $prompt .= "UNTERNEHMENSINFORMATIONEN:\n";
+        if (!empty($profile_data['company_name'])) {
+            $prompt .= "- Firmenname: " . $profile_data['company_name'] . "\n";
+        }
+        if (!empty($profile_data['company_industry'])) {
+            $prompt .= "- Branche: " . $profile_data['company_industry'] . "\n";
+        }
+        if (!empty($profile_data['company_description'])) {
+            $prompt .= "- Beschreibung: " . substr($profile_data['company_description'], 0, 500) . "...\n";
+        }
+        if (!empty($profile_data['company_products'])) {
+            $prompt .= "- Produkte/Dienstleistungen: " . substr($profile_data['company_products'], 0, 300) . "...\n";
+        }
+        if (!empty($profile_data['target_audience'])) {
+            $prompt .= "- Zielgruppe: " . $profile_data['target_audience'] . "\n";
+        }
+        $prompt .= "\n";
+        
+        // Source Content (Feed Items)
+        if (!empty($source_content['feed_items'])) {
+            $prompt .= "QUELL-ARTIKEL (als Inspiration verwenden):\n";
+            foreach (array_slice($source_content['feed_items'], 0, 3) as $item) {
+                $prompt .= "- Titel: " . ($item['title'] ?? 'Unbekannt') . "\n";
+                if (!empty($item['description'])) {
+                    $clean_desc = strip_tags($item['description']);
+                    $prompt .= "  Inhalt: " . substr($clean_desc, 0, 200) . "...\n";
+                }
+                $prompt .= "\n";
+            }
+        }
+        
+        // Tone and Style
+        $tone = $form_data['tone'] ?? 'professional';
+        $prompt .= "TON: ";
+        switch ($tone) {
+            case 'professional':
+                $prompt .= "Sachlich, kompetent, vertrauenswürdig\n";
+                break;
+            case 'casual':
+                $prompt .= "Locker, zugänglich, freundlich\n";
+                break;
+            case 'friendly':
+                $prompt .= "Warm, einladend, hilfsbereit\n";
+                break;
+            default:
+                $prompt .= "Professionell und ansprechend\n";
+        }
+        $prompt .= "\n";
+        
+        // Length
+        $length = $form_data['content_length'] ?? 'medium';
+        $prompt .= "LÄNGE: ";
+        switch ($length) {
+            case 'short':
+                $prompt .= "300-500 Wörter, prägnant und auf den Punkt\n";
+                break;
+            case 'long':
+                $prompt .= "1000+ Wörter, umfassend und detailliert\n";
+                break;
+            default:
+                $prompt .= "500-1000 Wörter, ausgewogen und gut strukturiert\n";
+        }
+        $prompt .= "\n";
+        
+        // Additional Instructions
+        if (!empty($form_data['instructions'])) {
+            $prompt .= "ZUSÄTZLICHE ANWEISUNGEN:\n" . $form_data['instructions'] . "\n\n";
+        }
+        
+        // Keywords
+        if (!empty($form_data['keywords'])) {
+            $prompt .= "KEYWORDS (natürlich einbauen): " . $form_data['keywords'] . "\n\n";
+        }
+        
+        // Output Format
+        $prompt .= "AUSGABE-FORMAT:\n";
+        $prompt .= "Erstelle GENAU in dieser Struktur:\n\n";
+        $prompt .= "=== TITEL ===\n";
+        $prompt .= "[SEO-optimierter Titel - max. 60 Zeichen]\n\n";
+        $prompt .= "=== META-BESCHREIBUNG ===\n";
+        $prompt .= "[Meta-Beschreibung 150-160 Zeichen mit Call-to-Action]\n\n";
+        $prompt .= "=== INHALT ===\n";
+        $prompt .= "[Vollständiger Artikel-Inhalt mit HTML-Struktur (h2, h3, p, ul, li)]\n\n";
+        $prompt .= "Beginne jetzt mit der Content-Erstellung:";
+        
+        return $prompt;
     }
 
     /**
