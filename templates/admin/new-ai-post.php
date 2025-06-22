@@ -21,415 +21,20 @@ $stored_data = AIPostController::get_stored_form_data();
 global $hook_suffix;
 error_log("New AI Post page hook: " . $hook_suffix);
 
-// Ensure TailwindCSS and other assets are loaded
-wp_enqueue_style(
-    'athena-ai-new-ai-post',
-    ATHENA_AI_PLUGIN_URL . 'assets/css/new-ai-post.css',
-    [],
-    ATHENA_AI_VERSION
-);
-
-wp_enqueue_style(
-    'athena-ai-google-fonts',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
-    [],
-    ATHENA_AI_VERSION
-);
-
-wp_enqueue_style(
-    'athena-ai-fontawesome',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    [],
-    '6.4.0'
-);
+// Load the specific CSS for this page directly 
+$css_url = ATHENA_AI_PLUGIN_URL . 'assets/css/new-ai-post.css?v=' . time();
 ?>
 
-<!-- Inline CSS to ensure styling works -->
-<style>
-/* Force Inter font family only on New AI Post page */
-.wrap.athena-ai-admin.new-ai-post-page {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-}
-
-/* Ensure TailwindCSS classes work only on New AI Post page */
-.athena-ai-admin.new-ai-post-page .bg-white { background-color: #ffffff !important; }
-.athena-ai-admin.new-ai-post-page .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
-.athena-ai-admin.new-ai-post-page .font-bold { font-weight: 700 !important; }
-.athena-ai-admin.new-ai-post-page .text-gray-800 { color: #1f2937 !important; }
-.athena-ai-admin.new-ai-post-page .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
-.athena-ai-admin.new-ai-post-page .px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-.athena-ai-admin.new-ai-post-page .py-5 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
-.athena-ai-admin.new-ai-post-page .mb-6 { margin-bottom: 1.5rem !important; }
-.athena-ai-admin.new-ai-post-page .rounded-lg { border-radius: 0.5rem !important; }
-.athena-ai-admin.new-ai-post-page .border { border-width: 1px !important; }
-.athena-ai-admin.new-ai-post-page .border-gray-100 { border-color: #f3f4f6 !important; }
-.athena-ai-admin.new-ai-post-page .flex { display: flex !important; }
-.athena-ai-admin.new-ai-post-page .justify-between { justify-content: space-between !important; }
-.athena-ai-admin.new-ai-post-page .items-center { align-items: center !important; }
-.athena-ai-admin.new-ai-post-page .m-0 { margin: 0 !important; }
-.athena-ai-admin.new-ai-post-page .bg-purple-100 { background-color: #f3e8ff !important; }
-.athena-ai-admin.new-ai-post-page .text-purple-600 { color: #9333ea !important; }
-.athena-ai-admin.new-ai-post-page .p-2 { padding: 0.5rem !important; }
-.athena-ai-admin.new-ai-post-page .mr-3 { margin-right: 0.75rem !important; }
-.athena-ai-admin.new-ai-post-page .p-8 { padding: 2rem !important; }
-.athena-ai-admin.new-ai-post-page .max-w-4xl { max-width: 56rem !important; }
-.athena-ai-admin.new-ai-post-page .mx-auto { margin-left: auto !important; margin-right: auto !important; }
-.athena-ai-admin.new-ai-post-page .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem !important; }
-.athena-ai-admin.new-ai-post-page .min-h-screen { min-height: 100vh !important; }
-
-/* Debug info styling */
-.debug-info {
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-    border-radius: 0.375rem;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-    font-family: monospace;
-    font-size: 0.875rem;
-    color: #991b1b;
-}
-
-/* Enhanced styling for the step navigation and form - only on New AI Post page */
-.athena-ai-admin.new-ai-post-page .step-navigation {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    margin-bottom: 2rem !important;
-    padding: 0 1rem !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    position: relative !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-weight: 600 !important;
-    font-size: 0.875rem !important;
-    margin-bottom: 0.5rem !important;
-    transition: all 0.2s ease-in-out !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number.active {
-    background-color: #9333ea !important;
-    color: white !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number.completed {
-    background-color: #22c55e !important;
-    color: white !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number.inactive {
-    background-color: #e5e7eb !important;
-    color: #6b7280 !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-text {
-    font-size: 0.75rem !important;
-    font-weight: 500 !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-text.active {
-    color: #9333ea !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-text.completed {
-    color: #22c55e !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-text.inactive {
-    color: #6b7280 !important;
-}
-
-/* Connection lines */
-.athena-ai-admin.new-ai-post-page .connection-line {
-    flex: 1 !important;
-    height: 2px !important;
-    background-color: #e5e7eb !important;
-    margin: 0 0.5rem !important;
-    position: relative !important;
-    top: 1.25rem !important;
-}
-
-.athena-ai-admin.new-ai-post-page .connection-line.completed {
-    background-color: #22c55e !important;
-}
-
-/* Clickable step numbers */
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number {
-    cursor: pointer !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number:hover {
-    transform: scale(1.1) !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number.clickable {
-    cursor: pointer !important;
-    opacity: 1 !important;
-}
-
-.athena-ai-admin.new-ai-post-page .step-navigation .step-number.non-clickable {
-    cursor: not-allowed !important;
-    opacity: 0.5 !important;
-}
-
-/* Form actions */
-.athena-ai-admin.new-ai-post-page .form-actions {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding-top: 1.5rem !important;
-    border-top: 1px solid #e5e7eb !important;
-    margin-top: 2rem !important;
-}
-
-.athena-ai-admin.new-ai-post-page .btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-    padding: 0.75rem 1.5rem !important;
-    border-radius: 0.5rem !important;
-    font-weight: 500 !important;
-    text-decoration: none !important;
-    transition: all 0.2s ease !important;
-    border: none !important;
-    cursor: pointer !important;
-    font-size: 14px !important;
-}
-
-.athena-ai-admin.new-ai-post-page .btn-primary {
-    background: linear-gradient(to right, #9333ea, #7c3aed) !important;
-    color: white !important;
-}
-
-.athena-ai-admin.new-ai-post-page .btn-primary:hover {
-    background: linear-gradient(to right, #7c3aed, #6d28d9) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3) !important;
-}
-
-.athena-ai-admin.new-ai-post-page .btn-secondary {
-    background: white !important;
-    color: #6b7280 !important;
-    border: 1px solid #d1d5db !important;
-}
-
-.athena-ai-admin.new-ai-post-page .btn-secondary:hover {
-    background: #f9fafb !important;
-    color: #374151 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Form styling */
-.athena-ai-admin .content-source-options {
-    max-width: 42rem !important;
-    margin: 0 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 1rem !important;
-}
-
-.athena-ai-admin .radio-option {
-    padding: 1.5rem !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.5rem !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    background-color: white !important;
-}
-
-.athena-ai-admin .radio-option:hover {
-    border-color: #c084fc !important;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
-}
-
-.athena-ai-admin .radio-option.selected {
-    border-color: #9333ea !important;
-    background-color: #faf5ff !important;
-}
-
-.athena-ai-admin .radio-option label {
-    display: flex !important;
-    align-items: flex-start !important;
-    gap: 0.75rem !important;
-    cursor: pointer !important;
-    margin: 0 !important;
-}
-
-.athena-ai-admin .radio-option input[type="radio"] {
-    margin-top: 0.125rem !important;
-    width: 1.25rem !important;
-    height: 1.25rem !important;
-    accent-color: #9333ea !important;
-}
-
-.athena-ai-admin .radio-option .option-content h3 {
-    font-size: 1.125rem !important;
-    font-weight: 500 !important;
-    color: #111827 !important;
-    margin: 0 0 0.25rem 0 !important;
-}
-
-.athena-ai-admin .radio-option .option-content p {
-    font-size: 0.875rem !important;
-    color: #6b7280 !important;
-    margin: 0 !important;
-}
-
-/* Center content and improve spacing */
-.athena-ai-admin .step-content {
-    text-align: center !important;
-    margin-bottom: 2rem !important;
-}
-
-.athena-ai-admin .step-header {
-    margin-bottom: 2rem !important;
-}
-
-.athena-ai-admin .step-icon {
-    display: inline-flex !important;
-    padding: 1rem !important;
-    border-radius: 50% !important;
-    margin-bottom: 1rem !important;
-}
-
-.athena-ai-admin .step-icon.blue {
-    background-color: #dbeafe !important;
-    color: #2563eb !important;
-}
-
-.athena-ai-admin .step-header h2 {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-    color: #111827 !important;
-    margin: 0 0 0.5rem 0 !important;
-}
-
-.athena-ai-admin .step-header p {
-    color: #6b7280 !important;
-    margin: 0 !important;
-}
-
-/* Button styling */
-.athena-ai-admin .form-actions {
-    display: flex !important;
-    justify-content: center !important;
-    margin-top: 2rem !important;
-}
-
-.athena-ai-admin .btn {
-    padding: 0.75rem 1.5rem !important;
-    border-radius: 0.5rem !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    border: none !important;
-    text-decoration: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-}
-
-.athena-ai-admin .btn-primary {
-    background-color: #9333ea !important;
-    color: white !important;
-}
-
-.athena-ai-admin .btn-primary:hover {
-    background-color: #7e22ce !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 8px rgba(147, 51, 234, 0.3) !important;
-}
-
-/* Content type grid for step 2 */
-.athena-ai-admin .content-type-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-    gap: 1rem !important;
-    max-width: 42rem !important;
-    margin: 0 auto !important;
-}
-
-/* Extended grid for more content types */
-.athena-ai-admin .content-type-grid-extended {
-    max-width: 60rem !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-}
-
-@media (min-width: 768px) {
-    .athena-ai-admin .content-type-grid-extended {
-        grid-template-columns: repeat(4, 1fr) !important;
-    }
-}
-
-.athena-ai-admin .content-type-option {
-    padding: 1.5rem !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.5rem !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    background-color: white !important;
-    text-align: center !important;
-}
-
-.athena-ai-admin .content-type-option:hover {
-    border-color: #c084fc !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-.athena-ai-admin .content-type-option.selected {
-    border-color: #9333ea !important;
-    background-color: #faf5ff !important;
-}
-
-.athena-ai-admin .content-type-option i {
-    font-size: 2rem !important;
-    margin-bottom: 0.75rem !important;
-    color: #9333ea !important;
-}
-
-.athena-ai-admin .content-type-option h3 {
-    font-size: 1.125rem !important;
-    font-weight: 500 !important;
-    color: #111827 !important;
-    margin: 0 0 0.25rem 0 !important;
-}
-
-.athena-ai-admin .content-type-option p {
-    font-size: 0.875rem !important;
-    color: #6b7280 !important;
-    margin: 0 !important;
-}
-
-/* Hide elements properly */
-.athena-ai-admin .hidden {
-    display: none !important;
-}
-
-.athena-ai-admin .block {
-    display: block !important;
-}
-</style>
+<!-- Load specific CSS for this page -->
+<link rel="stylesheet" href="<?php echo $css_url; ?>" type="text/css" media="all" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" type="text/css" media="all" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" type="text/css" media="all" />
 
 <!-- Debug Information -->
 <div class="debug-info">
     <strong>Debug Info:</strong><br>
     Hook Suffix: <?php echo esc_html($hook_suffix); ?><br>
-    CSS URL: <?php echo ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css'; ?><br>
+    CSS URL: <?php echo ATHENA_AI_PLUGIN_URL . 'assets/css/new-ai-post.css'; ?><br>
     Body Classes: <span id="body-classes"></span><br>
     TailwindCSS Loaded: <span id="tailwind-status">Checking...</span>
 </div>
@@ -441,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if TailwindCSS is loaded
     const testElement = document.createElement('div');
-    testElement.className = 'athena-ai-admin bg-red-500';
+    testElement.className = 'new-ai-post-page bg-red-500';
     testElement.style.display = 'none';
     document.body.appendChild(testElement);
     
@@ -757,7 +362,7 @@ function generatePost() {
 }
 </script>
 
-<div class="wrap athena-ai-admin new-ai-post-page min-h-screen">
+<div class="wrap new-ai-post-page min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
         <h1 class="text-2xl font-bold text-gray-800 m-0 flex items-center">
@@ -767,10 +372,10 @@ function generatePost() {
             <?php esc_html_e('New AI Athena Post', 'athena-ai'); ?>
         </h1>
     </div>
-    
+
     <!-- Main Content -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8">
-        <div class="max-w-4xl mx-auto">
+    <div class="bg-white shadow-sm rounded-lg border border-gray-100 p-8">
+        <div class="max-w-4xl mx-auto space-y-6">
             
             <!-- Step Navigation -->
             <div class="step-navigation">
@@ -800,20 +405,18 @@ function generatePost() {
                     <span class="step-text inactive">Review & Generate</span>
                 </div>
             </div>
-            
+
             <!-- Step Form -->
-            <form id="ai-post-form" class="space-y-6">
-                <?php wp_nonce_field(AIPostController::NONCE_ACTION, 'ai_post_nonce'); ?>
-                <input type="hidden" id="current_step" name="current_step" value="<?php echo esc_attr($current_step); ?>">
-                
-                <!-- Step Content -->
-                <div id="step-content">
-                    
+            <form id="ai-post-form" method="post" action="">
+                <?php wp_nonce_field('athena_ai_post_nonce', 'ai_post_nonce'); ?>
+                <input type="hidden" name="action" value="<?php echo esc_attr('athena_ai_post_step'); ?>">
+
+                <div class="step-forms">
                     <!-- Step 1: Content Source -->
                     <div id="step-1" class="step-content <?php echo $current_step === 1 ? 'block' : 'hidden'; ?>">
                         <div class="text-center mb-8">
-                            <div class="bg-blue-100 text-blue-600 inline-flex p-4 rounded-full mb-4 mx-auto">
-                                <i class="fa-solid fa-file-text fa-2x"></i>
+                            <div class="bg-purple-100 text-purple-600 inline-flex p-4 rounded-full mb-4 mx-auto">
+                                <i class="fa-solid fa-rss fa-2x"></i>
                             </div>
                             <h2 class="text-2xl font-bold text-gray-900 mb-2">
                                 <?php echo esc_html($step_config[1]['title']); ?>
@@ -1105,279 +708,13 @@ function generatePost() {
                         Generate Post
                     </button>
                 </div>
-
-                <!-- Old Form Navigation (hidden) -->
-                <div class="flex justify-between items-center pt-6 border-t border-gray-200" style="display: none !important;">
-                    <button type="button" id="prev-btn" onclick="previousStep()" 
-                            class="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 <?php echo $current_step <= 1 ? 'hidden' : ''; ?>">
-                        <i class="fa-solid fa-arrow-left mr-2"></i>
-                        <?php esc_html_e('Back', 'athena-ai'); ?>
-                    </button>
-                    
-                    <div class="flex space-x-3">
-                        <button type="button" id="next-btn" onclick="nextStep()" 
-                                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 <?php echo $current_step >= 4 ? 'hidden' : ''; ?>">
-                            <?php esc_html_e('Next', 'athena-ai'); ?>
-                            <i class="fa-solid fa-arrow-right ml-2"></i>
-                        </button>
-                        
-                        <button type="button" id="generate-btn" onclick="generatePost()" 
-                                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 <?php echo $current_step < 4 ? 'hidden' : ''; ?>">
-                            <i class="fa-solid fa-magic mr-2"></i>
-                            <?php esc_html_e('Generate Post', 'athena-ai'); ?>
-                        </button>
-                    </div>
-                </div>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-let currentStep = <?php echo $current_step; ?>;
-
-function navigateToStep(step) {
-    if (step <= currentStep || step <= getCompletedSteps()) {
-        showStep(step);
-        currentStep = step;
-        updateNavigation();
-        updateStepNavigation();
-    }
-}
-
-function nextStep() {
-    if (currentStep < 4) {
-        currentStep++;
-        showStep(currentStep);
-        updateNavigation();
-        updateStepNavigation();
-        
-        if (currentStep === 4) {
-            updateReviewContent();
-        }
-    }
-}
-
-function previousStep() {
-    if (currentStep > 1) {
-        currentStep--;
-        showStep(currentStep);
-        updateNavigation();
-        updateStepNavigation();
-    }
-}
-
-function showStep(step) {
-    // Hide all steps
-    document.querySelectorAll('.step-content').forEach(el => {
-        el.classList.add('hidden');
-        el.classList.remove('block');
-    });
-    
-    // Show current step
-    const stepElement = document.getElementById(`step-${step}`);
-    if (stepElement) {
-        stepElement.classList.remove('hidden');
-        stepElement.classList.add('block');
-    }
-    
-    // Update hidden input
-    document.getElementById('current_step').value = step;
-}
-
-function updateNavigation() {
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const generateBtn = document.getElementById('generate-btn');
-    
-    // Previous button
-    if (currentStep <= 1) {
-        prevBtn.classList.add('hidden');
-    } else {
-        prevBtn.classList.remove('hidden');
-    }
-    
-    // Next/Generate buttons
-    if (currentStep >= 4) {
-        nextBtn.classList.add('hidden');
-        generateBtn.classList.remove('hidden');
-    } else {
-        nextBtn.classList.remove('hidden');
-        generateBtn.classList.add('hidden');
-    }
-}
-
-function updateStepNavigation() {
-    // Die Step-Navigation wird vollständig server-seitig generiert
-    // Diese Funktion wird für eventuelle zukünftige clientseitige Updates beibehalten
-    // aber ist derzeit nicht erforderlich, da wir bei jedem Step-Wechsel
-    // die Navigation neu rendern
-}
-
-function getCompletedSteps() {
-    // Logic to determine which steps are completed based on form data
-    return currentStep - 1;
-}
-
-function updateReviewContent() {
-    const reviewContainer = document.getElementById('review-content');
-    if (!reviewContainer) return;
-    
-    let reviewHTML = '';
-    
-    // Content Source
-    const contentSource = document.querySelector('input[name="content_source"]:checked');
-    if (contentSource) {
-        reviewHTML += `<div class="flex justify-between"><span class="font-medium">Content Source:</span><span>${getContentSourceLabel(contentSource.value)}</span></div>`;
-    }
-    
-    // Content Type
-    const contentType = document.querySelector('input[name="content_type"]:checked');
-    if (contentType) {
-        reviewHTML += `<div class="flex justify-between"><span class="font-medium">Content Type:</span><span>${getContentTypeLabel(contentType.value)}</span></div>`;
-    }
-    
-    // Tone
-    const tone = document.querySelector('select[name="tone"]');
-    if (tone && tone.value) {
-        reviewHTML += `<div class="flex justify-between"><span class="font-medium">Tone:</span><span>${tone.options[tone.selectedIndex].text}</span></div>`;
-    }
-    
-    // Target Audience
-    const audience = document.querySelector('input[name="target_audience"]');
-    if (audience && audience.value) {
-        reviewHTML += `<div class="flex justify-between"><span class="font-medium">Target Audience:</span><span>${audience.value}</span></div>`;
-    }
-    
-    // Keywords
-    const keywords = document.querySelector('input[name="keywords"]');
-    if (keywords && keywords.value) {
-        reviewHTML += `<div class="flex justify-between"><span class="font-medium">Keywords:</span><span>${keywords.value}</span></div>`;
-    }
-    
-    // Instructions
-    const instructions = document.querySelector('textarea[name="instructions"]');
-    if (instructions && instructions.value) {
-        reviewHTML += `<div><span class="font-medium">Additional Instructions:</span><br><span class="text-gray-600">${instructions.value}</span></div>`;
-    }
-    
-    reviewContainer.innerHTML = reviewHTML || '<p class="text-gray-500">No settings configured yet.</p>';
-}
-
-function getContentSourceLabel(value) {
-    const labels = {
-        'feed_items': 'Feed Items',
-        'custom_topic': 'Custom Topic'
-    };
-    return labels[value] || value;
-}
-
-function getContentTypeLabel(value) {
-    const labels = {
-        'blog_post': 'Blog Post',
-        'social_post': 'Social Post',
-        'summary': 'Summary',
-        'newsletter': 'Newsletter'
-    };
-    return labels[value] || value;
-}
-
-function generatePost() {
-    // Collect form data
-    const formData = new FormData(document.getElementById('ai-post-form'));
-    formData.append('action', 'athena_ai_post_generate');
-    formData.append('nonce', document.querySelector('input[name="ai_post_nonce"]').value);
-    
-    // Show loading state
-    const generateBtn = document.getElementById('generate-btn');
-    const originalText = generateBtn.innerHTML;
-    generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i><?php esc_html_e("Generating...", "athena-ai"); ?>';
-    generateBtn.disabled = true;
-    
-    // Send AJAX request
-    fetch(ajaxurl, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.data.message || '<?php esc_html_e("Post generated successfully!", "athena-ai"); ?>');
-            if (data.data.redirect) {
-                window.location.href = data.data.redirect;
-            }
-        } else {
-            alert(data.data.message || '<?php esc_html_e("An error occurred. Please try again.", "athena-ai"); ?>');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('<?php esc_html_e("An error occurred. Please try again.", "athena-ai"); ?>');
-    })
-    .finally(() => {
-        // Restore button state
-        generateBtn.innerHTML = originalText;
-        generateBtn.disabled = false;
-    });
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateNavigation();
-    updateStepNavigation();
-    
-    // Add form change listeners to update review content
-    document.getElementById('ai-post-form').addEventListener('change', function() {
-        if (currentStep === 4) {
-            updateReviewContent();
-        }
-    });
-});
-</script>
-
-<style>
-/* Additional custom styles for the step form */
-.athena-ai-admin .step-content {
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.athena-ai-admin .step-circle {
-    transition: all 0.2s ease-in-out;
-}
-
-.athena-ai-admin .step-circle:hover {
-    transform: scale(1.05);
-}
-
-.athena-ai-admin input[type="radio"]:checked + * {
-    border-color: #9333ea !important;
-    background-color: #faf5ff !important;
-}
-
-/* Content type selection styling */
-.athena-ai-admin input[name="content_type"]:checked ~ * {
-    border-color: #9333ea !important;
-    background-color: #faf5ff !important;
-}
-
-.athena-ai-admin input[name="content_type"] + * i {
-    transition: color 0.2s ease-in-out;
-}
-
-.athena-ai-admin input[name="content_type"]:checked + * i {
-    color: #9333ea !important;
-}
-</style>
-
 <?php
 // Restore previous error reporting
 error_reporting($previous_error_reporting);
-?> 
+?>
+</rewritten_file>
