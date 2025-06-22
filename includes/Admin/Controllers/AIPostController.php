@@ -265,36 +265,50 @@ class AIPostController {
     }
 
     /**
-     * Generate AI content using the appropriate service
+     * Generate AI content using the same system as Profile page
      */
     private static function generate_ai_content(string $prompt, array $form_data): string {
-        // Determine which AI service to use (could be from settings)
-        $ai_provider = \get_option('athena_ai_provider', 'openai'); // Default to OpenAI
+        // Use the same AI services as the Profile page
+        $openai_service = new \AthenaAI\Services\OpenAIService();
+        $gemini_service = new \AthenaAI\Services\GeminiService();
+        
+        // Determine which AI service to use (default to OpenAI like Profile page)
+        $ai_provider = \get_option('athena_ai_provider', 'openai');
         
         try {
             if ($ai_provider === 'gemini') {
-                $gemini_service = new \AthenaAI\Services\GeminiService();
-                $result = $gemini_service->generate_content($prompt);
+                // Use Gemini service (same as AjaxHandler)
+                $ai_result = $gemini_service->generate_content($prompt);
                 
-                if (\is_wp_error($result)) {
-                    throw new \Exception($result->get_error_message());
+                if (!\is_wp_error($ai_result)) {
+                    return $gemini_service->extract_content($ai_result);
+                } else {
+                    // Handle Gemini errors like AjaxHandler does
+                    if ($ai_result->get_error_code() === 'api_key_error') {
+                        throw new \Exception($ai_result->get_error_message());
+                    } else {
+                        throw new \Exception('Gemini API Error: ' . $ai_result->get_error_message());
+                    }
                 }
-                
-                return $gemini_service->extract_content($result);
                 
             } else {
-                // Use OpenAI
-                $openai_service = new \AthenaAI\Services\OpenAIService();
-                $result = $openai_service->generate_content($prompt);
+                // Use OpenAI service (same as AjaxHandler)
+                $ai_result = $openai_service->generate_content($prompt);
                 
-                if (\is_wp_error($result)) {
-                    throw new \Exception($result->get_error_message());
-                }
-                
-                if (isset($result['choices'][0]['message']['content'])) {
-                    return $result['choices'][0]['message']['content'];
+                if (!\is_wp_error($ai_result)) {
+                    // Extract content like AjaxHandler does
+                    if (isset($ai_result['choices'][0]['message']['content'])) {
+                        return $ai_result['choices'][0]['message']['content'];
+                    } else {
+                        throw new \Exception('Unexpected AI response format');
+                    }
                 } else {
-                    throw new \Exception('Unexpected AI response format');
+                    // Handle OpenAI errors like AjaxHandler does
+                    if ($ai_result->get_error_code() === 'quota_exceeded') {
+                        throw new \Exception($ai_result->get_error_message());
+                    } else {
+                        throw new \Exception('OpenAI API Error: ' . $ai_result->get_error_message());
+                    }
                 }
             }
             
@@ -302,8 +316,8 @@ class AIPostController {
             // Log the error for debugging
             error_log('AI Content Generation Error: ' . $e->getMessage());
             
-            // Return error information instead of demo response
-            throw new \Exception('AI Generation failed: ' . $e->getMessage());
+            // Re-throw the exception to be handled by the calling method
+            throw $e;
         }
     }
 
