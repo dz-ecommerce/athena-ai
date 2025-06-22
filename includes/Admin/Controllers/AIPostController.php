@@ -85,25 +85,19 @@ class AIPostController {
             \wp_send_json_error(['message' => \__('You do not have permission to perform this action.', 'athena-ai')]);
         }
 
-        // Get form data
+        // Get form data from individual POST fields
         $form_data = [];
-        if (isset($_POST['form_data'])) {
-            // Log the raw form data for debugging
-            error_log('Raw form_data received: ' . print_r($_POST['form_data'], true));
-            
-            if (is_string($_POST['form_data'])) {
-                $form_data = json_decode($_POST['form_data'], true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    error_log('JSON decode error: ' . json_last_error_msg());
-                    error_log('JSON string was: ' . $_POST['form_data']);
-                    \wp_send_json_error(['message' => 'Invalid form data JSON: ' . json_last_error_msg()]);
-                }
-            } else {
-                $form_data = $_POST['form_data'];
+        
+        // Extract all form fields except action and nonce
+        foreach ($_POST as $key => $value) {
+            if (in_array($key, ['action', 'nonce'], true)) {
+                continue;
             }
-        } else {
-            error_log('No form_data received in POST');
+            $form_data[$key] = $value;
         }
+        
+        // Log the form data for debugging
+        error_log('Form data received: ' . print_r($form_data, true));
         
         try {
             // Step 1: Load profile data

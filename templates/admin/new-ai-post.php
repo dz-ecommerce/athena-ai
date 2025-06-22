@@ -408,18 +408,19 @@ async function generatePost() {
         ajaxData.append('action', 'athena_ai_post_generate');
         ajaxData.append('nonce', athenaAjax.nonce);
         
-        // Try to stringify the data and catch any errors
-        let jsonData;
-        try {
-            jsonData = JSON.stringify(data);
-            console.log('JSON data created:', jsonData); // Debug log
-        } catch (stringifyError) {
-            console.error('JSON stringify error:', stringifyError);
-            console.error('Data that failed to stringify:', data);
-            throw new Error('Failed to convert form data to JSON: ' + stringifyError.message);
+        // Send form data as individual fields instead of JSON string
+        for (const [key, value] of Object.entries(data)) {
+            if (Array.isArray(value)) {
+                // Handle arrays (like selected_feed_items)
+                value.forEach((item, index) => {
+                    ajaxData.append(`${key}[${index}]`, item);
+                });
+            } else {
+                ajaxData.append(key, value);
+            }
         }
         
-        ajaxData.append('form_data', jsonData);
+        console.log('Form data prepared for AJAX:', data); // Debug log
         
         updateProgress(40, 'AI Service wird kontaktiert...');
         
