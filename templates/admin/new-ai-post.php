@@ -661,7 +661,13 @@ function updateReviewContent() {
     let reviewHTML = '';
     
     if (contentSource) {
-        const sourceLabel = contentSource.value === 'feed_items' ? 'Feed Items' : 'Custom Topic';
+        const sourceLabels = {
+            'feed_items': 'Feed Items',
+            'page_content': 'Page Content',
+            'post_content': 'Post Content',
+            'custom_topic': 'Custom Topic'
+        };
+        const sourceLabel = sourceLabels[contentSource.value] || contentSource.value;
         reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Content Source:</span><span class="text-gray-900">${sourceLabel}</span></div>`;
     }
     
@@ -788,6 +794,26 @@ function generatePost() {
                                     <div class="option-content">
                                         <h3>Feed Items</h3>
                                         <p>Generate content based on your existing feed items</p>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="radio-option">
+                                <label>
+                                    <input type="radio" name="content_source" value="page_content">
+                                    <div class="option-content">
+                                        <h3>Page Content</h3>
+                                        <p>Create content based on existing WordPress pages</p>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="radio-option">
+                                <label>
+                                    <input type="radio" name="content_source" value="post_content">
+                                    <div class="option-content">
+                                        <h3>Post Content</h3>
+                                        <p>Generate content from existing WordPress posts</p>
                                     </div>
                                 </label>
                             </div>
