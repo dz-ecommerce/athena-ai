@@ -452,7 +452,25 @@ async function generatePost() {
         if (result.success) {
             updateProgress(100, 'Fertig!');
             
-            // Show results immediately
+            // Check if we're using demo content due to AI failure
+            if (result.data.error_info && result.data.error_info.using_demo) {
+                // Show warning about demo content
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'notice notice-warning';
+                warningDiv.innerHTML = `
+                    <p><strong>⚠️ AI-Service nicht verfügbar</strong></p>
+                    <p>Grund: ${result.data.error_info.ai_error}</p>
+                    <p>Es wird Demo-Content angezeigt. Bitte konfigurieren Sie Ihre AI-API-Schlüssel in den Einstellungen.</p>
+                `;
+                
+                // Insert warning before results
+                const contentArea = document.querySelector('.new-ai-post-page');
+                if (contentArea) {
+                    contentArea.insertBefore(warningDiv, contentArea.firstChild);
+                }
+            }
+            
+            // Show results
             showResults(result.data);
             
         } else {

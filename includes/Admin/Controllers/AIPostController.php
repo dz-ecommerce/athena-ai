@@ -110,8 +110,8 @@ class AIPostController {
             $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
             $prompt = $prompt_manager->build_ai_post_prompt($form_data, $profile_data, $source_content);
             
-            // Step 4: Generate content with AI (use demo for now to avoid API issues)
-            $ai_response = self::get_demo_ai_response($form_data);
+            // Step 4: Generate content with AI
+            $ai_response = self::generate_ai_content($prompt, $form_data);
             
             // Step 5: Parse response
             $parsed_content = $prompt_manager->parse_ai_post_response($ai_response);
@@ -133,12 +133,30 @@ class AIPostController {
             ]);
             
         } catch (\Exception $e) {
-            \wp_send_json_error([
-                'message' => \__('Error during AI post generation: ', 'athena-ai') . $e->getMessage(),
+            // If AI generation fails, provide demo content with clear error message
+            error_log('AI Post Generation Exception: ' . $e->getMessage());
+            
+            $demo_response = self::get_demo_ai_response($form_data);
+            $parsed_demo = $prompt_manager->parse_ai_post_response($demo_response);
+            
+            \wp_send_json_success([
+                'step' => 'completed_with_demo',
+                'message' => \__('AI service unavailable - showing demo content', 'athena-ai'),
+                'progress' => 100,
+                'error_info' => [
+                    'ai_error' => $e->getMessage(),
+                    'using_demo' => true,
+                    'demo_reason' => 'AI service failed or not configured'
+                ],
                 'debug' => [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]
+                    'form_data' => $form_data,
+                    'profile_data' => $profile_data,
+                    'source_content' => $source_content,
+                    'prompt' => $prompt,
+                    'ai_error' => $e->getMessage(),
+                    'demo_response' => $demo_response
+                ],
+                'result' => $parsed_demo
             ]);
         }
     }
@@ -281,8 +299,11 @@ class AIPostController {
             }
             
         } catch (\Exception $e) {
-            // Fallback: return a demo response for testing
-            return self::get_demo_ai_response($form_data);
+            // Log the error for debugging
+            error_log('AI Content Generation Error: ' . $e->getMessage());
+            
+            // Return error information instead of demo response
+            throw new \Exception('AI Generation failed: ' . $e->getMessage());
         }
     }
 
