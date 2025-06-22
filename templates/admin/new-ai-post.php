@@ -380,6 +380,11 @@ async function generatePost() {
         
         // Convert FormData to regular object
         for (let [key, value] of formData.entries()) {
+            // Skip nonce and action fields - they're not form data
+            if (key === 'ai_post_nonce' || key === 'action') {
+                continue;
+            }
+            
             if (data[key]) {
                 // Handle multiple values (like multi-select)
                 if (!Array.isArray(data[key])) {
@@ -387,7 +392,10 @@ async function generatePost() {
                 }
                 data[key].push(value);
             } else {
-                data[key] = value;
+                // Only add non-empty values or explicitly allow empty strings for certain fields
+                if (value !== '' || ['custom_topic', 'instructions', 'target_audience', 'keywords'].includes(key)) {
+                    data[key] = value;
+                }
             }
         }
         
