@@ -613,9 +613,12 @@ function generatePost() {
                             <div class="section-card">
                                 <h3><i class="fa-solid fa-palette"></i>Content Customization</h3>
                                 <div class="content-selection-grid">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Tone of Voice</label>
-                                        <select name="tone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                                    <div class="form-field">
+                                        <label>
+                                            <i class="fa-solid fa-microphone text-purple-600 mr-2"></i>
+                                            Tone of Voice
+                                        </label>
+                                        <select name="tone">
                                             <option value="professional">Professional</option>
                                             <option value="casual">Casual</option>
                                             <option value="friendly">Friendly</option>
@@ -624,21 +627,28 @@ function generatePost() {
                                         </select>
                                     </div>
                                     
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Target Audience</label>
-                                        <input type="text" name="target_audience" placeholder="e.g., Business professionals, Tech enthusiasts..." 
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                                    <div class="form-field">
+                                        <label>
+                                            <i class="fa-solid fa-users text-purple-600 mr-2"></i>
+                                            Target Audience
+                                        </label>
+                                        <input type="text" name="target_audience" placeholder="e.g., Business professionals, Tech enthusiasts...">
                                     </div>
                                     
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Keywords (optional)</label>
-                                        <input type="text" name="keywords" placeholder="Enter keywords separated by commas" 
-                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                                    <div class="form-field">
+                                        <label>
+                                            <i class="fa-solid fa-tags text-purple-600 mr-2"></i>
+                                            Keywords (optional)
+                                        </label>
+                                        <input type="text" name="keywords" placeholder="Enter keywords separated by commas">
                                     </div>
                                     
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Content Length</label>
-                                        <select name="content_length" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                                    <div class="form-field">
+                                        <label>
+                                            <i class="fa-solid fa-ruler text-purple-600 mr-2"></i>
+                                            Content Length
+                                        </label>
+                                        <select name="content_length">
                                             <option value="short">Short (300-500 words)</option>
                                             <option value="medium" selected>Medium (500-1000 words)</option>
                                             <option value="long">Long (1000+ words)</option>
@@ -646,10 +656,13 @@ function generatePost() {
                                     </div>
                                 </div>
                                 
-                                <div class="mt-6">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Instructions</label>
-                                    <textarea name="instructions" rows="4" placeholder="Any specific requirements or instructions..." 
-                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"></textarea>
+                                <div class="form-field mt-6">
+                                    <label>
+                                        <i class="fa-solid fa-comment-dots text-purple-600 mr-2"></i>
+                                        Additional Instructions
+                                    </label>
+                                    <textarea name="instructions" rows="4" placeholder="Any specific requirements or instructions..."></textarea>
+                                    <span class="helper-text">Provide any additional context or specific requirements for your content</span>
                                 </div>
                             </div>
                         </div>
