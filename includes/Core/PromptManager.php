@@ -241,8 +241,13 @@ class PromptManager {
         
         if (empty($config)) {
             error_log('ai_post_generation config not found, using simple fallback');
-            // Temporary simple prompt to avoid fatal error
-            return "Du bist ein professioneller Content-Marketing-Experte. Erstelle einen Blog-Artikel über E-Commerce und Webdesign für das Unternehmen DZ Ecom. Verwende die Struktur: === TITEL === [Titel] === META-BESCHREIBUNG === [Meta] === INHALT === [Inhalt]";
+            $simple_prompt = "Du bist ein professioneller Content-Marketing-Experte. ";
+            $simple_prompt .= "Erstelle einen Blog-Artikel über E-Commerce und Webdesign für das Unternehmen DZ Ecom. ";
+            $simple_prompt .= "Verwende diese Struktur:\n\n";
+            $simple_prompt .= "=== TITEL ===\n[SEO-optimierter Titel]\n\n";
+            $simple_prompt .= "=== META-BESCHREIBUNG ===\n[Meta-Beschreibung 150-160 Zeichen]\n\n";
+            $simple_prompt .= "=== INHALT ===\n[Vollständiger Blog-Artikel mit HTML-Struktur]";
+            return $simple_prompt;
         }
 
         // Start with base introduction
