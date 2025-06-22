@@ -51,6 +51,133 @@ company_industry:
     max_words: 3
     format: 'single_term'
 
+# AI Post Generation Prompts
+ai_post_generation:
+        base_intro: |
+        Du bist ein professioneller Content-Marketing-Experte und WordPress-Redakteur. 
+        Erstelle hochwertigen, SEO-optimierten Content basierend auf den folgenden Unternehmensinformationen und Anforderungen.
+        
+        Du musst DREI separate Elemente erstellen:
+        1. TITEL - SEO-optimiert, max. 60 Zeichen, mit Hauptkeyword
+        2. META-BESCHREIBUNG - 150-160 Zeichen, mit Call-to-Action
+        3. INHALT - Vollständiger Artikel mit WordPress-Struktur
+        
+        Achte auf:
+        - Authentischen, zur Marke passenden Ton
+        - SEO-Optimierung mit natürlicher Keyword-Integration
+        - Zielgruppengerechte Ansprache
+        - Strukturierten, gut lesbaren Aufbau
+        - Actionable Insights und Mehrwert für den Leser
+
+    content_types:
+        blog_post:
+            intro: 'Erstelle einen professionellen Blog-Artikel mit folgender Struktur: Einleitung, Hauptteil mit Zwischenüberschriften, Fazit/Call-to-Action.'
+            requirements: |
+                - WordPress-optimiert mit H2/H3-Überschriften
+                - SEO-freundliche Meta-Description möglich
+                - Natürliche Keyword-Integration
+                - Leserfreundliche Absätze (max. 3-4 Sätze)
+                - Konkrete Beispiele und Praxisbezug
+            format: 'structured_article'
+            title_guidelines: 'Verwende das Hauptkeyword am Anfang, mache neugierig, max. 60 Zeichen'
+            meta_guidelines: 'Fasse den Nutzen zusammen, füge Call-to-Action hinzu, 150-160 Zeichen'
+            content_guidelines: 'Strukturiere mit H2/H3, nutze Aufzählungen, füge Zwischenfazits ein'
+
+        social_post:
+            intro: 'Erstelle einen ansprechenden Social Media Post für LinkedIn/Facebook/Instagram.'
+            requirements: |
+                - Aufmerksamkeitsstarker Hook in den ersten Zeilen
+                - Storytelling-Elemente
+                - Call-to-Action am Ende
+                - Relevante Hashtags (3-5 Stück)
+                - Emotionale Ansprache der Zielgruppe
+            format: 'social_media'
+            title_guidelines: 'Kurz und knackig, emotionaler Hook, max. 50 Zeichen'
+            meta_guidelines: 'Teaser für den Post, neugierig machen, 120-150 Zeichen'
+            content_guidelines: 'Kurze Absätze, Emojis verwenden, Hashtags am Ende'
+
+        product_description:
+            intro: 'Erstelle eine überzeugende Produktbeschreibung für E-Commerce.'
+            requirements: |
+                - Nutzen-orientierte Beschreibung (nicht nur Features)
+                - Zielgruppen-spezifische Sprache
+                - Vertrauensbildende Elemente
+                - Klare Struktur: Überblick, Details, Vorteile
+                - Kaufanregende Call-to-Action
+            format: 'product_copy'
+
+        landing_page:
+            intro: 'Erstelle konversionsstarken Landing Page Content.'
+            requirements: |
+                - Starke Headline mit Nutzenversprechen
+                - Problem-Lösung-Struktur
+                - Social Proof Integration möglich
+                - Überzeugende USPs hervorheben
+                - Mehrere Call-to-Action Elemente
+            format: 'conversion_copy'
+
+        tutorial:
+            intro: 'Erstelle eine Schritt-für-Schritt Anleitung oder Tutorial.'
+            requirements: |
+                - Klare, nummerierte Schritte
+                - Voraussetzungen am Anfang erwähnen
+                - Praktische Tipps und Hinweise
+                - Häufige Fehler und deren Vermeidung
+                - Zusammenfassung am Ende
+            format: 'step_by_step'
+
+        seo_article:
+            intro: 'Erstelle einen SEO-optimierten Fachartikel.'
+            requirements: |
+                - Keyword-optimierte Überschriften (H1-H3)
+                - Semantische Keywords natürlich einbauen
+                - Featured Snippet-optimierte Antworten
+                - Interne Verlinkungsmöglichkeiten erwähnen
+                - Expertise und Autorität demonstrieren
+            format: 'seo_optimized'
+
+        podcast_notes:
+            intro: 'Erstelle strukturierte Podcast Show Notes.'
+            requirements: |
+                - Episoden-Zusammenfassung
+                - Key Takeaways / Hauptpunkte
+                - Timestamps für wichtige Themen
+                - Erwähnte Ressourcen und Links
+                - Gäste-Information falls relevant
+            format: 'podcast_summary'
+
+        social_captions:
+            intro: 'Erstelle mehrere Social Media Captions für verschiedene Plattformen.'
+            requirements: |
+                - Platform-spezifische Anpassungen
+                - Verschiedene Caption-Längen
+                - Hashtag-Strategien pro Platform
+                - Engagement-fördernde Fragen
+                - Brand Voice konsistent halten
+            format: 'multi_platform'
+
+    content_sources:
+        feed_items:
+            instruction: 'Basiere den Content auf den ausgewählten Feed-Artikeln. Analysiere die Kernaussagen und erstelle daraus einen eigenständigen, wertvollen Beitrag.'
+        page_content:
+            instruction: 'Nutze die ausgewählten WordPress-Seiten als Grundlage und erweitere den Content um neue Perspektiven und aktuelle Entwicklungen.'
+        post_content:
+            instruction: 'Baue auf den ausgewählten Blog-Posts auf, aktualisiere die Informationen und füge neue Erkenntnisse hinzu.'
+        custom_topic:
+            instruction: 'Entwickle den Content vollständig basierend auf dem angegebenen Thema und den Unternehmensinformationen.'
+
+    tone_styles:
+        professional: 'Sachlich, kompetent, vertrauenswürdig. Verwende Fachbegriffe angemessen und erkläre komplexe Sachverhalte verständlich.'
+        casual: 'Locker, zugänglich, freundlich. Verwende eine natürliche Sprache und direkte Ansprache.'
+        friendly: 'Warm, einladend, hilfsbereit. Schaffe eine persönliche Verbindung zum Leser.'
+        authoritative: 'Selbstbewusst, expertenhaft, meinungsbildend. Demonstriere Fachwissen und Branchenerfahrung.'
+        conversational: 'Dialogisch, interaktiv, nahbar. Schreibe als würdest du direkt mit dem Leser sprechen.'
+
+    length_guidelines:
+        short: 'Prägnant und auf den Punkt (300-500 Wörter). Fokus auf die wichtigsten Informationen.'
+        medium: 'Ausgewogen und detailliert (500-1000 Wörter). Gute Balance zwischen Tiefe und Lesbarkeit.'
+        long: 'Umfassend und tiefgreifend (1000+ Wörter). Vollständige Abhandlung des Themas mit allen relevanten Aspekten.'
+
 # Globale Einstellungen
 global:
     default_provider: 'openai'
@@ -62,12 +189,12 @@ providers:
     openai:
         model: 'gpt-3.5-turbo'
         temperature: 0.7
-        max_tokens: 500
+        max_tokens: 2000
 
     gemini:
         model: 'gemini-pro'
         temperature: 0.7
-        max_tokens: 500
+        max_tokens: 2000
 
 # Spracheinstellungen
 language:
@@ -77,5 +204,5 @@ language:
 # Validierung
 validation:
     min_input_length: 10
-    max_input_length: 2000
-    required_fields: ['extra_info']
+    max_input_length: 5000
+    required_fields: ['content_type', 'content_source']

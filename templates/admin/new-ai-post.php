@@ -343,23 +343,233 @@ function updateReviewContent() {
 }
 
 // Generate post function
-function generatePost() {
+async function generatePost() {
     const generateBtn = document.getElementById('generate-btn');
-    if (generateBtn) {
-        generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
-        generateBtn.disabled = true;
-    }
+    const progressContainer = document.getElementById('progressContainer');
+    const debugContainer = document.getElementById('debugContainer');
+    const resultContainer = document.getElementById('resultContainer');
     
-    // Simulate post generation
-    setTimeout(() => {
-        if (generateBtn) {
-            generateBtn.innerHTML = '<i class="fa-solid fa-magic"></i> Generate Post';
-            generateBtn.disabled = false;
+    if (!generateBtn) return;
+    
+    // Reset previous results
+    if (resultContainer) resultContainer.style.display = 'none';
+    if (debugContainer) debugContainer.style.display = 'none';
+    
+    // Show progress and disable button
+    if (progressContainer) progressContainer.style.display = 'block';
+    generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generiere...';
+    generateBtn.disabled = true;
+    
+    try {
+        // Collect all form data
+        const formData = new FormData(document.getElementById('ai-post-form'));
+        const data = {};
+        
+        // Convert FormData to regular object
+        for (let [key, value] of formData.entries()) {
+            if (data[key]) {
+                // Handle multiple values (like multi-select)
+                if (!Array.isArray(data[key])) {
+                    data[key] = [data[key]];
+                }
+                data[key].push(value);
+            } else {
+                data[key] = value;
+            }
         }
         
-        alert('Post generated successfully! (This is a demo)');
-    }, 3000);
+        updateProgress(20, 'Formulardaten werden verarbeitet...');
+        
+        // Prepare AJAX request
+        const ajaxData = new FormData();
+        ajaxData.append('action', 'athena_ai_post_generate');
+        ajaxData.append('nonce', athenaAjax.nonce);
+        ajaxData.append('form_data', JSON.stringify(data));
+        
+        updateProgress(40, 'AI Service wird kontaktiert...');
+        
+        // Send AJAX request
+        const response = await fetch(athenaAjax.ajaxurl, {
+            method: 'POST',
+            body: ajaxData
+        });
+        
+        updateProgress(60, 'Antwort wird verarbeitet...');
+        
+        const result = await response.json();
+        
+        updateProgress(80, 'Content wird aufbereitet...');
+        
+        if (result.success) {
+            updateProgress(100, 'Fertig!');
+            
+            // Show results after a short delay
+            setTimeout(() => {
+                showResults(result.data);
+            }, 500);
+            
+        } else {
+            throw new Error(result.data?.message || 'Unbekannter Fehler bei der AI-Generierung');
+        }
+        
+    } catch (error) {
+        console.error('Generation error:', error);
+        showError('Fehler bei der Content-Generierung: ' + error.message);
+    } finally {
+        // Reset button
+        generateBtn.innerHTML = '<i class="fa-solid fa-magic"></i> Generate Post';
+        generateBtn.disabled = false;
+    }
 }
+
+// Update progress bar
+function updateProgress(percent, message) {
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressFill) progressFill.style.width = percent + '%';
+    if (progressPercent) progressPercent.textContent = percent + '%';
+    if (progressText) progressText.textContent = message;
+}
+
+// Show results
+function showResults(data) {
+    const progressContainer = document.getElementById('progressContainer');
+    const debugContainer = document.getElementById('debugContainer');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    // Hide progress
+    if (progressContainer) progressContainer.style.display = 'none';
+    
+    // Show debug information
+    if (data.debug && debugContainer) {
+        const debugOutput = document.getElementById('debugOutput');
+        if (debugOutput) {
+            debugOutput.textContent = JSON.stringify(data.debug, null, 2);
+        }
+        debugContainer.style.display = 'block';
+    }
+    
+    // Show generated content
+    if (data.result && resultContainer) {
+        displayGeneratedContent(data.result);
+        resultContainer.style.display = 'block';
+    }
+}
+
+// Display generated content
+function displayGeneratedContent(content) {
+    const resultContent = document.getElementById('resultContent');
+    if (!resultContent) return;
+    
+    let html = '';
+    
+    if (typeof content === 'string') {
+        // Parse structured content with === markers
+        const sections = content.split('===');
+        let currentSection = '';
+        
+        for (let i = 0; i < sections.length; i++) {
+            const section = sections[i].trim();
+            if (!section) continue;
+            
+            if (section.includes('TITEL')) {
+                currentSection = 'title';
+                continue;
+            } else if (section.includes('META-BESCHREIBUNG')) {
+                currentSection = 'meta';
+                continue;
+            } else if (section.includes('INHALT')) {
+                currentSection = 'content';
+                continue;
+            }
+            
+            if (currentSection === 'title') {
+                html += `<div class="content-section">
+                    <h4><i class="fas fa-heading"></i> Titel</h4>
+                    <div class="content-value">${escapeHtml(section)}</div>
+                </div>`;
+            } else if (currentSection === 'meta') {
+                html += `<div class="content-section">
+                    <h4><i class="fas fa-tag"></i> Meta-Beschreibung</h4>
+                    <div class="content-value">${escapeHtml(section)}</div>
+                </div>`;
+            } else if (currentSection === 'content') {
+                html += `<div class="content-section">
+                    <h4><i class="fas fa-file-alt"></i> Inhalt</h4>
+                    <div class="content-value">${section}</div>
+                </div>`;
+            }
+        }
+        
+        // If no structured content found, display as plain text
+        if (!html) {
+            html = `<div class="content-section">
+                <h4><i class="fas fa-file-alt"></i> Generierter Content</h4>
+                <div class="content-value">${escapeHtml(content)}</div>
+            </div>`;
+        }
+    } else {
+        // Display object content
+        html = `<div class="content-section">
+            <h4><i class="fas fa-code"></i> AI Response</h4>
+            <div class="content-value"><pre>${JSON.stringify(content, null, 2)}</pre></div>
+        </div>`;
+    }
+    
+    resultContent.innerHTML = html;
+}
+
+// Show error
+function showError(message) {
+    const progressContainer = document.getElementById('progressContainer');
+    if (progressContainer) progressContainer.style.display = 'none';
+    
+    alert('Fehler: ' + message);
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize debug toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleDebug = document.getElementById('toggleDebug');
+    const debugContent = document.getElementById('debugContent');
+    
+    if (toggleDebug && debugContent) {
+        toggleDebug.addEventListener('click', function() {
+            const isVisible = debugContent.style.display !== 'none';
+            debugContent.style.display = isVisible ? 'none' : 'block';
+            this.innerHTML = isVisible ? 
+                '<i class="fas fa-eye"></i> Details anzeigen' : 
+                '<i class="fas fa-eye-slash"></i> Details ausblenden';
+        });
+    }
+    
+    // Copy content functionality
+    const copyContentBtn = document.getElementById('copyContentBtn');
+    if (copyContentBtn) {
+        copyContentBtn.addEventListener('click', function() {
+            const resultContent = document.getElementById('resultContent');
+            if (resultContent) {
+                const content = resultContent.innerText;
+                navigator.clipboard.writeText(content).then(() => {
+                    this.innerHTML = '<i class="fas fa-check"></i> Kopiert!';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy"></i> Kopieren';
+                    }, 2000);
+                }).catch(() => {
+                    alert('Fehler beim Kopieren in die Zwischenablage');
+                });
+            }
+        });
+    }
+});
 </script>
 
 <div class="wrap new-ai-post-page min-h-screen">
@@ -776,6 +986,51 @@ function generatePost() {
                     </button>
                 </div>
             </form>
+            
+            <!-- Progress Bar (initially hidden) -->
+            <div id="progressContainer" class="progress-container" style="display: none;">
+                <div class="progress-header">
+                    <h3><i class="fas fa-cog fa-spin"></i> AI Post wird generiert...</h3>
+                    <span id="progressText">Vorbereitung...</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div class="progress-percentage">
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+
+            <!-- Debug Output (initially hidden) -->
+            <div id="debugContainer" class="debug-container" style="display: none;">
+                <div class="debug-header">
+                    <h3><i class="fas fa-bug"></i> Debug-Ausgabe</h3>
+                    <button type="button" id="toggleDebug" class="btn btn-small">
+                        <i class="fas fa-eye"></i> Details anzeigen
+                    </button>
+                </div>
+                <div id="debugContent" class="debug-content" style="display: none;">
+                    <pre id="debugOutput"></pre>
+                </div>
+            </div>
+
+            <!-- Generated Content Display -->
+            <div id="resultContainer" class="result-container" style="display: none;">
+                <div class="result-header">
+                    <h3><i class="fas fa-check-circle"></i> Generierter Content</h3>
+                    <div class="result-actions">
+                        <button type="button" id="copyContentBtn" class="btn btn-secondary">
+                            <i class="fas fa-copy"></i> Kopieren
+                        </button>
+                        <button type="button" id="createPostBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Als WordPress Post erstellen
+                        </button>
+                    </div>
+                </div>
+                <div id="resultContent" class="result-content">
+                    <!-- Generated content will be displayed here -->
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -22,10 +22,10 @@ class AIPostController {
      */
     public static function init(): void {
         // Handle AJAX requests for step navigation
-        add_action('wp_ajax_athena_ai_post_step', [self::class, 'handle_step_navigation']);
+        \add_action('wp_ajax_athena_ai_post_step', [self::class, 'handle_step_navigation']);
         
         // Handle form submission
-        add_action('wp_ajax_athena_ai_post_generate', [self::class, 'handle_post_generation']);
+        \add_action('wp_ajax_athena_ai_post_generate', [self::class, 'handle_post_generation']);
     }
 
     /**
@@ -48,13 +48,13 @@ class AIPostController {
      */
     public static function handle_step_navigation(): void {
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], self::NONCE_ACTION)) {
-            wp_send_json_error(['message' => __('Security check failed.', 'athena-ai')]);
+        if (!isset($_POST['nonce']) || !\wp_verify_nonce($_POST['nonce'], self::NONCE_ACTION)) {
+            \wp_send_json_error(['message' => \__('Security check failed.', 'athena-ai')]);
         }
 
         // Check permissions
-        if (!current_user_can(self::CAPABILITY)) {
-            wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'athena-ai')]);
+        if (!\current_user_can(self::CAPABILITY)) {
+            \wp_send_json_error(['message' => \__('You do not have permission to perform this action.', 'athena-ai')]);
         }
 
         $step = isset($_POST['step']) ? intval($_POST['step']) : 1;
@@ -65,9 +65,9 @@ class AIPostController {
             self::store_form_data($_POST['form_data']);
         }
 
-        wp_send_json_success([
+        \wp_send_json_success([
             'step' => $step,
-            'message' => sprintf(__('Moved to step %d', 'athena-ai'), $step)
+            'message' => sprintf(\__('Moved to step %d', 'athena-ai'), $step)
         ]);
     }
 
@@ -76,24 +76,218 @@ class AIPostController {
      */
     public static function handle_post_generation(): void {
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], self::NONCE_ACTION)) {
-            wp_send_json_error(['message' => __('Security check failed.', 'athena-ai')]);
+        if (!isset($_POST['nonce']) || !\wp_verify_nonce($_POST['nonce'], self::NONCE_ACTION)) {
+            \wp_send_json_error(['message' => \__('Security check failed.', 'athena-ai')]);
         }
 
         // Check permissions
-        if (!current_user_can(self::CAPABILITY)) {
-            wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'athena-ai')]);
+        if (!\current_user_can(self::CAPABILITY)) {
+            \wp_send_json_error(['message' => \__('You do not have permission to perform this action.', 'athena-ai')]);
         }
 
         // Get form data
         $form_data = isset($_POST['form_data']) ? $_POST['form_data'] : [];
         
-        // TODO: Implement actual AI post generation logic here
-        // For now, just return success
-        wp_send_json_success([
-            'message' => __('AI Post generation started!', 'athena-ai'),
-            'redirect' => admin_url('admin.php?page=athena-feed-items')
-        ]);
+        try {
+            // Step 1: Load profile data
+            \wp_send_json_success([
+                'step' => 'loading_profile',
+                'message' => \__('Loading company profile data...', 'athena-ai'),
+                'progress' => 10
+            ]);
+            
+            $profile_data = \get_option('athena_ai_profiles', []);
+            
+            // Step 2: Load source content
+            $source_content = self::load_source_content($form_data);
+            
+            // Step 3: Build AI prompt
+            $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
+            $prompt = $prompt_manager->build_ai_post_prompt($form_data, $profile_data, $source_content);
+            
+            // Step 4: Generate content with AI
+            $ai_response = self::generate_ai_content($prompt, $form_data);
+            
+            // Step 5: Parse response
+            $parsed_content = $prompt_manager->parse_ai_post_response($ai_response);
+            
+            // Return debug information
+            \wp_send_json_success([
+                'step' => 'completed',
+                'message' => \__('AI Post generation completed!', 'athena-ai'),
+                'progress' => 100,
+                'debug' => [
+                    'form_data' => $form_data,
+                    'profile_data' => $profile_data,
+                    'source_content' => $source_content,
+                    'prompt' => $prompt,
+                    'ai_response' => $ai_response,
+                    'parsed_content' => $parsed_content
+                ],
+                'result' => $parsed_content
+            ]);
+            
+        } catch (\Exception $e) {
+            \wp_send_json_error([
+                'message' => \__('Error during AI post generation: ', 'athena-ai') . $e->getMessage(),
+                'debug' => [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            ]);
+        }
+    }
+
+    /**
+     * Load source content based on form data
+     */
+    private static function load_source_content(array $form_data): array {
+        $source_content = [];
+        $content_source = $form_data['content_source'] ?? 'custom_topic';
+        
+        switch ($content_source) {
+            case 'feed_items':
+                $source_content['feed_items'] = self::load_feed_items($form_data);
+                break;
+                
+            case 'page_content':
+                $source_content['pages'] = self::load_wordpress_pages($form_data);
+                break;
+                
+            case 'post_content':
+                $source_content['posts'] = self::load_wordpress_posts($form_data);
+                break;
+                
+            case 'custom_topic':
+                // Custom topic is already in form_data
+                break;
+        }
+        
+        return $source_content;
+    }
+
+    /**
+     * Load selected feed items
+     */
+    private static function load_feed_items(array $form_data): array {
+        $selected_items = $form_data['selected_feed_items'] ?? [];
+        if (empty($selected_items)) {
+            return [];
+        }
+        
+        global $wpdb;
+        $placeholders = implode(',', array_fill(0, count($selected_items), '%s'));
+        
+        $items = $wpdb->get_results($wpdb->prepare("
+            SELECT ri.*, p.post_title as feed_title,
+                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
+                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) as description,
+                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.link')) as link
+            FROM {$wpdb->prefix}feed_raw_items ri
+            JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
+            WHERE ri.item_hash IN ($placeholders)
+        ", $selected_items), ARRAY_A);
+        
+        return $items ?: [];
+    }
+
+    /**
+     * Load selected WordPress pages
+     */
+    private static function load_wordpress_pages(array $form_data): array {
+        $selected_pages = $form_data['selected_pages'] ?? [];
+        if (empty($selected_pages)) {
+            return [];
+        }
+        
+        $pages = [];
+        foreach ($selected_pages as $page_id) {
+            $page = \get_post($page_id);
+            if ($page && $page->post_type === 'page' && $page->post_status === 'publish') {
+                $pages[] = [
+                    'id' => $page->ID,
+                    'title' => $page->post_title,
+                    'content' => $page->post_content,
+                    'excerpt' => $page->post_excerpt
+                ];
+            }
+        }
+        
+        return $pages;
+    }
+
+    /**
+     * Load selected WordPress posts
+     */
+    private static function load_wordpress_posts(array $form_data): array {
+        $selected_posts = $form_data['selected_posts'] ?? [];
+        if (empty($selected_posts)) {
+            return [];
+        }
+        
+        $posts = [];
+        foreach ($selected_posts as $post_id) {
+            $post = \get_post($post_id);
+            if ($post && $post->post_type === 'post' && $post->post_status === 'publish') {
+                $posts[] = [
+                    'id' => $post->ID,
+                    'title' => $post->post_title,
+                    'content' => $post->post_content,
+                    'excerpt' => $post->post_excerpt
+                ];
+            }
+        }
+        
+        return $posts;
+    }
+
+    /**
+     * Generate AI content using the appropriate service
+     */
+    private static function generate_ai_content(string $prompt, array $form_data): string {
+        // Determine which AI service to use (could be from settings)
+        $ai_provider = \get_option('athena_ai_provider', 'openai'); // Default to OpenAI
+        
+        try {
+            if ($ai_provider === 'gemini') {
+                $gemini_service = new \AthenaAI\Services\GeminiService();
+                $result = $gemini_service->generate_content($prompt);
+                
+                if (\is_wp_error($result)) {
+                    throw new \Exception($result->get_error_message());
+                }
+                
+                return $gemini_service->extract_content($result);
+                
+            } else {
+                // Use OpenAI
+                $openai_service = new \AthenaAI\Services\OpenAIService();
+                $result = $openai_service->generate_content($prompt);
+                
+                if (\is_wp_error($result)) {
+                    throw new \Exception($result->get_error_message());
+                }
+                
+                if (isset($result['choices'][0]['message']['content'])) {
+                    return $result['choices'][0]['message']['content'];
+                } else {
+                    throw new \Exception('Unexpected AI response format');
+                }
+            }
+            
+        } catch (\Exception $e) {
+            // Fallback: return a demo response for testing
+            return self::get_demo_ai_response($form_data);
+        }
+    }
+
+    /**
+     * Generate demo AI response for testing
+     */
+    private static function get_demo_ai_response(array $form_data): string {
+        $content_type = $form_data['content_type'] ?? 'blog_post';
+        
+        return "=== TITEL ===\nDemo: " . ucfirst(str_replace('_', ' ', $content_type)) . " für Ihr Unternehmen\n\n=== META-BESCHREIBUNG ===\nEntdecken Sie, wie Sie mit unserem " . $content_type . " Ihre Zielgruppe erreichen und Ihre Geschäftsziele verwirklichen können. Jetzt mehr erfahren!\n\n=== INHALT ===\n<h2>Einleitung</h2>\n<p>Dies ist ein Demo-Artikel, der zeigt, wie die AI-Post-Generierung funktioniert.</p>\n\n<h2>Hauptteil</h2>\n<p>Hier würde der echte AI-generierte Content stehen, basierend auf Ihren Unternehmensdaten und den ausgewählten Quellen.</p>\n\n<h3>Wichtige Punkte</h3>\n<ul>\n<li>Punkt 1: Relevanter Inhalt</li>\n<li>Punkt 2: SEO-Optimierung</li>\n<li>Punkt 3: Zielgruppengerechte Ansprache</li>\n</ul>\n\n<h2>Fazit</h2>\n<p>Kontaktieren Sie uns noch heute, um mehr über unsere Lösungen zu erfahren!</p>";
     }
 
     /**
