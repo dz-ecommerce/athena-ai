@@ -43,6 +43,89 @@ wp_enqueue_style(
     '6.4.0'
 );
 ?>
+
+<!-- Inline CSS to ensure styling works -->
+<style>
+/* Force Inter font family */
+.wrap.athena-ai-admin {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Ensure TailwindCSS classes work */
+.athena-ai-admin .bg-white { background-color: #ffffff !important; }
+.athena-ai-admin .text-2xl { font-size: 1.5rem !important; line-height: 2rem !important; }
+.athena-ai-admin .font-bold { font-weight: 700 !important; }
+.athena-ai-admin .text-gray-800 { color: #1f2937 !important; }
+.athena-ai-admin .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+.athena-ai-admin .px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+.athena-ai-admin .py-5 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+.athena-ai-admin .mb-6 { margin-bottom: 1.5rem !important; }
+.athena-ai-admin .rounded-lg { border-radius: 0.5rem !important; }
+.athena-ai-admin .border { border-width: 1px !important; }
+.athena-ai-admin .border-gray-100 { border-color: #f3f4f6 !important; }
+.athena-ai-admin .flex { display: flex !important; }
+.athena-ai-admin .justify-between { justify-content: space-between !important; }
+.athena-ai-admin .items-center { align-items: center !important; }
+.athena-ai-admin .m-0 { margin: 0 !important; }
+.athena-ai-admin .bg-purple-100 { background-color: #f3e8ff !important; }
+.athena-ai-admin .text-purple-600 { color: #9333ea !important; }
+.athena-ai-admin .p-2 { padding: 0.5rem !important; }
+.athena-ai-admin .mr-3 { margin-right: 0.75rem !important; }
+.athena-ai-admin .p-8 { padding: 2rem !important; }
+.athena-ai-admin .max-w-4xl { max-width: 56rem !important; }
+.athena-ai-admin .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.athena-ai-admin .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem !important; }
+.athena-ai-admin .min-h-screen { min-height: 100vh !important; }
+
+/* Debug info styling */
+.debug-info {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: #991b1b;
+}
+</style>
+
+<!-- Debug Information -->
+<div class="debug-info">
+    <strong>Debug Info:</strong><br>
+    Hook Suffix: <?php echo esc_html($hook_suffix); ?><br>
+    CSS URL: <?php echo ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css'; ?><br>
+    Body Classes: <span id="body-classes"></span><br>
+    TailwindCSS Loaded: <span id="tailwind-status">Checking...</span>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show body classes
+    document.getElementById('body-classes').textContent = document.body.className;
+    
+    // Check if TailwindCSS is loaded
+    const testElement = document.createElement('div');
+    testElement.className = 'athena-ai-admin bg-red-500';
+    testElement.style.display = 'none';
+    document.body.appendChild(testElement);
+    
+    const computedStyle = window.getComputedStyle(testElement);
+    const isLoaded = computedStyle.backgroundColor === 'rgb(239, 68, 68)';
+    
+    document.getElementById('tailwind-status').textContent = isLoaded ? 'YES' : 'NO';
+    document.getElementById('tailwind-status').style.color = isLoaded ? 'green' : 'red';
+    
+    document.body.removeChild(testElement);
+    
+    // Force add athena-ai-admin class
+    if (!document.body.classList.contains('athena-ai-admin')) {
+        document.body.classList.add('athena-ai-admin');
+        console.log('Added athena-ai-admin class to body');
+    }
+});
+</script>
+
 <div class="wrap athena-ai-admin min-h-screen">
     <!-- Header -->
     <div class="flex justify-between items-center bg-white shadow-sm px-6 py-5 mb-6 rounded-lg border border-gray-100">
