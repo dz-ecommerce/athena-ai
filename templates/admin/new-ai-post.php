@@ -106,6 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeStepNavigation();
 });
 
+// AJAX Configuration
+const athenaAjax = {
+    ajaxurl: '<?php echo admin_url('admin-ajax.php'); ?>',
+    nonce: '<?php echo wp_create_nonce('athena_ai_post_nonce'); ?>'
+};
+
 // Step navigation variables
 let currentStep = 1;
 const maxSteps = 4;
