@@ -90,12 +90,6 @@ class AIPostController {
         
         try {
             // Step 1: Load profile data
-            \wp_send_json_success([
-                'step' => 'loading_profile',
-                'message' => \__('Loading company profile data...', 'athena-ai'),
-                'progress' => 10
-            ]);
-            
             $profile_data = \get_option('athena_ai_profiles', []);
             
             // Step 2: Load source content

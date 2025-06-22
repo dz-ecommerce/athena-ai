@@ -404,17 +404,18 @@ async function generatePost() {
         
         const result = await response.json();
         
+        console.log('AJAX Response:', result); // Debug log
+        
         updateProgress(80, 'Content wird aufbereitet...');
         
         if (result.success) {
             updateProgress(100, 'Fertig!');
             
-            // Show results after a short delay
-            setTimeout(() => {
-                showResults(result.data);
-            }, 500);
+            // Show results immediately
+            showResults(result.data);
             
         } else {
+            console.error('AJAX Error:', result);
             throw new Error(result.data?.message || 'Unbekannter Fehler bei der AI-Generierung');
         }
         
@@ -441,9 +442,17 @@ function updateProgress(percent, message) {
 
 // Show results
 function showResults(data) {
+    console.log('showResults called with:', data); // Debug log
+    
     const progressContainer = document.getElementById('progressContainer');
     const debugContainer = document.getElementById('debugContainer');
     const resultContainer = document.getElementById('resultContainer');
+    
+    console.log('Containers found:', {
+        progress: !!progressContainer,
+        debug: !!debugContainer,
+        result: !!resultContainer
+    }); // Debug log
     
     // Hide progress
     if (progressContainer) progressContainer.style.display = 'none';
@@ -455,12 +464,25 @@ function showResults(data) {
             debugOutput.textContent = JSON.stringify(data.debug, null, 2);
         }
         debugContainer.style.display = 'block';
+        console.log('Debug container shown'); // Debug log
+    } else {
+        console.log('No debug data or container:', { hasDebug: !!data.debug, hasContainer: !!debugContainer }); // Debug log
     }
     
     // Show generated content
     if (data.result && resultContainer) {
+        console.log('Displaying content:', data.result); // Debug log
         displayGeneratedContent(data.result);
         resultContainer.style.display = 'block';
+        console.log('Result container shown'); // Debug log
+    } else {
+        console.log('No result data or container:', { hasResult: !!data.result, hasContainer: !!resultContainer }); // Debug log
+    }
+    
+    // If no content to show, show a message
+    if (!data.debug && !data.result) {
+        console.log('No data to display, showing alert'); // Debug log
+        alert('Keine Daten erhalten. Überprüfe die Browser-Konsole für Details.');
     }
 }
 
