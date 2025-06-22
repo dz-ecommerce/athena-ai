@@ -321,29 +321,86 @@ function updateNavigation() {
 
 function updateStepNavigation() {
     // Update step navigation visual state
-    document.querySelectorAll('[onclick^="navigateToStep"]').forEach((btn, index) => {
+    const stepElements = document.querySelectorAll('ol li');
+    
+    stepElements.forEach((li, index) => {
         const stepNum = index + 1;
         const isActive = stepNum === currentStep;
         const isCompleted = stepNum < currentStep;
+        const isLast = stepNum === stepElements.length;
         
-        // Reset classes
-        btn.className = 'flex items-center justify-center w-10 h-10 rounded-full border-2 text-sm font-medium transition-all duration-200';
+        // Update li classes
+        let liClasses = 'flex w-full relative';
         
+        // Text color
         if (isActive) {
-            btn.className += ' bg-purple-600 border-purple-600 text-white';
-        } else if (isCompleted) {
-            btn.className += ' bg-green-500 border-green-500 text-white cursor-pointer hover:bg-green-600';
-            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            liClasses += ' text-purple-600';
         } else {
-            btn.className += ' bg-gray-100 border-gray-300 text-gray-500';
-            btn.innerHTML = stepNum;
+            liClasses += ' text-gray-900';
         }
         
-        // Enable/disable buttons
-        if (stepNum > currentStep && !isCompleted) {
-            btn.disabled = true;
-        } else {
-            btn.disabled = false;
+        // After pseudo-element for connecting line
+        if (!isLast) {
+            if (isCompleted || isActive) {
+                liClasses += " after:content-[''] after:w-full after:h-0.5 after:bg-purple-600 after:inline-block after:absolute lg:after:top-5 after:top-3 after:left-4";
+            } else {
+                liClasses += " after:content-[''] after:w-full after:h-0.5 after:bg-gray-200 after:inline-block after:absolute lg:after:top-5 after:top-3 after:left-4";
+            }
+        }
+        
+        li.className = liClasses;
+        
+        // Update circle element
+        const circleElement = li.querySelector('button, span');
+        if (circleElement) {
+            let circleClasses = 'w-6 h-6 border-2 rounded-full flex justify-center items-center mx-auto mb-3 text-sm lg:w-10 lg:h-10';
+            let circleContent = stepNum;
+            
+            if (isCompleted) {
+                circleClasses += ' bg-green-500 border-green-500 text-white';
+                circleContent = '<i class="fa-solid fa-check text-xs"></i>';
+                
+                // Convert to button if not already
+                if (circleElement.tagName === 'SPAN') {
+                    const newButton = document.createElement('button');
+                    newButton.type = 'button';
+                    newButton.onclick = () => navigateToStep(stepNum);
+                    newButton.className = circleClasses + ' cursor-pointer hover:opacity-80 transition-opacity';
+                    newButton.innerHTML = circleContent;
+                    circleElement.parentNode.replaceChild(newButton, circleElement);
+                } else {
+                    circleElement.className = circleClasses + ' cursor-pointer hover:opacity-80 transition-opacity';
+                    circleElement.innerHTML = circleContent;
+                }
+            } else if (isActive) {
+                circleClasses += ' bg-purple-600 border-transparent text-white';
+                
+                // Convert to button if not already
+                if (circleElement.tagName === 'SPAN') {
+                    const newButton = document.createElement('button');
+                    newButton.type = 'button';
+                    newButton.onclick = () => navigateToStep(stepNum);
+                    newButton.className = circleClasses + ' cursor-pointer hover:opacity-80 transition-opacity';
+                    newButton.innerHTML = circleContent;
+                    circleElement.parentNode.replaceChild(newButton, circleElement);
+                } else {
+                    circleElement.className = circleClasses + ' cursor-pointer hover:opacity-80 transition-opacity';
+                    circleElement.innerHTML = circleContent;
+                }
+            } else {
+                circleClasses += ' bg-gray-50 border-gray-200';
+                
+                // Convert to span if not already
+                if (circleElement.tagName === 'BUTTON') {
+                    const newSpan = document.createElement('span');
+                    newSpan.className = circleClasses;
+                    newSpan.innerHTML = circleContent;
+                    circleElement.parentNode.replaceChild(newSpan, circleElement);
+                } else {
+                    circleElement.className = circleClasses;
+                    circleElement.innerHTML = circleContent;
+                }
+            }
         }
     });
 }

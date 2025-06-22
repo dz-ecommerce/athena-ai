@@ -159,45 +159,64 @@ class AIPostController {
      */
     public static function render_step_navigation(int $current_step): string {
         $steps = self::get_step_config();
-        $html = '<div class="flex items-center justify-center mb-8">';
-        $html .= '<div class="flex items-center space-x-4">';
+        $html = '<div class="mb-8">';
+        $html .= '<ol class="flex items-center w-full text-xs text-gray-900 font-medium sm:text-base">';
 
         foreach ($steps as $step_number => $step_config) {
             $is_active = $step_number === $current_step;
             $is_completed = $step_number < $current_step;
+            $is_last = $step_number === count($steps);
             
-            $classes = 'flex items-center justify-center w-10 h-10 rounded-full border-2 text-sm font-medium transition-all duration-200';
+            // Determine text color
+            $text_color = $is_active ? 'text-purple-600' : 'text-gray-900';
             
-            if ($is_active) {
-                $classes .= ' bg-purple-600 border-purple-600 text-white';
-            } elseif ($is_completed) {
-                $classes .= ' bg-green-500 border-green-500 text-white cursor-pointer hover:bg-green-600';
-            } else {
-                $classes .= ' bg-gray-100 border-gray-300 text-gray-500';
+            // Determine after pseudo-element classes for the line
+            $after_classes = '';
+            if (!$is_last) {
+                if ($is_completed || $is_active) {
+                    $after_classes = "after:content-[''] after:w-full after:h-0.5 after:bg-purple-600 after:inline-block after:absolute lg:after:top-5 after:top-3 after:left-4";
+                } else {
+                    $after_classes = "after:content-[''] after:w-full after:h-0.5 after:bg-gray-200 after:inline-block after:absolute lg:after:top-5 after:top-3 after:left-4";
+                }
             }
-
-            $html .= '<div class="flex flex-col items-center">';
-            $html .= '<button type="button" class="' . $classes . '" onclick="navigateToStep(' . $step_number . ')" ' . ($step_number > $current_step ? 'disabled' : '') . '>';
             
+            $li_classes = "flex w-full relative $text_color $after_classes";
+            
+            // Determine circle styles
             if ($is_completed) {
-                $html .= '<i class="fa-solid fa-check"></i>';
+                $circle_classes = 'w-6 h-6 bg-green-500 border-2 border-green-500 rounded-full flex justify-center items-center mx-auto mb-3 text-sm text-white lg:w-10 lg:h-10';
+                $circle_content = '<i class="fa-solid fa-check text-xs"></i>';
+            } elseif ($is_active) {
+                $circle_classes = 'w-6 h-6 bg-purple-600 border-2 border-transparent rounded-full flex justify-center items-center mx-auto mb-3 text-sm text-white lg:w-10 lg:h-10';
+                $circle_content = $step_number;
             } else {
-                $html .= $step_number;
+                $circle_classes = 'w-6 h-6 bg-gray-50 border-2 border-gray-200 rounded-full flex justify-center items-center mx-auto mb-3 text-sm lg:w-10 lg:h-10';
+                $circle_content = $step_number;
+            }
+
+            $html .= '<li class="' . $li_classes . '">';
+            $html .= '<div class="block whitespace-nowrap z-10">';
+            
+            if ($is_completed || $is_active) {
+                $html .= '<button type="button" onclick="navigateToStep(' . $step_number . ')" class="' . $circle_classes . ' cursor-pointer hover:opacity-80 transition-opacity">';
+            } else {
+                $html .= '<span class="' . $circle_classes . '">';
             }
             
-            $html .= '</button>';
-            $html .= '<span class="text-xs text-gray-600 mt-1 text-center max-w-20">' . esc_html($step_config['title']) . '</span>';
-            $html .= '</div>';
-
-            // Add connector line between steps
-            if ($step_number < count($steps)) {
-                $connector_classes = 'w-12 h-0.5 mx-2 transition-all duration-200';
-                $connector_classes .= $step_number < $current_step ? ' bg-green-500' : ' bg-gray-300';
-                $html .= '<div class="' . $connector_classes . '"></div>';
+            $html .= $circle_content;
+            
+            if ($is_completed || $is_active) {
+                $html .= '</button>';
+            } else {
+                $html .= '</span>';
             }
+            
+            $html .= '<span class="block text-center mt-1">' . esc_html($step_config['title']) . '</span>';
+            $html .= '</div>';
+            $html .= '</li>';
         }
 
-        $html .= '</div>';
+        $html .= '</ol>';
         $html .= '</div>';
 
         return $html;
