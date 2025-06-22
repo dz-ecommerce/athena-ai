@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * AI Prompt Manager
  * 
@@ -14,8 +16,6 @@ namespace AthenaAI\Core;
 if (!defined('ABSPATH')) {
     exit;
 }
-
-declare(strict_types=1);
 
 class PromptManager {
     
