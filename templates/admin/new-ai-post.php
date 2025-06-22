@@ -152,6 +152,87 @@ wp_enqueue_style(
     color: #6b7280 !important;
 }
 
+/* Connection lines */
+.athena-ai-admin .connection-line {
+    flex: 1 !important;
+    height: 2px !important;
+    background-color: #e5e7eb !important;
+    margin: 0 0.5rem !important;
+    position: relative !important;
+    top: 1.25rem !important;
+}
+
+.athena-ai-admin .connection-line.completed {
+    background-color: #22c55e !important;
+}
+
+/* Clickable step numbers */
+.athena-ai-admin .step-navigation .step-number {
+    cursor: pointer !important;
+}
+
+.athena-ai-admin .step-navigation .step-number:hover {
+    transform: scale(1.1) !important;
+}
+
+.athena-ai-admin .step-navigation .step-number.clickable {
+    cursor: pointer !important;
+    opacity: 1 !important;
+}
+
+.athena-ai-admin .step-navigation .step-number.non-clickable {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+/* Form actions */
+.athena-ai-admin .form-actions {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding-top: 1.5rem !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 2rem !important;
+}
+
+.athena-ai-admin .btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+}
+
+.athena-ai-admin .btn-primary {
+    background: linear-gradient(to right, #9333ea, #7c3aed) !important;
+    color: white !important;
+}
+
+.athena-ai-admin .btn-primary:hover {
+    background: linear-gradient(to right, #7c3aed, #6d28d9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3) !important;
+}
+
+.athena-ai-admin .btn-secondary {
+    background: white !important;
+    color: #6b7280 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+.athena-ai-admin .btn-secondary:hover {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
 /* Form styling */
 .athena-ai-admin .content-source-options {
     max-width: 42rem !important;
@@ -418,7 +499,220 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize interactive elements
     setupRadioOptions();
+    
+    // Initialize step navigation
+    initializeStepNavigation();
 });
+
+// Step navigation variables
+let currentStep = 1;
+const maxSteps = 4;
+
+// Initialize step navigation
+function initializeStepNavigation() {
+    updateStepNavigation();
+    updateFormNavigation();
+}
+
+// Navigate to specific step
+function navigateToStep(step) {
+    if (step >= 1 && step <= maxSteps && (step <= currentStep + 1 || step <= getHighestAccessibleStep())) {
+        currentStep = step;
+        showStep(step);
+        updateStepNavigation();
+        updateFormNavigation();
+        
+        if (step === 4) {
+            updateReviewContent();
+        }
+    }
+}
+
+// Go to next step
+function nextStep() {
+    if (currentStep < maxSteps) {
+        currentStep++;
+        showStep(currentStep);
+        updateStepNavigation();
+        updateFormNavigation();
+        
+        if (currentStep === 4) {
+            updateReviewContent();
+        }
+    }
+}
+
+// Go to previous step
+function previousStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+        updateStepNavigation();
+        updateFormNavigation();
+    }
+}
+
+// Show specific step content
+function showStep(step) {
+    // Hide all steps
+    for (let i = 1; i <= maxSteps; i++) {
+        const stepElement = document.getElementById('step-' + i);
+        if (stepElement) {
+            stepElement.classList.add('hidden');
+            stepElement.classList.remove('block');
+        }
+    }
+    
+    // Show current step
+    const currentStepElement = document.getElementById('step-' + step);
+    if (currentStepElement) {
+        currentStepElement.classList.remove('hidden');
+        currentStepElement.classList.add('block');
+    }
+}
+
+// Update step navigation visual state
+function updateStepNavigation() {
+    for (let i = 1; i <= maxSteps; i++) {
+        const stepNav = document.getElementById('step-nav-' + i);
+        const stepText = stepNav ? stepNav.nextElementSibling : null;
+        const connectionLine = document.getElementById('line-' + i);
+        
+        if (stepNav && stepText) {
+            // Remove all classes
+            stepNav.className = 'step-number';
+            stepText.className = 'step-text';
+            
+            if (i < currentStep) {
+                // Completed step
+                stepNav.classList.add('completed');
+                stepNav.innerHTML = '<i class="fa-solid fa-check"></i>';
+                stepText.classList.add('completed');
+                stepNav.classList.add('clickable');
+            } else if (i === currentStep) {
+                // Active step
+                stepNav.classList.add('active');
+                stepNav.innerHTML = i.toString();
+                stepText.classList.add('active');
+                stepNav.classList.add('clickable');
+            } else if (i === currentStep + 1) {
+                // Next accessible step
+                stepNav.classList.add('inactive');
+                stepNav.innerHTML = i.toString();
+                stepText.classList.add('inactive');
+                stepNav.classList.add('clickable');
+            } else {
+                // Future step
+                stepNav.classList.add('inactive');
+                stepNav.innerHTML = i.toString();
+                stepText.classList.add('inactive');
+                stepNav.classList.add('non-clickable');
+            }
+        }
+        
+        // Update connection lines
+        if (connectionLine) {
+            connectionLine.className = 'connection-line';
+            if (i < currentStep) {
+                connectionLine.classList.add('completed');
+            }
+        }
+    }
+}
+
+// Update form navigation buttons
+function updateFormNavigation() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const generateBtn = document.getElementById('generate-btn');
+    
+    if (prevBtn) {
+        prevBtn.style.display = currentStep > 1 ? 'inline-flex' : 'none';
+    }
+    
+    if (nextBtn) {
+        nextBtn.style.display = currentStep < maxSteps ? 'inline-flex' : 'none';
+    }
+    
+    if (generateBtn) {
+        generateBtn.style.display = currentStep === maxSteps ? 'inline-flex' : 'none';
+    }
+}
+
+// Get highest accessible step (current + 1)
+function getHighestAccessibleStep() {
+    return Math.min(currentStep + 1, maxSteps);
+}
+
+// Update review content in step 4
+function updateReviewContent() {
+    const reviewContainer = document.getElementById('review-content');
+    if (!reviewContainer) return;
+    
+    // Get form values
+    const contentSource = document.querySelector('input[name="content_source"]:checked');
+    const contentType = document.querySelector('input[name="content_type"]:checked');
+    const tone = document.querySelector('select[name="tone"]');
+    const targetAudience = document.querySelector('input[name="target_audience"]');
+    const keywords = document.querySelector('input[name="keywords"]');
+    const instructions = document.querySelector('textarea[name="instructions"]');
+    
+    // Build review content
+    let reviewHTML = '';
+    
+    if (contentSource) {
+        const sourceLabel = contentSource.value === 'feed_items' ? 'Feed Items' : 'Custom Topic';
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Content Source:</span><span class="text-gray-900">${sourceLabel}</span></div>`;
+    }
+    
+    if (contentType) {
+        const typeLabels = {
+            'blog_post': 'Blog Post',
+            'social_post': 'Social Post',
+            'summary': 'Summary',
+            'newsletter': 'Newsletter'
+        };
+        const typeLabel = typeLabels[contentType.value] || contentType.value;
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Content Type:</span><span class="text-gray-900">${typeLabel}</span></div>`;
+    }
+    
+    if (tone && tone.value) {
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Tone:</span><span class="text-gray-900">${tone.value}</span></div>`;
+    }
+    
+    if (targetAudience && targetAudience.value) {
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Target Audience:</span><span class="text-gray-900">${targetAudience.value}</span></div>`;
+    }
+    
+    if (keywords && keywords.value) {
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Keywords:</span><span class="text-gray-900">${keywords.value}</span></div>`;
+    }
+    
+    if (instructions && instructions.value) {
+        reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Instructions:</span><span class="text-gray-900">${instructions.value.substring(0, 100)}${instructions.value.length > 100 ? '...' : ''}</span></div>`;
+    }
+    
+    reviewContainer.innerHTML = reviewHTML || '<p class="text-gray-500">No settings configured yet.</p>';
+}
+
+// Generate post function
+function generatePost() {
+    const generateBtn = document.getElementById('generate-btn');
+    if (generateBtn) {
+        generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+        generateBtn.disabled = true;
+    }
+    
+    // Simulate post generation
+    setTimeout(() => {
+        if (generateBtn) {
+            generateBtn.innerHTML = '<i class="fa-solid fa-magic"></i> Generate Post';
+            generateBtn.disabled = false;
+        }
+        
+        alert('Post generated successfully! (This is a demo)');
+    }, 3000);
+}
 </script>
 
 <div class="wrap athena-ai-admin min-h-screen">
@@ -437,7 +731,33 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="max-w-4xl mx-auto">
             
             <!-- Step Navigation -->
-            <?php echo AIPostController::render_step_navigation($current_step); ?>
+            <div class="step-navigation">
+                <div class="step-item">
+                    <div class="step-number active" id="step-nav-1" onclick="navigateToStep(1)">1</div>
+                    <span class="step-text active">Content Source</span>
+                </div>
+                
+                <div class="connection-line" id="line-1"></div>
+                
+                <div class="step-item">
+                    <div class="step-number inactive" id="step-nav-2" onclick="navigateToStep(2)">2</div>
+                    <span class="step-text inactive">Content Type</span>
+                </div>
+                
+                <div class="connection-line" id="line-2"></div>
+                
+                <div class="step-item">
+                    <div class="step-number inactive" id="step-nav-3" onclick="navigateToStep(3)">3</div>
+                    <span class="step-text inactive">Customization</span>
+                </div>
+                
+                <div class="connection-line" id="line-3"></div>
+                
+                <div class="step-item">
+                    <div class="step-number inactive" id="step-nav-4" onclick="navigateToStep(4)">4</div>
+                    <span class="step-text inactive">Review & Generate</span>
+                </div>
+            </div>
             
             <!-- Step Form -->
             <form id="ai-post-form" class="space-y-6">
@@ -611,7 +931,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <!-- Form Navigation -->
-                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                <div class="form-actions">
+                    <button type="button" id="prev-btn" onclick="previousStep()" class="btn btn-secondary" style="display: none;">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Back
+                    </button>
+                    
+                    <button type="button" id="next-btn" onclick="nextStep()" class="btn btn-primary">
+                        Next
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    
+                    <button type="button" id="generate-btn" onclick="generatePost()" class="btn btn-primary" style="display: none; background: linear-gradient(to right, #22c55e, #16a34a) !important;">
+                        <i class="fa-solid fa-magic"></i>
+                        Generate Post
+                    </button>
+                </div>
+
+                <!-- Old Form Navigation (hidden) -->
+                <div class="flex justify-between items-center pt-6 border-t border-gray-200" style="display: none !important;">
                     <button type="button" id="prev-btn" onclick="previousStep()" 
                             class="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 <?php echo $current_step <= 1 ? 'hidden' : ''; ?>">
                         <i class="fa-solid fa-arrow-left mr-2"></i>
