@@ -46,10 +46,10 @@ class StylesManager extends BaseAdmin {
             $hook_suffix !== 'feed-items_page_athena-new-ai-post' &&
             strpos($hook_suffix, 'athena-new-ai-post') === false
         ) {
-            // Tailwind CSS - use the correct admin.css file
+            // Tailwind CSS - use the correct athena-admin.css file
             \wp_enqueue_style(
                 'athena-ai-tailwind',
-                ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css',
+                ATHENA_AI_PLUGIN_URL . 'assets/css/athena-admin.css',
                 [],
                 ATHENA_AI_VERSION
             );
