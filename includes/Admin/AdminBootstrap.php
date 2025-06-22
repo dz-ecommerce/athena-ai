@@ -125,6 +125,9 @@ class AdminBootstrap {
 
         // Profilseite initialisieren
         ProfilePage::register();
+
+        // AI Post Controller initialisieren
+        \AthenaAI\Admin\Controllers\AIPostController::init();
     }
 
     /**
