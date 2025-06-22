@@ -16,6 +16,32 @@ AIPostController::init();
 $current_step = AIPostController::get_current_step();
 $step_config = AIPostController::get_step_config();
 $stored_data = AIPostController::get_stored_form_data();
+
+// Get the current hook suffix for debugging
+global $hook_suffix;
+error_log("New AI Post page hook: " . $hook_suffix);
+
+// Ensure TailwindCSS and other assets are loaded
+wp_enqueue_style(
+    'athena-ai-tailwind',
+    ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css',
+    [],
+    ATHENA_AI_VERSION
+);
+
+wp_enqueue_style(
+    'athena-ai-google-fonts',
+    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+    [],
+    ATHENA_AI_VERSION
+);
+
+wp_enqueue_style(
+    'athena-ai-fontawesome',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    [],
+    '6.4.0'
+);
 ?>
 <div class="wrap athena-ai-admin min-h-screen">
     <!-- Header -->
@@ -449,6 +475,45 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<style>
+/* Additional custom styles for the step form */
+.athena-ai-admin .step-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.athena-ai-admin .step-circle {
+    transition: all 0.2s ease-in-out;
+}
+
+.athena-ai-admin .step-circle:hover {
+    transform: scale(1.05);
+}
+
+.athena-ai-admin input[type="radio"]:checked + * {
+    border-color: #9333ea !important;
+    background-color: #faf5ff !important;
+}
+
+/* Content type selection styling */
+.athena-ai-admin input[name="content_type"]:checked ~ * {
+    border-color: #9333ea !important;
+    background-color: #faf5ff !important;
+}
+
+.athena-ai-admin input[name="content_type"] + * i {
+    transition: color 0.2s ease-in-out;
+}
+
+.athena-ai-admin input[name="content_type"]:checked + * i {
+    color: #9333ea !important;
+}
+</style>
 
 <?php
 // Restore previous error reporting

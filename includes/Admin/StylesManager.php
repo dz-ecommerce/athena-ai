@@ -16,10 +16,10 @@ class StylesManager extends BaseAdmin {
      */
     public function __construct() {
         // Lade die Tailwind CSS Styles im Admin-Bereich
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles']);
+        \add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_styles']);
 
         // Füge Body-Klasse für Tailwind-Scope hinzu
-        add_filter('admin_body_class', [$this, 'add_admin_body_class']);
+        \add_filter('admin_body_class', [$this, 'add_admin_body_class']);
     }
 
     /**
@@ -36,21 +36,25 @@ class StylesManager extends BaseAdmin {
         // Auf allen Plugin-Seiten laden: Athena AI, Feed Items und eigenen Admin-Seiten
         if (
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
-            (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-new-ai-post') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-maintenance') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-database-upgrade') !== false) ||
+            (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false) ||
+            strpos($hook_suffix, 'feed-items_page_athena-new-ai-post') !== false
         ) {
-            // Tailwind CSS
-            wp_enqueue_style(
+            // Tailwind CSS - use the correct admin.css file
+            \wp_enqueue_style(
                 'athena-ai-tailwind',
-                ATHENA_AI_PLUGIN_URL . 'assets/css/athena-admin.css',
+                ATHENA_AI_PLUGIN_URL . 'assets/css/admin.css',
                 [],
                 ATHENA_AI_VERSION
             );
 
             // Google Fonts
-            wp_enqueue_style(
+            \wp_enqueue_style(
                 'athena-ai-google-fonts',
                 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
                 [],
@@ -58,7 +62,7 @@ class StylesManager extends BaseAdmin {
             );
 
             // Font Awesome für Icons
-            wp_enqueue_style(
+            \wp_enqueue_style(
                 'athena-ai-fontawesome',
                 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
                 [],
@@ -84,10 +88,14 @@ class StylesManager extends BaseAdmin {
         // Auf allen Plugin-Seiten anwenden
         if (
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
-            (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-new-ai-post') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-maintenance') !== false) ||
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-database-upgrade') !== false) ||
+            (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false) ||
+            strpos($hook_suffix, 'feed-items_page_athena-new-ai-post') !== false
         ) {
             $classes .= ' athena-ai-admin';
         }
