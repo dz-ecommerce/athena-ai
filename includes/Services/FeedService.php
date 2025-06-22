@@ -1039,11 +1039,43 @@ class FeedService {
         // Content
         $data['content'] = !empty($data['description']) ? $data['description'] : '';
 
+        // Kategorien aus dem RSS-Item extrahieren
+        $categories = [];
+        
+        // Standardmäßige category-Elemente
+        if (isset($item->category)) {
+            foreach ($item->category as $category) {
+                $cat_text = trim((string) $category);
+                if (!empty($cat_text)) {
+                    $categories[] = $cat_text;
+                }
+            }
+        }
+        
+        // Dublin Core Subject
+        if (empty($categories) && isset($namespaces['dc'])) {
+            $dc = $item->children($namespaces['dc']);
+            if (isset($dc->subject)) {
+                foreach ($dc->subject as $subject) {
+                    $subj_text = trim((string) $subject);
+                    if (!empty($subj_text)) {
+                        $categories[] = $subj_text;
+                    }
+                }
+            }
+        }
+        
+        // Fallback auf 'Allgemein' wenn keine Kategorien gefunden
+        if (empty($categories)) {
+            $categories = ['Allgemein'];
+        }
+        
+        $data['categories'] = $categories;
+
         // Weitere Felder für die Datenbank-Kompatibilität
         $data['permalink'] = $data['link'];
         $data['id'] = $data['guid'];
         $data['thumbnail'] = null;
-        $data['categories'] = ['Nachrichten'];
 
         return $data;
     }
@@ -1058,6 +1090,7 @@ class FeedService {
      */
     private function extractAtomItem(\SimpleXMLElement $entry, Feed $feed) {
         $data = [];
+        $namespaces = $entry->getNamespaces(true);
 
         // Titel
         $data['title'] = (string) $entry->title;
@@ -1079,6 +1112,55 @@ class FeedService {
 
         // GUID
         $data['guid'] = (string) $entry->id;
+
+        // Kategorien aus dem Atom-Item extrahieren
+        $categories = [];
+        
+        // Atom category-Elemente
+        if (isset($entry->category)) {
+            foreach ($entry->category as $category) {
+                $cat_text = '';
+                // Versuche verschiedene Attribute
+                if (isset($category['term'])) {
+                    $cat_text = trim((string) $category['term']);
+                } elseif (isset($category['label'])) {
+                    $cat_text = trim((string) $category['label']);
+                } else {
+                    $cat_text = trim((string) $category);
+                }
+                
+                if (!empty($cat_text)) {
+                    $categories[] = $cat_text;
+                }
+            }
+        }
+        
+        // Dublin Core Subject für Atom
+        if (empty($categories) && isset($namespaces['dc'])) {
+            $dc = $entry->children($namespaces['dc']);
+            if (isset($dc->subject)) {
+                foreach ($dc->subject as $subject) {
+                    $subj_text = trim((string) $subject);
+                    if (!empty($subj_text)) {
+                        $categories[] = $subj_text;
+                    }
+                }
+            }
+        }
+        
+        // Fallback auf 'Allgemein' wenn keine Kategorien gefunden
+        if (empty($categories)) {
+            $categories = ['Allgemein'];
+        }
+        
+        $data['categories'] = $categories;
+
+        // Weitere Felder für die Datenbank-Kompatibilität
+        $data['date'] = $data['published'];
+        $data['content'] = $data['description'];
+        $data['permalink'] = $data['link'];
+        $data['id'] = $data['guid'];
+        $data['thumbnail'] = null;
 
         return $data;
     }
@@ -1168,6 +1250,60 @@ class FeedService {
 
         // GUID
         $data['guid'] = $item['guid'] ?? '';
+
+        // Kategorien aus dem JSON-Item extrahieren
+        $categories = [];
+        
+        // Direkte categories-Array
+        if (isset($item['categories']) && is_array($item['categories'])) {
+            foreach ($item['categories'] as $category) {
+                if (is_string($category)) {
+                    $cat_text = trim($category);
+                    if (!empty($cat_text)) {
+                        $categories[] = $cat_text;
+                    }
+                } elseif (is_array($category)) {
+                    // Strukturierte Kategorie-Objekte
+                    if (isset($category['name'])) {
+                        $cat_text = trim($category['name']);
+                        if (!empty($cat_text)) {
+                            $categories[] = $cat_text;
+                        }
+                    } elseif (isset($category['term'])) {
+                        $cat_text = trim($category['term']);
+                        if (!empty($cat_text)) {
+                            $categories[] = $cat_text;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Tags als Kategorien verwenden
+        if (empty($categories) && isset($item['tags']) && is_array($item['tags'])) {
+            foreach ($item['tags'] as $tag) {
+                if (is_string($tag)) {
+                    $tag_text = trim($tag);
+                    if (!empty($tag_text)) {
+                        $categories[] = $tag_text;
+                    }
+                }
+            }
+        }
+        
+        // Fallback auf 'Allgemein' wenn keine Kategorien gefunden
+        if (empty($categories)) {
+            $categories = ['Allgemein'];
+        }
+        
+        $data['categories'] = $categories;
+
+        // Weitere Felder für die Datenbank-Kompatibilität
+        $data['date'] = $data['published'];
+        $data['content'] = $data['description'];
+        $data['permalink'] = $data['link'];
+        $data['id'] = $data['guid'];
+        $data['thumbnail'] = null;
 
         return $data;
     }
