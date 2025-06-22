@@ -368,7 +368,14 @@ async function generatePost() {
     
     try {
         // Collect all form data
-        const formData = new FormData(document.getElementById('ai-post-form'));
+        const form = document.getElementById('ai-post-form');
+        console.log('Form element found:', !!form); // Debug log
+        
+        if (!form) {
+            throw new Error('Form element with ID "ai-post-form" not found');
+        }
+        
+        const formData = new FormData(form);
         const data = {};
         
         // Convert FormData to regular object
@@ -384,13 +391,27 @@ async function generatePost() {
             }
         }
         
+        console.log('Form data collected:', data); // Debug log
+        
         updateProgress(20, 'Formulardaten werden verarbeitet...');
         
         // Prepare AJAX request
         const ajaxData = new FormData();
         ajaxData.append('action', 'athena_ai_post_generate');
         ajaxData.append('nonce', athenaAjax.nonce);
-        ajaxData.append('form_data', JSON.stringify(data));
+        
+        // Try to stringify the data and catch any errors
+        let jsonData;
+        try {
+            jsonData = JSON.stringify(data);
+            console.log('JSON data created:', jsonData); // Debug log
+        } catch (stringifyError) {
+            console.error('JSON stringify error:', stringifyError);
+            console.error('Data that failed to stringify:', data);
+            throw new Error('Failed to convert form data to JSON: ' + stringifyError.message);
+        }
+        
+        ajaxData.append('form_data', jsonData);
         
         updateProgress(40, 'AI Service wird kontaktiert...');
         
