@@ -556,13 +556,35 @@ function generatePost() {
                                             Select Feed Items
                                         </label>
                                         <select name="selected_feed_items" multiple style="height: 120px;">
-                                            <option value="1">Tech News - Latest AI Developments</option>
-                                            <option value="2">Business Insider - Market Updates</option>
-                                            <option value="3">WordPress News - Plugin Updates</option>
-                                            <option value="4">Digital Marketing - SEO Tips</option>
-                                            <option value="5">Web Development - Best Practices</option>
+                                            <?php
+                                            // Get recent feed items from database
+                                            global $wpdb;
+                                            $feed_items = $wpdb->get_results("
+                                                SELECT ri.*, p.post_title as feed_title,
+                                                       JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title
+                                                FROM {$wpdb->prefix}feed_raw_items ri
+                                                JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
+                                                WHERE p.post_type = 'athena-feed' AND p.post_status = 'publish'
+                                                ORDER BY ri.pub_date DESC
+                                                LIMIT 50
+                                            ");
+                                            
+                                            if ($feed_items) {
+                                                foreach ($feed_items as $item) {
+                                                    $title = $item->title ?: 'Untitled';
+                                                    $feed_source = $item->feed_title;
+                                                    $display_title = esc_html($title . ' (' . $feed_source . ')');
+                                                    if (strlen($display_title) > 80) {
+                                                        $display_title = substr($display_title, 0, 77) . '...';
+                                                    }
+                                                    echo '<option value="' . esc_attr($item->item_hash) . '">' . $display_title . '</option>';
+                                                }
+                                            } else {
+                                                echo '<option value="">No feed items available</option>';
+                                            }
+                                            ?>
                                         </select>
-                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple items</span>
+                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple items (showing latest 50)</span>
                                     </div>
                                     
                                     <!-- WordPress Pages Selection -->
@@ -572,13 +594,29 @@ function generatePost() {
                                             Select WordPress Pages
                                         </label>
                                         <select name="selected_pages" multiple style="height: 120px;">
-                                            <option value="1">About Us</option>
-                                            <option value="2">Services</option>
-                                            <option value="3">Contact</option>
-                                            <option value="4">Privacy Policy</option>
-                                            <option value="5">Terms of Service</option>
+                                            <?php
+                                            // Get all published pages
+                                            $pages = get_pages([
+                                                'post_status' => 'publish',
+                                                'number' => 0, // Get all pages
+                                                'sort_column' => 'post_title',
+                                                'sort_order' => 'ASC'
+                                            ]);
+                                            
+                                            if ($pages) {
+                                                foreach ($pages as $page) {
+                                                    $title = esc_html($page->post_title);
+                                                    if (strlen($title) > 60) {
+                                                        $title = substr($title, 0, 57) . '...';
+                                                    }
+                                                    echo '<option value="' . esc_attr($page->ID) . '">' . $title . '</option>';
+                                                }
+                                            } else {
+                                                echo '<option value="">No pages available</option>';
+                                            }
+                                            ?>
                                         </select>
-                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple pages</span>
+                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple pages (all pages shown)</span>
                                     </div>
                                     
                                     <!-- WordPress Posts Selection -->
@@ -588,13 +626,30 @@ function generatePost() {
                                             Select WordPress Posts
                                         </label>
                                         <select name="selected_posts" multiple style="height: 120px;">
-                                            <option value="1">How to Build a WordPress Plugin</option>
-                                            <option value="2">Best SEO Practices for 2024</option>
-                                            <option value="3">AI in Content Marketing</option>
-                                            <option value="4">WordPress Security Guide</option>
-                                            <option value="5">E-commerce Trends 2024</option>
+                                            <?php
+                                            // Get recent published posts
+                                            $posts = get_posts([
+                                                'post_type' => 'post',
+                                                'post_status' => 'publish',
+                                                'numberposts' => 100, // Limit to recent 100 posts
+                                                'orderby' => 'date',
+                                                'order' => 'DESC'
+                                            ]);
+                                            
+                                            if ($posts) {
+                                                foreach ($posts as $post) {
+                                                    $title = esc_html($post->post_title);
+                                                    if (strlen($title) > 60) {
+                                                        $title = substr($title, 0, 57) . '...';
+                                                    }
+                                                    echo '<option value="' . esc_attr($post->ID) . '">' . $title . '</option>';
+                                                }
+                                            } else {
+                                                echo '<option value="">No posts available</option>';
+                                            }
+                                            ?>
                                         </select>
-                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple posts</span>
+                                        <span class="helper-text">Hold Ctrl/Cmd to select multiple posts (showing latest 100)</span>
                                     </div>
                                     
                                     <!-- Custom Topic Input -->
