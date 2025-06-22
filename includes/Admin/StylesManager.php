@@ -33,18 +33,18 @@ class StylesManager extends BaseAdmin {
             $hook_suffix = '';
         }
 
-        // Auf allen Plugin-Seiten laden: Athena AI, Feed Items und eigenen Admin-Seiten
+        // Auf allen Plugin-Seiten laden, AUSSER New AI Post (lädt eigenes CSS)
         if (
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
+            (($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-new-ai-post') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-maintenance') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-database-upgrade') !== false) ||
             (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            $hook_suffix === 'feed-items_page_athena-new-ai-post' ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false) ||
-            strpos($hook_suffix, 'feed-items_page_athena-new-ai-post') !== false
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)) &&
+            // EXCLUDE New AI Post page (it loads its own CSS)
+            $hook_suffix !== 'feed-items_page_athena-new-ai-post' &&
+            strpos($hook_suffix, 'athena-new-ai-post') === false
         ) {
             // Tailwind CSS - use the correct admin.css file
             \wp_enqueue_style(
@@ -149,18 +149,18 @@ class StylesManager extends BaseAdmin {
             $hook_suffix = '';
         }
 
-        // Auf allen Plugin-Seiten anwenden
+        // Auf allen Plugin-Seiten anwenden, AUSSER New AI Post
         if (
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
+            (($hook_suffix !== '' && strpos($hook_suffix, 'athena-ai') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-items') !== false) ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena-new-ai-post') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-feed-maintenance') !== false) ||
             ($hook_suffix !== '' && strpos($hook_suffix, 'athena-database-upgrade') !== false) ||
             (isset($_GET['post_type']) && $_GET['post_type'] === 'athena-feed') ||
             $hook_suffix === 'toplevel_page_athena-feed-items' ||
-            $hook_suffix === 'feed-items_page_athena-new-ai-post' ||
-            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false) ||
-            strpos($hook_suffix, 'feed-items_page_athena-new-ai-post') !== false
+            ($hook_suffix !== '' && strpos($hook_suffix, 'athena_page') !== false)) &&
+            // EXCLUDE New AI Post page
+            $hook_suffix !== 'feed-items_page_athena-new-ai-post' &&
+            strpos($hook_suffix, 'athena-new-ai-post') === false
         ) {
             $classes .= ' athena-ai-admin';
         }
