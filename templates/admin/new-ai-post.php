@@ -470,6 +470,14 @@ async function generatePost() {
                 }
             }
             
+            // Show AI prompt debug info if available
+            if (result.data.debug && result.data.debug.prompt) {
+                console.log('AI Prompt sent to API:', result.data.debug.prompt);
+                console.log('AI Response received:', result.data.debug.ai_response);
+                console.log('Profile data used:', result.data.debug.profile_data);
+                console.log('Source content loaded:', result.data.debug.source_content);
+            }
+            
             // Show results
             showResults(result.data);
             
