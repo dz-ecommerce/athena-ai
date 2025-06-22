@@ -363,6 +363,18 @@ wp_enqueue_style(
     margin: 0 auto !important;
 }
 
+/* Extended grid for more content types */
+.athena-ai-admin .content-type-grid-extended {
+    max-width: 60rem !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+@media (min-width: 768px) {
+    .athena-ai-admin .content-type-grid-extended {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+}
+
 .athena-ai-admin .content-type-option {
     padding: 1.5rem !important;
     border: 1px solid #e5e7eb !important;
@@ -663,8 +675,12 @@ function updateReviewContent() {
         const typeLabels = {
             'blog_post': 'Blog Post',
             'social_post': 'Social Post',
-            'summary': 'Summary',
-            'newsletter': 'Newsletter'
+            'product_description': 'Product Description',
+            'landing_page': 'Landing Page Copy',
+            'tutorial': 'Tutorial/How-To',
+            'seo_article': 'SEO Article',
+            'podcast_notes': 'Podcast Show Notes',
+            'social_captions': 'Social Media Captions'
         };
         const typeLabel = typeLabels[contentType.value] || contentType.value;
         reviewHTML += `<div class="flex justify-between"><span class="font-medium text-gray-700">Content Type:</span><span class="text-gray-900">${typeLabel}</span></div>`;
@@ -820,7 +836,7 @@ function generatePost() {
                             </p>
                         </div>
                         
-                        <div class="content-type-grid">
+                        <div class="content-type-grid content-type-grid-extended">
                             <div class="content-type-option">
                                 <i class="fa-solid fa-newspaper"></i>
                                 <input type="radio" name="content_type" value="blog_post" style="display: none;" checked>
@@ -836,17 +852,45 @@ function generatePost() {
                             </div>
                             
                             <div class="content-type-option">
-                                <i class="fa-solid fa-list-check"></i>
-                                <input type="radio" name="content_type" value="summary" style="display: none;">
-                                <h3>Summary</h3>
-                                <p>Condensed overview</p>
+                                <i class="fa-solid fa-box"></i>
+                                <input type="radio" name="content_type" value="product_description" style="display: none;">
+                                <h3>Product Description</h3>
+                                <p>E-commerce product copy</p>
                             </div>
                             
                             <div class="content-type-option">
-                                <i class="fa-solid fa-envelope-open-text"></i>
-                                <input type="radio" name="content_type" value="newsletter" style="display: none;">
-                                <h3>Newsletter</h3>
-                                <p>Email newsletter format</p>
+                                <i class="fa-solid fa-bullseye"></i>
+                                <input type="radio" name="content_type" value="landing_page" style="display: none;">
+                                <h3>Landing Page Copy</h3>
+                                <p>Sales and conversion text</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                                <input type="radio" name="content_type" value="tutorial" style="display: none;">
+                                <h3>Tutorial/How-To</h3>
+                                <p>Step-by-step guides</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-search"></i>
+                                <input type="radio" name="content_type" value="seo_article" style="display: none;">
+                                <h3>SEO Article</h3>
+                                <p>Search optimized content</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-microphone"></i>
+                                <input type="radio" name="content_type" value="podcast_notes" style="display: none;">
+                                <h3>Podcast Show Notes</h3>
+                                <p>Episode summaries</p>
+                            </div>
+                            
+                            <div class="content-type-option">
+                                <i class="fa-solid fa-camera"></i>
+                                <input type="radio" name="content_type" value="social_captions" style="display: none;">
+                                <h3>Social Media Captions</h3>
+                                <p>Instagram/LinkedIn copy</p>
                             </div>
                         </div>
                     </div>
