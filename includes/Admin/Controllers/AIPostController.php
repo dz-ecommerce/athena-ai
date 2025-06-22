@@ -110,6 +110,14 @@ class AIPostController {
             $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
             $prompt = $prompt_manager->build_ai_post_prompt($form_data, $profile_data, $source_content);
             
+            // Log prompt details for debugging
+            error_log('AI Prompt length: ' . strlen($prompt));
+            error_log('Profile data keys: ' . implode(', ', array_keys($profile_data)));
+            error_log('Source content keys: ' . implode(', ', array_keys($source_content)));
+            if (!empty($source_content['feed_items'])) {
+                error_log('Feed items count: ' . count($source_content['feed_items']));
+            }
+            
             // Step 4: Generate content with AI
             $ai_response = self::generate_ai_content($prompt, $form_data);
             
@@ -195,12 +203,16 @@ class AIPostController {
     private static function load_feed_items(array $form_data): array {
         $selected_items = $form_data['selected_feed_items'] ?? [];
         if (empty($selected_items)) {
+            error_log('No feed items selected');
             return [];
         }
+        
+        error_log('Loading feed items: ' . count($selected_items) . ' items selected');
         
         global $wpdb;
         $placeholders = implode(',', array_fill(0, count($selected_items), '%s'));
         
+        // First try with JSON extraction
         $items = $wpdb->get_results($wpdb->prepare("
             SELECT ri.*, p.post_title as feed_title,
                    JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
@@ -210,6 +222,31 @@ class AIPostController {
             JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
             WHERE ri.item_hash IN ($placeholders)
         ", $selected_items), ARRAY_A);
+        
+        // If JSON extraction fails, try simpler query
+        if (empty($items)) {
+            error_log('JSON extraction failed, trying simpler query');
+            $items = $wpdb->get_results($wpdb->prepare("
+                SELECT ri.*, p.post_title as feed_title, ri.raw_content
+                FROM {$wpdb->prefix}feed_raw_items ri
+                JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
+                WHERE ri.item_hash IN ($placeholders)
+            ", $selected_items), ARRAY_A);
+            
+            // Parse raw_content manually
+            foreach ($items as &$item) {
+                if (!empty($item['raw_content'])) {
+                    $raw_data = json_decode($item['raw_content'], true);
+                    if ($raw_data) {
+                        $item['title'] = $raw_data['title'] ?? 'Unknown Title';
+                        $item['description'] = $raw_data['description'] ?? '';
+                        $item['link'] = $raw_data['link'] ?? '';
+                    }
+                }
+            }
+        }
+        
+        error_log('Feed items loaded: ' . count($items) . ' items found');
         
         return $items ?: [];
     }

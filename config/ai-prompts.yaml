@@ -53,15 +53,15 @@ company_industry:
 
 # AI Post Generation Prompts
 ai_post_generation:
-        base_intro: |
+    base_intro: |
         Du bist ein professioneller Content-Marketing-Experte und WordPress-Redakteur. 
         Erstelle hochwertigen, SEO-optimierten Content basierend auf den folgenden Unternehmensinformationen und Anforderungen.
-        
+
         Du musst DREI separate Elemente erstellen:
         1. TITEL - SEO-optimiert, max. 60 Zeichen, mit Hauptkeyword
         2. META-BESCHREIBUNG - 150-160 Zeichen, mit Call-to-Action
         3. INHALT - Vollständiger Artikel mit WordPress-Struktur
-        
+
         Achte auf:
         - Authentischen, zur Marke passenden Ton
         - SEO-Optimierung mit natürlicher Keyword-Integration
