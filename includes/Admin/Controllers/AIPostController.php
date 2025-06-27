@@ -274,72 +274,46 @@ class AIPostController {
         global $wpdb;
         $placeholders = implode(',', array_fill(0, count($selected_items), '%s'));
 
-        // Load feed items with full content
+        // Use simpler query without JSON functions for better compatibility
         $items = $wpdb->get_results(
             $wpdb->prepare(
                 "
-            SELECT ri.*, p.post_title as feed_title,
-                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
-                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) as description,
-                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.link')) as link,
-                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.content')) as content
-            FROM {$wpdb->prefix}feed_raw_items ri
-            JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
-            WHERE ri.item_hash IN ($placeholders)
-            ORDER BY ri.pub_date DESC
-        ",
-                $selected_items
-            ),
-            ARRAY_A
-        );
-
-        // If JSON extraction fails, try simpler query and parse manually
-        if (empty($items)) {
-            error_log('JSON extraction failed, trying simpler query');
-            $items = $wpdb->get_results(
-                $wpdb->prepare(
-                    "
                 SELECT ri.*, p.post_title as feed_title, ri.raw_content
                 FROM {$wpdb->prefix}feed_raw_items ri
                 JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
                 WHERE ri.item_hash IN ($placeholders)
                 ORDER BY ri.pub_date DESC
             ",
-                    $selected_items
-                ),
-                ARRAY_A
-            );
+                $selected_items
+            ),
+            ARRAY_A
+        );
 
-            // Parse raw_content manually
-            foreach ($items as &$item) {
-                if (!empty($item['raw_content'])) {
-                    $raw_data = json_decode($item['raw_content'], true);
-                    if ($raw_data) {
-                        $item['title'] = $raw_data['title'] ?? 'Unknown Title';
-                        $item['description'] = $raw_data['description'] ?? '';
-                        $item['link'] = $raw_data['link'] ?? '';
-                        $item['content'] = $raw_data['content'] ?? ($raw_data['description'] ?? '');
-                    }
-                }
-            }
-        }
-
-        error_log('Feed items loaded: ' . count($items) . ' items found');
+        error_log('Feed items raw query result: ' . count($items) . ' items found');
 
         // Format items for prompt
         $formatted_items = [];
         foreach ($items as $item) {
-            $title = $item['title'] ?: 'Untitled';
-            $description = $item['description'] ?: '';
-            $content = $item['content'] ?: $description;
-            $link = $item['link'] ?: '';
+            // Parse raw_content JSON
+            $raw_data = [];
+            if (!empty($item['raw_content'])) {
+                $decoded = json_decode($item['raw_content'], true);
+                if ($decoded) {
+                    $raw_data = $decoded;
+                }
+            }
+
+            $title = $raw_data['title'] ?? ($item['title'] ?? 'Untitled');
+            $description = $raw_data['description'] ?? ($item['description'] ?? '');
+            $content = $raw_data['content'] ?? ($raw_data['description'] ?? $description);
+            $link = $raw_data['link'] ?? ($item['link'] ?? '');
 
             // Clean up HTML from content
             $clean_content = wp_strip_all_tags($content);
 
-            // Truncate very long content
-            if (strlen($clean_content) > 2000) {
-                $clean_content = substr($clean_content, 0, 2000) . '...';
+            // Truncate very long content for preview
+            if (strlen($clean_content) > 500) {
+                $clean_content = substr($clean_content, 0, 500) . '...';
             }
 
             $formatted_items[] = [
@@ -352,6 +326,7 @@ class AIPostController {
             ];
         }
 
+        error_log('Feed items formatted: ' . count($formatted_items) . ' items processed');
         return $formatted_items;
     }
 
@@ -761,11 +736,6 @@ class AIPostController {
         array $form_data,
         array $source_content
     ): string {
-        // Use PromptManager but exclude company information for debug (since it's shown in PROFILE DATA)
-        $prompt_manager = new \AthenaAI\Core\PromptManager();
-
-        // Get the base prompt structure
-        $config = $prompt_manager->get_config();
         $prompt = '';
 
         // Add base instruction
@@ -776,15 +746,7 @@ class AIPostController {
 
         // Add content type
         $content_type = $form_data['content_type'] ?? 'blog_post';
-        $content_type_config =
-            $config['content_types'][$content_type] ?? $config['content_types']['blog_post'];
-        $prompt .= 'CONTENT-TYP: ' . strtoupper($content_type) . "\n";
-        $prompt .= $content_type_config['intro'] . "\n\n";
-
-        // Add requirements if they exist
-        if (!empty($content_type_config['requirements'])) {
-            $prompt .= "ANFORDERUNGEN:\n" . $content_type_config['requirements'] . "\n\n";
-        }
+        $prompt .= 'CONTENT-TYP: ' . strtoupper($content_type) . "\n\n";
 
         // Add form parameters (excluding empty ones)
         $params = [];
