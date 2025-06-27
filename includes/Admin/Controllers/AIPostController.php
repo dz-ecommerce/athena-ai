@@ -110,6 +110,67 @@ class AIPostController {
             // Step 1: Load profile data
             $profile_data = \get_option('athena_ai_profiles', []);
 
+            // Step 2: Load source content based on form data
+            $source_content = [];
+            $content_source = $form_data['content_source'] ?? 'feed_items';
+
+            switch ($content_source) {
+                case 'feed_items':
+                    if (!empty($form_data['selected_feed_items'])) {
+                        $feed_items = self::load_feed_items($form_data);
+                        $source_content['feed_items'] = $feed_items;
+                    }
+                    break;
+
+                case 'page_content':
+                    if (!empty($form_data['selected_pages'])) {
+                        $pages = self::load_wordpress_pages($form_data);
+                        $source_content['pages'] = $pages;
+                    }
+                    break;
+
+                case 'post_content':
+                    if (!empty($form_data['selected_posts'])) {
+                        $posts = self::load_wordpress_posts($form_data);
+                        $source_content['posts'] = $posts;
+                    }
+                    break;
+
+                case 'custom_topic':
+                    if (!empty($form_data['custom_topic'])) {
+                        $source_content['custom_topic'] = $form_data['custom_topic'];
+                    }
+                    break;
+            }
+
+            // Step 3: Build AI prompt
+            $prompt_manager = \AthenaAI\Core\PromptManager::get_instance();
+            $prompt = $prompt_manager->build_ai_post_prompt(
+                $form_data,
+                $profile_data,
+                $source_content
+            );
+
+            // Step 4: Generate AI content
+            $ai_response = self::generate_ai_content($prompt, $form_data);
+
+            // Step 5: Parse AI response
+            $parsed_content = $prompt_manager->parse_ai_post_response($ai_response);
+
+            \wp_send_json_success([
+                'step' => 'completed',
+                'message' => 'AI Post generation completed!',
+                'progress' => 100,
+                'result' => $parsed_content,
+                'debug' => [
+                    'form_data' => $form_data,
+                    'profile_data' => $profile_data,
+                    'source_content' => $source_content,
+                    'prompt' => $prompt,
+                    'ai_response' => $ai_response,
+                ],
+            ]);
+        } catch (\Exception $e) {
             // Step 2: Skip source content loading temporarily
             $source_content = [];
 
@@ -129,7 +190,7 @@ class AIPostController {
                 'progress' => 100,
                 'result' => $parsed_content,
             ]);
-        } catch (\Exception $e) {
+
             // If AI generation fails, provide demo content with clear error message
             error_log('AI Post Generation Exception: ' . $e->getMessage());
 
@@ -213,24 +274,26 @@ class AIPostController {
         global $wpdb;
         $placeholders = implode(',', array_fill(0, count($selected_items), '%s'));
 
-        // First try with JSON extraction
+        // Load feed items with full content
         $items = $wpdb->get_results(
             $wpdb->prepare(
                 "
             SELECT ri.*, p.post_title as feed_title,
                    JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.title')) as title,
                    JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.description')) as description,
-                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.link')) as link
+                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.link')) as link,
+                   JSON_UNQUOTE(JSON_EXTRACT(ri.raw_content, '$.content')) as content
             FROM {$wpdb->prefix}feed_raw_items ri
             JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
             WHERE ri.item_hash IN ($placeholders)
+            ORDER BY ri.pub_date DESC
         ",
                 $selected_items
             ),
             ARRAY_A
         );
 
-        // If JSON extraction fails, try simpler query
+        // If JSON extraction fails, try simpler query and parse manually
         if (empty($items)) {
             error_log('JSON extraction failed, trying simpler query');
             $items = $wpdb->get_results(
@@ -240,6 +303,7 @@ class AIPostController {
                 FROM {$wpdb->prefix}feed_raw_items ri
                 JOIN {$wpdb->posts} p ON ri.feed_id = p.ID
                 WHERE ri.item_hash IN ($placeholders)
+                ORDER BY ri.pub_date DESC
             ",
                     $selected_items
                 ),
@@ -254,6 +318,7 @@ class AIPostController {
                         $item['title'] = $raw_data['title'] ?? 'Unknown Title';
                         $item['description'] = $raw_data['description'] ?? '';
                         $item['link'] = $raw_data['link'] ?? '';
+                        $item['content'] = $raw_data['content'] ?? ($raw_data['description'] ?? '');
                     }
                 }
             }
@@ -261,7 +326,33 @@ class AIPostController {
 
         error_log('Feed items loaded: ' . count($items) . ' items found');
 
-        return $items ?: [];
+        // Format items for prompt
+        $formatted_items = [];
+        foreach ($items as $item) {
+            $title = $item['title'] ?: 'Untitled';
+            $description = $item['description'] ?: '';
+            $content = $item['content'] ?: $description;
+            $link = $item['link'] ?: '';
+
+            // Clean up HTML from content
+            $clean_content = wp_strip_all_tags($content);
+
+            // Truncate very long content
+            if (strlen($clean_content) > 2000) {
+                $clean_content = substr($clean_content, 0, 2000) . '...';
+            }
+
+            $formatted_items[] = [
+                'title' => $title,
+                'description' => $description,
+                'content' => $clean_content,
+                'link' => $link,
+                'feed_title' => $item['feed_title'] ?? 'Unknown Feed',
+                'pub_date' => $item['pub_date'] ?? '',
+            ];
+        }
+
+        return $formatted_items;
     }
 
     /**
@@ -559,27 +650,28 @@ class AIPostController {
             switch ($content_source) {
                 case 'feed_items':
                     if (!empty($form_data['selected_feed_items'])) {
-                        $source_content = self::load_feed_items($form_data);
+                        $feed_items = self::load_feed_items($form_data);
+                        $source_content['feed_items'] = $feed_items;
                     }
                     break;
 
                 case 'page_content':
                     if (!empty($form_data['selected_pages'])) {
-                        $source_content = self::load_wordpress_pages($form_data);
+                        $pages = self::load_wordpress_pages($form_data);
+                        $source_content['pages'] = $pages;
                     }
                     break;
 
                 case 'post_content':
                     if (!empty($form_data['selected_posts'])) {
-                        $source_content = self::load_wordpress_posts($form_data);
+                        $posts = self::load_wordpress_posts($form_data);
+                        $source_content['posts'] = $posts;
                     }
                     break;
 
                 case 'custom_topic':
                     if (!empty($form_data['custom_topic'])) {
-                        $source_content = [
-                            'custom_topic' => $form_data['custom_topic'],
-                        ];
+                        $source_content['custom_topic'] = $form_data['custom_topic'];
                     }
                     break;
             }
@@ -627,15 +719,58 @@ class AIPostController {
             if (!empty($source_content)) {
                 if (isset($source_content['custom_topic'])) {
                     $debug_output .= 'Custom Topic: ' . $source_content['custom_topic'] . "\n";
-                } else {
-                    $debug_output .= 'Number of items loaded: ' . count($source_content) . "\n";
-                    foreach ($source_content as $index => $item) {
+                }
+
+                if (isset($source_content['feed_items']) && !empty($source_content['feed_items'])) {
+                    $debug_output .=
+                        'Feed Items loaded: ' . count($source_content['feed_items']) . "\n\n";
+                    foreach ($source_content['feed_items'] as $index => $item) {
+                        $debug_output .= 'Feed Item ' . ($index + 1) . ":\n";
+                        $debug_output .= '  Title: ' . ($item['title'] ?? 'No title') . "\n";
                         $debug_output .=
-                            'Item ' . ($index + 1) . ': ' . ($item['title'] ?? 'No title') . "\n";
-                        if (isset($item['content'])) {
+                            '  Feed Source: ' . ($item['feed_title'] ?? 'Unknown') . "\n";
+                        $debug_output .= '  Link: ' . ($item['link'] ?? 'No link') . "\n";
+                        if (!empty($item['description'])) {
                             $debug_output .=
-                                'Content: ' .
-                                substr(strip_tags($item['content']), 0, 200) .
+                                '  Description: ' . substr($item['description'], 0, 200) . "...\n";
+                        }
+                        if (!empty($item['content'])) {
+                            $debug_output .=
+                                '  Content: ' . substr($item['content'], 0, 300) . "...\n";
+                        }
+                        if (!empty($item['pub_date'])) {
+                            $debug_output .= '  Published: ' . $item['pub_date'] . "\n";
+                        }
+                        $debug_output .= "\n";
+                    }
+                }
+
+                if (isset($source_content['pages']) && !empty($source_content['pages'])) {
+                    $debug_output .=
+                        'WordPress Pages loaded: ' . count($source_content['pages']) . "\n\n";
+                    foreach ($source_content['pages'] as $index => $page) {
+                        $debug_output .= 'Page ' . ($index + 1) . ":\n";
+                        $debug_output .= '  Title: ' . ($page['title'] ?? 'No title') . "\n";
+                        if (!empty($page['content'])) {
+                            $debug_output .=
+                                '  Content: ' .
+                                substr(strip_tags($page['content']), 0, 300) .
+                                "...\n";
+                        }
+                        $debug_output .= "\n";
+                    }
+                }
+
+                if (isset($source_content['posts']) && !empty($source_content['posts'])) {
+                    $debug_output .=
+                        'WordPress Posts loaded: ' . count($source_content['posts']) . "\n\n";
+                    foreach ($source_content['posts'] as $index => $post) {
+                        $debug_output .= 'Post ' . ($index + 1) . ":\n";
+                        $debug_output .= '  Title: ' . ($post['title'] ?? 'No title') . "\n";
+                        if (!empty($post['content'])) {
+                            $debug_output .=
+                                '  Content: ' .
+                                substr(strip_tags($post['content']), 0, 300) .
                                 "...\n";
                         }
                         $debug_output .= "\n";

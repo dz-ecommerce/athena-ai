@@ -397,12 +397,27 @@ async function generatePost() {
                 }
                 data[key].push(value);
             } else {
-                // Only add non-empty values or explicitly allow empty strings for certain fields
-                if (value !== '' || ['custom_topic', 'instructions', 'target_audience', 'keywords'].includes(key)) {
-                    data[key] = value;
-                }
+                // Add all values, including empty ones for certain important fields
+                data[key] = value;
             }
         }
+        
+        // Ensure important fields are present even if empty
+        const importantFields = ['content_source', 'content_type', 'tone', 'content_length'];
+        importantFields.forEach(field => {
+            if (!(field in data)) {
+                // Get value from form element directly if not in FormData
+                const element = form.querySelector(`[name="${field}"]`);
+                if (element) {
+                    if (element.type === 'radio') {
+                        const checked = form.querySelector(`[name="${field}"]:checked`);
+                        data[field] = checked ? checked.value : '';
+                    } else {
+                        data[field] = element.value || '';
+                    }
+                }
+            }
+        });
         
         console.log('Form data collected:', data); // Debug log
         
@@ -511,12 +526,27 @@ async function showOutput() {
                 }
                 data[key].push(value);
             } else {
-                // Only add non-empty values or explicitly allow empty strings for certain fields
-                if (value !== '' || ['custom_topic', 'instructions', 'target_audience', 'keywords'].includes(key)) {
-                    data[key] = value;
-                }
+                // Add all values, including empty ones for certain important fields
+                data[key] = value;
             }
         }
+        
+        // Ensure important fields are present even if empty
+        const importantFields = ['content_source', 'content_type', 'tone', 'content_length'];
+        importantFields.forEach(field => {
+            if (!(field in data)) {
+                // Get value from form element directly if not in FormData
+                const element = form.querySelector(`[name="${field}"]`);
+                if (element) {
+                    if (element.type === 'radio') {
+                        const checked = form.querySelector(`[name="${field}"]:checked`);
+                        data[field] = checked ? checked.value : '';
+                    } else {
+                        data[field] = element.value || '';
+                    }
+                }
+            }
+        });
         
         console.log('Form data collected for output preview:', data);
         

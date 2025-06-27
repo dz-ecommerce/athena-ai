@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 /**
  * AI Prompt Manager
- * 
+ *
  * Verwaltet AI-Prompts aus der YAML-Konfigurationsdatei
- * 
+ *
  * @package AthenaAI\Core
  * @since 2.1.0
  */
@@ -14,31 +14,30 @@ namespace AthenaAI\Core;
 
 // Verhindere direkten Zugriff
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
 class PromptManager {
-    
     /**
      * Singleton-Instanz
      */
     private static $instance = null;
-    
+
     /**
      * Geladene Prompt-Konfiguration
      */
     private $prompts = null;
-    
+
     /**
      * Pfad zur YAML-Konfigurationsdatei
      */
     private $config_file;
-    
+
     /**
      * @var array Cached prompts configuration
      */
     private static $prompts_config = null;
-    
+
     /**
      * Konstruktor
      */
@@ -46,7 +45,7 @@ class PromptManager {
         $this->config_file = ATHENA_AI_PLUGIN_DIR . 'config/ai-prompts.yaml';
         $this->load_prompts();
     }
-    
+
     /**
      * Singleton-Instanz abrufen
      */
@@ -56,17 +55,19 @@ class PromptManager {
         }
         return self::$instance;
     }
-    
+
     /**
      * YAML-Prompts laden
      */
     private function load_prompts() {
         if (!file_exists($this->config_file)) {
-            error_log('Athena AI: Prompt-Konfigurationsdatei nicht gefunden: ' . $this->config_file);
+            error_log(
+                'Athena AI: Prompt-Konfigurationsdatei nicht gefunden: ' . $this->config_file
+            );
             $this->prompts = [];
             return;
         }
-        
+
         // Prüfen ob YAML-Extension verfügbar ist
         if (function_exists('yaml_parse_file')) {
             $this->prompts = yaml_parse_file($this->config_file);
@@ -80,13 +81,13 @@ class PromptManager {
                 $this->prompts = $this->parse_simple_yaml($this->config_file);
             }
         }
-        
+
         if ($this->prompts === false || $this->prompts === null) {
             error_log('Athena AI: Fehler beim Laden der Prompt-Konfiguration');
             $this->prompts = [];
         }
     }
-    
+
     /**
      * Einfacher YAML-Parser als Fallback
      */
@@ -96,62 +97,62 @@ class PromptManager {
         $result = [];
         $stack = [&$result];
         $last_indent = -1;
-        
+
         foreach ($lines as $line_num => $line) {
             // Kommentare und leere Zeilen überspringen
             if (empty(trim($line)) || strpos(trim($line), '#') === 0) {
                 continue;
             }
-            
+
             // Einrückung messen
             $indent = strlen($line) - strlen(ltrim($line));
             $line = trim($line);
-            
+
             // Multi-line String erkennen (|)
             if (strpos($line, '|') !== false) {
                 $parts = explode(':', $line, 2);
                 $key = trim($parts[0]);
                 $multiline_content = '';
-                
+
                 // Folgende Zeilen sammeln bis Einrückung wieder zurückgeht
                 for ($i = $line_num + 1; $i < count($lines); $i++) {
                     $next_line = $lines[$i];
                     $next_indent = strlen($next_line) - strlen(ltrim($next_line));
-                    
+
                     if (trim($next_line) === '' || strpos(trim($next_line), '#') === 0) {
                         $multiline_content .= "\n";
                         continue;
                     }
-                    
+
                     if ($next_indent <= $indent) {
                         break;
                     }
-                    
+
                     $multiline_content .= trim($next_line) . "\n";
                 }
-                
+
                 $current = &$stack[count($stack) - 1];
                 $current[$key] = trim($multiline_content);
                 continue;
             }
-            
+
             // Key-Value Paare
             if (strpos($line, ':') !== false) {
                 $parts = explode(':', $line, 2);
                 $key = trim($parts[0]);
                 $value = trim($parts[1] ?? '');
-                
+
                 // Anführungszeichen entfernen
                 $value = trim($value, '"\'');
-                
+
                 // Stack anpassen basierend auf Einrückung
                 while (count($stack) > 1 && $indent <= $last_indent) {
                     array_pop($stack);
                     $last_indent -= 4; // Annahme: 4 Leerzeichen pro Ebene
                 }
-                
+
                 $current = &$stack[count($stack) - 1];
-                
+
                 if (empty($value)) {
                     // Neue Sektion
                     $current[$key] = [];
@@ -163,10 +164,10 @@ class PromptManager {
                 }
             }
         }
-        
+
         return $result;
     }
-    
+
     /**
      * Prompt für einen bestimmten Modal-Typ abrufen
      */
@@ -174,14 +175,14 @@ class PromptManager {
         if (!isset($this->prompts[$modal_type])) {
             return null;
         }
-        
+
         if ($prompt_part === null) {
             return $this->prompts[$modal_type];
         }
-        
+
         return $this->prompts[$modal_type][$prompt_part] ?? null;
     }
-    
+
     /**
      * Vollständigen Prompt zusammenbauen
      */
@@ -190,10 +191,10 @@ class PromptManager {
         if (!$config) {
             return '';
         }
-        
+
         $intro = $config['intro'] ?? '';
         $limit = $config['limit'] ?? '';
-        
+
         $full_prompt = $intro;
         if (!empty($extra_info)) {
             $full_prompt .= "\n\n" . $extra_info;
@@ -201,10 +202,10 @@ class PromptManager {
         if (!empty($limit)) {
             $full_prompt .= "\n\n" . $limit;
         }
-        
+
         return $full_prompt;
     }
-    
+
     /**
      * Alle verfügbaren Modal-Typen abrufen
      */
@@ -217,7 +218,7 @@ class PromptManager {
         }
         return $modals;
     }
-    
+
     /**
      * Zielfeld für einen Modal-Typ abrufen
      */
@@ -235,14 +236,15 @@ class PromptManager {
      */
     public function build_ai_post_prompt($form_data, $profile_data, $source_content = []) {
         $config = $this->get_prompt('ai_post_generation');
-        
+
         // Debug: Log what we found
         error_log('AI Post Generation Config: ' . print_r($config, true));
-        
+
         if (empty($config)) {
             error_log('ai_post_generation config not found, using simple fallback');
-            $simple_prompt = "Du bist ein professioneller Content-Marketing-Experte. ";
-            $simple_prompt .= "Erstelle einen Blog-Artikel über E-Commerce und Webdesign für das Unternehmen DZ Ecom. ";
+            $simple_prompt = 'Du bist ein professioneller Content-Marketing-Experte. ';
+            $simple_prompt .=
+                'Erstelle einen Blog-Artikel über E-Commerce und Webdesign für das Unternehmen DZ Ecom. ';
             $simple_prompt .= "Verwende diese Struktur:\n\n";
             $simple_prompt .= "=== TITEL ===\n[SEO-optimierter Titel]\n\n";
             $simple_prompt .= "=== META-BESCHREIBUNG ===\n[Meta-Beschreibung 150-160 Zeichen]\n\n";
@@ -256,9 +258,10 @@ class PromptManager {
 
         // Add content type specific instructions
         $content_type = $form_data['content_type'] ?? 'blog_post';
-        $content_type_config = $config['content_types'][$content_type] ?? $config['content_types']['blog_post'];
-        
-        $prompt .= "CONTENT-TYP: " . strtoupper($content_type) . "\n";
+        $content_type_config =
+            $config['content_types'][$content_type] ?? $config['content_types']['blog_post'];
+
+        $prompt .= 'CONTENT-TYP: ' . strtoupper($content_type) . "\n";
         $prompt .= $content_type_config['intro'] . "\n\n";
         $prompt .= "ANFORDERUNGEN:\n" . $content_type_config['requirements'] . "\n\n";
 
@@ -270,28 +273,28 @@ class PromptManager {
         // Add company information
         $prompt .= "UNTERNEHMENSINFORMATIONEN:\n";
         if (!empty($profile_data['company_name'])) {
-            $prompt .= "- Firmenname: " . $profile_data['company_name'] . "\n";
+            $prompt .= '- Firmenname: ' . $profile_data['company_name'] . "\n";
         }
         if (!empty($profile_data['company_industry'])) {
-            $prompt .= "- Branche: " . $profile_data['company_industry'] . "\n";
+            $prompt .= '- Branche: ' . $profile_data['company_industry'] . "\n";
         }
         if (!empty($profile_data['company_description'])) {
-            $prompt .= "- Beschreibung: " . $profile_data['company_description'] . "\n";
+            $prompt .= '- Beschreibung: ' . $profile_data['company_description'] . "\n";
         }
         if (!empty($profile_data['company_products'])) {
-            $prompt .= "- Produkte/Dienstleistungen: " . $profile_data['company_products'] . "\n";
+            $prompt .= '- Produkte/Dienstleistungen: ' . $profile_data['company_products'] . "\n";
         }
         if (!empty($profile_data['company_usps'])) {
-            $prompt .= "- Alleinstellungsmerkmale: " . $profile_data['company_usps'] . "\n";
+            $prompt .= '- Alleinstellungsmerkmale: ' . $profile_data['company_usps'] . "\n";
         }
         if (!empty($profile_data['target_audience'])) {
-            $prompt .= "- Zielgruppe: " . $profile_data['target_audience'] . "\n";
+            $prompt .= '- Zielgruppe: ' . $profile_data['target_audience'] . "\n";
         }
         if (!empty($profile_data['expertise_areas'])) {
-            $prompt .= "- Expertise: " . $profile_data['expertise_areas'] . "\n";
+            $prompt .= '- Expertise: ' . $profile_data['expertise_areas'] . "\n";
         }
         if (!empty($profile_data['seo_keywords'])) {
-            $prompt .= "- SEO-Keywords: " . $profile_data['seo_keywords'] . "\n";
+            $prompt .= '- SEO-Keywords: ' . $profile_data['seo_keywords'] . "\n";
         }
         $prompt .= "\n";
 
@@ -302,12 +305,19 @@ class PromptManager {
 
         // Add length guidelines
         $length = $form_data['content_length'] ?? 'medium';
-        $length_instruction = $config['length_guidelines'][$length] ?? $config['length_guidelines']['medium'];
+        $length_instruction =
+            $config['length_guidelines'][$length] ?? $config['length_guidelines']['medium'];
         $prompt .= "LÄNGE:\n" . $length_instruction . "\n\n";
 
         // Add custom target audience if provided
-        if (!empty($form_data['target_audience']) && $form_data['target_audience'] !== $profile_data['target_audience']) {
-            $prompt .= "SPEZIFISCHE ZIELGRUPPE FÜR DIESEN CONTENT:\n" . $form_data['target_audience'] . "\n\n";
+        if (
+            !empty($form_data['target_audience']) &&
+            $form_data['target_audience'] !== $profile_data['target_audience']
+        ) {
+            $prompt .=
+                "SPEZIFISCHE ZIELGRUPPE FÜR DIESEN CONTENT:\n" .
+                $form_data['target_audience'] .
+                "\n\n";
         }
 
         // Add keywords if provided
@@ -318,52 +328,59 @@ class PromptManager {
         // Add source content
         if (!empty($source_content)) {
             $prompt .= "QUELL-CONTENT:\n";
-            
+
             // Feed items
-            if (!empty($source_content['feed_items'])) {
+            if (isset($source_content['feed_items']) && !empty($source_content['feed_items'])) {
                 $prompt .= "Feed-Artikel:\n";
                 foreach ($source_content['feed_items'] as $item) {
-                    $prompt .= "- Titel: " . ($item['title'] ?? 'Unbekannt') . "\n";
-                    if (!empty($item['description'])) {
-                        $prompt .= "  Beschreibung: " . substr($item['description'], 0, 300) . "...\n";
-                    }
+                    $prompt .= '- Titel: ' . ($item['title'] ?? 'Unbekannt') . "\n";
+                    $prompt .= '  Quelle: ' . ($item['feed_title'] ?? 'Unbekannte Quelle') . "\n";
                     if (!empty($item['link'])) {
-                        $prompt .= "  Link: " . $item['link'] . "\n";
+                        $prompt .= '  Link: ' . $item['link'] . "\n";
+                    }
+                    if (!empty($item['description'])) {
+                        $prompt .=
+                            '  Beschreibung: ' . substr($item['description'], 0, 300) . "...\n";
+                    }
+                    if (!empty($item['content'])) {
+                        $prompt .= '  Volltext: ' . substr($item['content'], 0, 500) . "...\n";
                     }
                     $prompt .= "\n";
                 }
             }
-            
+
             // Pages
-            if (!empty($source_content['pages'])) {
+            if (isset($source_content['pages']) && !empty($source_content['pages'])) {
                 $prompt .= "WordPress-Seiten:\n";
                 foreach ($source_content['pages'] as $page) {
-                    $prompt .= "- Titel: " . ($page['title'] ?? 'Unbekannt') . "\n";
+                    $prompt .= '- Titel: ' . ($page['title'] ?? 'Unbekannt') . "\n";
                     if (!empty($page['content'])) {
-                        $prompt .= "  Inhalt: " . substr(strip_tags($page['content']), 0, 500) . "...\n";
+                        $prompt .=
+                            '  Inhalt: ' . substr(strip_tags($page['content']), 0, 500) . "...\n";
                     }
                     $prompt .= "\n";
                 }
             }
-            
+
             // Posts
-            if (!empty($source_content['posts'])) {
+            if (isset($source_content['posts']) && !empty($source_content['posts'])) {
                 $prompt .= "WordPress-Beiträge:\n";
                 foreach ($source_content['posts'] as $post) {
-                    $prompt .= "- Titel: " . ($post['title'] ?? 'Unbekannt') . "\n";
+                    $prompt .= '- Titel: ' . ($post['title'] ?? 'Unbekannt') . "\n";
                     if (!empty($post['content'])) {
-                        $prompt .= "  Inhalt: " . substr(strip_tags($post['content']), 0, 500) . "...\n";
+                        $prompt .=
+                            '  Inhalt: ' . substr(strip_tags($post['content']), 0, 500) . "...\n";
                     }
                     $prompt .= "\n";
                 }
             }
-            
-            $prompt .= "\n";
-        }
 
-        // Add custom topic if provided
-        if (!empty($form_data['custom_topic'])) {
-            $prompt .= "CUSTOM TOPIC:\n" . $form_data['custom_topic'] . "\n\n";
+            // Custom topic
+            if (isset($source_content['custom_topic']) && !empty($source_content['custom_topic'])) {
+                $prompt .= "Custom Topic:\n" . $source_content['custom_topic'] . "\n\n";
+            }
+        } else {
+            $prompt .= "QUELL-CONTENT:\nKeine Quell-Inhalte ausgewählt.\n\n";
         }
 
         // Add additional instructions
@@ -386,15 +403,14 @@ class PromptManager {
         $prompt .= "=== TITEL ===\n";
         $prompt .= "[Hier den SEO-optimierten Titel schreiben - max. 60 Zeichen]\n\n";
         $prompt .= "=== META-BESCHREIBUNG ===\n";
-        $prompt .= "[Hier die Meta-Beschreibung schreiben - 150-160 Zeichen, mit Call-to-Action]\n\n";
+        $prompt .=
+            "[Hier die Meta-Beschreibung schreiben - 150-160 Zeichen, mit Call-to-Action]\n\n";
         $prompt .= "=== INHALT ===\n";
         $prompt .= "[Hier den vollständigen Artikel-Inhalt schreiben]\n\n";
-        $prompt .= "Beginne jetzt mit der Content-Erstellung:";
+        $prompt .= 'Beginne jetzt mit der Content-Erstellung:';
 
         return $prompt;
     }
-
-    
 
     /**
      * Parse AI response to extract title, meta description, and content
@@ -406,16 +422,28 @@ class PromptManager {
         $result = [
             'title' => '',
             'meta_description' => '',
-            'content' => ''
+            'content' => '',
         ];
 
         // Extract title
-        if (preg_match('/=== TITEL ===\s*\n(.*?)(?=\n=== META-BESCHREIBUNG ===|\n=== INHALT ===|$)/s', $ai_response, $matches)) {
+        if (
+            preg_match(
+                '/=== TITEL ===\s*\n(.*?)(?=\n=== META-BESCHREIBUNG ===|\n=== INHALT ===|$)/s',
+                $ai_response,
+                $matches
+            )
+        ) {
             $result['title'] = trim($matches[1]);
         }
 
         // Extract meta description
-        if (preg_match('/=== META-BESCHREIBUNG ===\s*\n(.*?)(?=\n=== INHALT ===|\n=== TITEL ===|$)/s', $ai_response, $matches)) {
+        if (
+            preg_match(
+                '/=== META-BESCHREIBUNG ===\s*\n(.*?)(?=\n=== INHALT ===|\n=== TITEL ===|$)/s',
+                $ai_response,
+                $matches
+            )
+        ) {
             $result['meta_description'] = trim($matches[1]);
         }
 
@@ -472,28 +500,28 @@ class PromptManager {
 
         return $result;
     }
-     
+
     /**
      * Globale Einstellungen abrufen
      */
     public function get_global_setting($key) {
         return $this->prompts['global'][$key] ?? null;
     }
-    
+
     /**
      * Provider-Einstellungen abrufen
      */
     public function get_provider_settings($provider) {
         return $this->prompts['providers'][$provider] ?? [];
     }
-    
+
     /**
      * Validierungsregeln abrufen
      */
     public function get_validation_rules() {
         return $this->prompts['validation'] ?? [];
     }
-    
+
     /**
      * Prompt-Konfiguration für JavaScript ausgeben
      */
@@ -503,17 +531,17 @@ class PromptManager {
             if (!$config) {
                 return '{}';
             }
-            
+
             return json_encode([
                 'intro' => $config['intro'] ?? '',
                 'limit' => $config['limit'] ?? '',
                 'target_field' => $config['target_field'] ?? '',
                 'max_words' => $config['max_words'] ?? null,
                 'max_items' => $config['max_items'] ?? null,
-                'format' => $config['format'] ?? 'text'
+                'format' => $config['format'] ?? 'text',
             ]);
         }
-        
+
         // Alle Konfigurationen für JavaScript
         $js_config = [];
         foreach ($this->get_available_modals() as $modal) {
@@ -524,13 +552,13 @@ class PromptManager {
                 'target_field' => $config['target_field'] ?? '',
                 'max_words' => $config['max_words'] ?? null,
                 'max_items' => $config['max_items'] ?? null,
-                'format' => $config['format'] ?? 'text'
+                'format' => $config['format'] ?? 'text',
             ];
         }
-        
+
         return json_encode($js_config);
     }
-    
+
     /**
      * Konfiguration neu laden (für Entwicklung/Debug)
      */
@@ -538,14 +566,14 @@ class PromptManager {
         $this->prompts = null;
         $this->load_prompts();
     }
-    
+
     /**
      * Prüfen ob Konfiguration gültig ist
      */
     public function is_config_valid() {
         return !empty($this->prompts) && is_array($this->prompts);
     }
-    
+
     /**
      * Debug-Informationen abrufen
      */
@@ -557,9 +585,7 @@ class PromptManager {
             'symfony_yaml' => class_exists('Symfony\Component\Yaml\Yaml'),
             'config_loaded' => $this->is_config_valid(),
             'available_modals' => $this->get_available_modals(),
-            'config_size' => count($this->prompts)
+            'config_size' => count($this->prompts),
         ];
     }
-
-
-} 
+}
