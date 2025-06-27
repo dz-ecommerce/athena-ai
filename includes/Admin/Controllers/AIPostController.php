@@ -684,17 +684,20 @@ class AIPostController {
                 $source_content
             );
 
-            // Create debug output showing what would be sent to AI
+            // Build form data debug output (excluding empty/duplicate fields)
             $debug_output = "=== FORM DATA ===\n";
-            $debug_output .= 'Content Source: ' . ($form_data['content_source'] ?? 'None') . "\n";
-            $debug_output .= 'Content Type: ' . ($form_data['content_type'] ?? 'None') . "\n";
-            $debug_output .= 'Tone: ' . ($form_data['tone'] ?? 'None') . "\n";
-            $debug_output .= 'Target Audience: ' . ($form_data['target_audience'] ?? 'None') . "\n";
-            $debug_output .= 'Keywords: ' . ($form_data['keywords'] ?? 'None') . "\n";
-            $debug_output .= 'Content Length: ' . ($form_data['content_length'] ?? 'None') . "\n";
+            foreach ($form_data as $key => $value) {
+                // Skip empty target_audience and keywords since they're in profile data
+                if (($key === 'target_audience' || $key === 'keywords') && empty($value)) {
+                    continue;
+                }
 
-            if (!empty($form_data['instructions'])) {
-                $debug_output .= 'Instructions: ' . $form_data['instructions'] . "\n";
+                if (is_array($value) && !empty($value)) {
+                    $debug_output .=
+                        ucfirst(str_replace('_', ' ', $key)) . ': ' . implode(', ', $value) . "\n";
+                } elseif (!is_array($value) && !empty($value)) {
+                    $debug_output .= ucfirst(str_replace('_', ' ', $key)) . ': ' . $value . "\n";
+                }
             }
 
             $debug_output .= "\n=== PROFILE DATA ===\n";
@@ -716,7 +719,9 @@ class AIPostController {
             }
 
             $debug_output .= "\n=== AI PROMPT THAT WOULD BE SENT ===\n";
-            $debug_output .= $prompt;
+            // Use simplified prompt for debug output (without company info since it's already shown above)
+            $simplified_prompt = self::build_simplified_ai_prompt($form_data, $source_content);
+            $debug_output .= $simplified_prompt;
 
             $debug_output .= "\n\n=== CONFIGURATION INFO ===\n";
             $debug_output .= 'AI Provider: ' . \get_option('athena_ai_provider', 'openai') . "\n";
@@ -747,5 +752,92 @@ class AIPostController {
                     \__('Error generating output preview: ', 'athena-ai') . $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Build a simplified AI prompt for debug output
+     */
+    private static function build_simplified_ai_prompt(
+        array $form_data,
+        array $source_content
+    ): string {
+        // Use PromptManager but exclude company information for debug (since it's shown in PROFILE DATA)
+        $prompt_manager = new \AthenaAI\Core\PromptManager();
+
+        // Get the base prompt structure
+        $config = $prompt_manager->get_config();
+        $prompt = '';
+
+        // Add base instruction
+        $prompt .=
+            "Du bist ein professioneller Content-Marketing-Experte und WordPress-Redakteur.\n";
+        $prompt .=
+            "Erstelle hochwertigen, SEO-optimierten Content basierend auf den Unternehmensinformationen.\n\n";
+
+        // Add content type
+        $content_type = $form_data['content_type'] ?? 'blog_post';
+        $content_type_config =
+            $config['content_types'][$content_type] ?? $config['content_types']['blog_post'];
+        $prompt .= 'CONTENT-TYP: ' . strtoupper($content_type) . "\n";
+        $prompt .= $content_type_config['intro'] . "\n\n";
+
+        // Add requirements if they exist
+        if (!empty($content_type_config['requirements'])) {
+            $prompt .= "ANFORDERUNGEN:\n" . $content_type_config['requirements'] . "\n\n";
+        }
+
+        // Add form parameters (excluding empty ones)
+        $params = [];
+        if (!empty($form_data['tone'])) {
+            $params[] = 'Ton: ' . $form_data['tone'];
+        }
+        if (!empty($form_data['content_length'])) {
+            $params[] = 'Länge: ' . $form_data['content_length'];
+        }
+
+        // Only show target_audience and keywords if they have values from form data
+        // (they're shown in PROFILE DATA section if they exist there)
+        if (!empty($form_data['target_audience'])) {
+            $params[] = 'Zielgruppe: ' . $form_data['target_audience'];
+        }
+        if (!empty($form_data['keywords'])) {
+            $params[] = 'Keywords: ' . $form_data['keywords'];
+        }
+
+        if (!empty($params)) {
+            $prompt .= "FORM-PARAMETER:\n" . implode("\n", $params) . "\n\n";
+        }
+
+        // Add source content
+        if (!empty($source_content)) {
+            $prompt .= "QUELL-CONTENT:\n";
+
+            if (isset($source_content['feed_items']) && !empty($source_content['feed_items'])) {
+                $prompt .= 'Feed-Artikel (' . count($source_content['feed_items']) . " Items):\n";
+                foreach ($source_content['feed_items'] as $item) {
+                    $prompt .= '• ' . ($item['title'] ?? 'Unbekannt');
+                    if (!empty($item['feed_title'])) {
+                        $prompt .= ' [' . $item['feed_title'] . ']';
+                    }
+                    $prompt .= "\n";
+                }
+            }
+
+            if (isset($source_content['custom_topic'])) {
+                $prompt .= 'Custom Topic: ' . $source_content['custom_topic'] . "\n";
+            }
+
+            $prompt .= "\n";
+        }
+
+        // Add instructions if provided
+        if (!empty($form_data['instructions'])) {
+            $prompt .= "ZUSÄTZLICHE ANWEISUNGEN:\n" . $form_data['instructions'] . "\n\n";
+        }
+
+        $prompt .= "Hinweis: Unternehmensinformationen siehe oben in PROFILE DATA.\n";
+        $prompt .= "Der vollständige Prompt wird diese Informationen enthalten.\n";
+
+        return $prompt;
     }
 }
