@@ -19,9 +19,9 @@ $stored_data = AIPostController::get_stored_form_data();
 
 // Get the current hook suffix for debugging
 global $hook_suffix;
-error_log("New AI Post page hook: " . $hook_suffix);
+error_log('New AI Post page hook: ' . $hook_suffix);
 
-// Load the specific CSS for this page directly 
+// Load the specific CSS for this page directly
 $css_url = ATHENA_AI_PLUGIN_URL . 'assets/css/new-ai-post.css?v=' . time();
 ?>
 
@@ -233,6 +233,7 @@ function updateFormNavigation() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const generateBtn = document.getElementById('generate-btn');
+    const showOutputBtn = document.getElementById('show-output-btn');
     
     if (prevBtn) {
         prevBtn.style.display = currentStep > 1 ? 'inline-flex' : 'none';
@@ -244,6 +245,10 @@ function updateFormNavigation() {
     
     if (generateBtn) {
         generateBtn.style.display = currentStep === maxSteps ? 'inline-flex' : 'none';
+    }
+    
+    if (showOutputBtn) {
+        showOutputBtn.style.display = currentStep === maxSteps ? 'inline-flex' : 'none';
     }
 }
 
@@ -430,47 +435,17 @@ async function generatePost() {
             body: ajaxData
         });
         
-        updateProgress(60, 'Antwort wird verarbeitet...');
-        
-        // Get raw response text first
-        const responseText = await response.text();
-        console.log('Raw response:', responseText); // Debug log
-        
-        // Try to parse as JSON
-        let result;
-        try {
-            result = JSON.parse(responseText);
-            console.log('AJAX Response:', result); // Debug log
-        } catch (parseError) {
-            console.error('JSON Parse Error:', parseError);
-            console.error('Response was:', responseText);
-            throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 200) + '...');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        updateProgress(80, 'Content wird aufbereitet...');
+        const result = await response.json();
+        console.log('AJAX Response:', result); // Debug log
         
         if (result.success) {
-            updateProgress(100, 'Fertig!');
+            updateProgress(100, 'Generierung abgeschlossen!');
             
-            // Check if we're using demo content due to AI failure
-            if (result.data.error_info && result.data.error_info.using_demo) {
-                // Show warning about demo content
-                const warningDiv = document.createElement('div');
-                warningDiv.className = 'notice notice-warning';
-                warningDiv.innerHTML = `
-                    <p><strong>⚠️ AI-Service nicht verfügbar</strong></p>
-                    <p>Grund: ${result.data.error_info.ai_error}</p>
-                    <p>Es wird Demo-Content angezeigt. Bitte konfigurieren Sie Ihre AI-API-Schlüssel in den Einstellungen.</p>
-                `;
-                
-                // Insert warning before results
-                const contentArea = document.querySelector('.new-ai-post-page');
-                if (contentArea) {
-                    contentArea.insertBefore(warningDiv, contentArea.firstChild);
-                }
-            }
-            
-            // Show AI prompt debug info if available
+            // Show debug info if available
             if (result.data.debug && result.data.debug.prompt) {
                 console.log('AI Prompt sent to API:', result.data.debug.prompt);
                 console.log('AI Response received:', result.data.debug.ai_response);
@@ -493,6 +468,129 @@ async function generatePost() {
         // Reset button
         generateBtn.innerHTML = '<i class="fa-solid fa-magic"></i> Generate Post';
         generateBtn.disabled = false;
+    }
+}
+
+// Show output function (without AI generation)
+async function showOutput() {
+    const showOutputBtn = document.getElementById('show-output-btn');
+    const debugContainer = document.getElementById('debugContainer');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    if (!showOutputBtn) return;
+    
+    // Reset previous results
+    if (resultContainer) resultContainer.style.display = 'none';
+    
+    // Show loading state
+    showOutputBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Lädt...';
+    showOutputBtn.disabled = true;
+    
+    try {
+        // Collect all form data (same as generatePost)
+        const form = document.getElementById('ai-post-form');
+        
+        if (!form) {
+            throw new Error('Form element with ID "ai-post-form" not found');
+        }
+        
+        const formData = new FormData(form);
+        const data = {};
+        
+        // Convert FormData to regular object
+        for (let [key, value] of formData.entries()) {
+            // Skip nonce and action fields - they're not form data
+            if (key === 'ai_post_nonce' || key === 'action') {
+                continue;
+            }
+            
+            if (data[key]) {
+                // Handle multiple values (like multi-select)
+                if (!Array.isArray(data[key])) {
+                    data[key] = [data[key]];
+                }
+                data[key].push(value);
+            } else {
+                // Only add non-empty values or explicitly allow empty strings for certain fields
+                if (value !== '' || ['custom_topic', 'instructions', 'target_audience', 'keywords'].includes(key)) {
+                    data[key] = value;
+                }
+            }
+        }
+        
+        console.log('Form data collected for output preview:', data);
+        
+        // Prepare AJAX request for show output
+        const ajaxData = new FormData();
+        ajaxData.append('action', 'athena_ai_post_show_output');
+        ajaxData.append('nonce', athenaAjax.nonce);
+        
+        // Send form data as individual fields
+        for (const [key, value] of Object.entries(data)) {
+            if (Array.isArray(value)) {
+                // Handle arrays (like selected_feed_items)
+                value.forEach((item, index) => {
+                    ajaxData.append(`${key}[${index}]`, item);
+                });
+            } else {
+                ajaxData.append(key, value);
+            }
+        }
+        
+        // Send AJAX request
+        const response = await fetch(athenaAjax.ajaxurl, {
+            method: 'POST',
+            body: ajaxData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Show Output Response:', result);
+        
+        if (result.success) {
+            // Show debug container with output preview
+            if (debugContainer) {
+                debugContainer.style.display = 'block';
+                const debugContent = document.getElementById('debugContent');
+                const debugOutput = document.getElementById('debugOutput');
+                
+                if (debugOutput && result.data.debug_output) {
+                    debugOutput.textContent = result.data.debug_output;
+                    
+                    // Show debug content by default for output preview
+                    if (debugContent) {
+                        debugContent.style.display = 'block';
+                    }
+                    
+                    // Update toggle button text
+                    const toggleDebug = document.getElementById('toggleDebug');
+                    if (toggleDebug) {
+                        toggleDebug.innerHTML = '<i class="fas fa-eye-slash"></i> Details verbergen';
+                    }
+                }
+                
+                // Update debug header for output preview
+                const debugHeader = debugContainer.querySelector('.debug-header h3');
+                if (debugHeader) {
+                    debugHeader.innerHTML = '<i class="fas fa-eye"></i> Output Vorschau (ohne AI-Generierung)';
+                }
+            }
+            
+        } else {
+            console.error('Show Output Error:', result);
+            throw new Error(result.data?.message || 'Fehler beim Anzeigen der Output-Vorschau');
+        }
+        
+    } catch (error) {
+        console.error('Show output error:', error);
+        showError('Fehler beim Anzeigen der Output-Vorschau: ' + error.message);
+    } finally {
+        // Reset button
+        showOutputBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Show Output';
+        showOutputBtn.disabled = false;
     }
 }
 
@@ -714,11 +812,15 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Step Form -->
             <form id="ai-post-form" method="post" action="">
                 <?php wp_nonce_field('athena_ai_post_nonce', 'ai_post_nonce'); ?>
-                <input type="hidden" name="action" value="<?php echo esc_attr('athena_ai_post_step'); ?>">
+                <input type="hidden" name="action" value="<?php echo esc_attr(
+                    'athena_ai_post_step'
+                ); ?>">
 
                 <div class="step-forms">
                     <!-- Step 1: Content Source -->
-                    <div id="step-1" class="step-content <?php echo $current_step === 1 ? 'block' : 'hidden'; ?>">
+                    <div id="step-1" class="step-content <?php echo $current_step === 1
+                        ? 'block'
+                        : 'hidden'; ?>">
                         <div class="text-center mb-8">
                             <div class="bg-purple-100 text-purple-600 inline-flex p-4 rounded-full mb-4 mx-auto">
                                 <i class="fa-solid fa-rss fa-2x"></i>
@@ -763,7 +865,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <!-- Step 2: Content Type -->
-                    <div id="step-2" class="step-content <?php echo $current_step === 2 ? 'block' : 'hidden'; ?>">
+                    <div id="step-2" class="step-content <?php echo $current_step === 2
+                        ? 'block'
+                        : 'hidden'; ?>">
                         <div class="text-center mb-8">
                             <div class="bg-green-100 text-green-600 inline-flex p-4 rounded-full mb-4 mx-auto">
                                 <i class="fa-solid fa-list fa-2x"></i>
@@ -836,7 +940,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <!-- Step 3: Customization -->
-                    <div id="step-3" class="step-content <?php echo $current_step === 3 ? 'block' : 'hidden'; ?>">
+                    <div id="step-3" class="step-content <?php echo $current_step === 3
+                        ? 'block'
+                        : 'hidden'; ?>">
                         <div class="text-center mb-8">
                             <div class="bg-purple-100 text-purple-600 inline-flex p-4 rounded-full mb-4 mx-auto">
                                 <i class="fa-solid fa-cog fa-2x"></i>
@@ -873,16 +979,23 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 ORDER BY ri.pub_date DESC
                                                 LIMIT 50
                                             ");
-                                            
+
                                             if ($feed_items) {
                                                 foreach ($feed_items as $item) {
                                                     $title = $item->title ?: 'Untitled';
                                                     $feed_source = $item->feed_title;
-                                                    $display_title = esc_html($title . ' (' . $feed_source . ')');
+                                                    $display_title = esc_html(
+                                                        $title . ' (' . $feed_source . ')'
+                                                    );
                                                     if (strlen($display_title) > 80) {
-                                                        $display_title = substr($display_title, 0, 77) . '...';
+                                                        $display_title =
+                                                            substr($display_title, 0, 77) . '...';
                                                     }
-                                                    echo '<option value="' . esc_attr($item->item_hash) . '">' . $display_title . '</option>';
+                                                    echo '<option value="' .
+                                                        esc_attr($item->item_hash) .
+                                                        '">' .
+                                                        $display_title .
+                                                        '</option>';
                                                 }
                                             } else {
                                                 echo '<option value="">No feed items available</option>';
@@ -905,16 +1018,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 'post_status' => 'publish',
                                                 'number' => 0, // Get all pages
                                                 'sort_column' => 'post_title',
-                                                'sort_order' => 'ASC'
+                                                'sort_order' => 'ASC',
                                             ]);
-                                            
+
                                             if ($pages) {
                                                 foreach ($pages as $page) {
                                                     $title = esc_html($page->post_title);
                                                     if (strlen($title) > 60) {
                                                         $title = substr($title, 0, 57) . '...';
                                                     }
-                                                    echo '<option value="' . esc_attr($page->ID) . '">' . $title . '</option>';
+                                                    echo '<option value="' .
+                                                        esc_attr($page->ID) .
+                                                        '">' .
+                                                        $title .
+                                                        '</option>';
                                                 }
                                             } else {
                                                 echo '<option value="">No pages available</option>';
@@ -938,16 +1055,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 'post_status' => 'publish',
                                                 'numberposts' => 100, // Limit to recent 100 posts
                                                 'orderby' => 'date',
-                                                'order' => 'DESC'
+                                                'order' => 'DESC',
                                             ]);
-                                            
+
                                             if ($posts) {
                                                 foreach ($posts as $post) {
                                                     $title = esc_html($post->post_title);
                                                     if (strlen($title) > 60) {
                                                         $title = substr($title, 0, 57) . '...';
                                                     }
-                                                    echo '<option value="' . esc_attr($post->ID) . '">' . $title . '</option>';
+                                                    echo '<option value="' .
+                                                        esc_attr($post->ID) .
+                                                        '">' .
+                                                        $title .
+                                                        '</option>';
                                                 }
                                             } else {
                                                 echo '<option value="">No posts available</option>';
@@ -1029,7 +1150,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <!-- Step 4: Review & Generate -->
-                    <div id="step-4" class="step-content <?php echo $current_step === 4 ? 'block' : 'hidden'; ?>">
+                    <div id="step-4" class="step-content <?php echo $current_step === 4
+                        ? 'block'
+                        : 'hidden'; ?>">
                         <div class="text-center mb-8">
                             <div class="bg-green-100 text-green-600 inline-flex p-4 rounded-full mb-4 mx-auto">
                                 <i class="fa-solid fa-check fa-2x"></i>
@@ -1073,6 +1196,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button type="button" id="next-btn" onclick="nextStep()" class="btn btn-primary">
                         Next
                         <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    
+                    <button type="button" id="show-output-btn" onclick="showOutput()" class="btn btn-secondary" style="display: none; margin-right: 10px;">
+                        <i class="fa-solid fa-eye"></i>
+                        Show Output
                     </button>
                     
                     <button type="button" id="generate-btn" onclick="generatePost()" class="btn btn-primary" style="display: none; background: linear-gradient(to right, #22c55e, #16a34a) !important;">
@@ -1130,8 +1258,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<?php
-// Restore previous error reporting
-error_reporting($previous_error_reporting);
-?>
+<?php // Restore previous error reporting
+
+error_reporting($previous_error_reporting); ?>
 </rewritten_file>
