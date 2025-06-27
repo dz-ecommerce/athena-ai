@@ -263,12 +263,18 @@ class PromptManager {
 
         $prompt .= 'CONTENT-TYP: ' . strtoupper($content_type) . "\n";
         $prompt .= $content_type_config['intro'] . "\n\n";
-        $prompt .= "ANFORDERUNGEN:\n" . $content_type_config['requirements'] . "\n\n";
 
-        // Add content source instructions
+        // Only add requirements if they exist
+        if (!empty($content_type_config['requirements'])) {
+            $prompt .= "ANFORDERUNGEN:\n" . $content_type_config['requirements'] . "\n\n";
+        }
+
+        // Add content source instructions only if they exist
         $content_source = $form_data['content_source'] ?? 'custom_topic';
-        $source_instruction = $config['content_sources'][$content_source]['instruction'] ?? '';
-        $prompt .= "CONTENT-QUELLE:\n" . $source_instruction . "\n\n";
+        if (!empty($config['content_sources'][$content_source]['instruction'])) {
+            $source_instruction = $config['content_sources'][$content_source]['instruction'];
+            $prompt .= "CONTENT-QUELLE:\n" . $source_instruction . "\n\n";
+        }
 
         // Add company information
         $prompt .= "UNTERNEHMENSINFORMATIONEN:\n";
@@ -298,16 +304,19 @@ class PromptManager {
         }
         $prompt .= "\n";
 
-        // Add tone and style
+        // Add tone and style only if configured
         $tone = $form_data['tone'] ?? 'professional';
-        $tone_instruction = $config['tone_styles'][$tone] ?? $config['tone_styles']['professional'];
-        $prompt .= "TON UND STIL:\n" . $tone_instruction . "\n\n";
+        if (!empty($config['tone_styles'][$tone])) {
+            $tone_instruction = $config['tone_styles'][$tone];
+            $prompt .= "TON UND STIL:\n" . $tone_instruction . "\n\n";
+        }
 
-        // Add length guidelines
+        // Add length guidelines only if configured
         $length = $form_data['content_length'] ?? 'medium';
-        $length_instruction =
-            $config['length_guidelines'][$length] ?? $config['length_guidelines']['medium'];
-        $prompt .= "LÄNGE:\n" . $length_instruction . "\n\n";
+        if (!empty($config['length_guidelines'][$length])) {
+            $length_instruction = $config['length_guidelines'][$length];
+            $prompt .= "LÄNGE:\n" . $length_instruction . "\n\n";
+        }
 
         // Add custom target audience if provided
         if (
@@ -325,51 +334,54 @@ class PromptManager {
             $prompt .= "ZUSÄTZLICHE KEYWORDS:\n" . $form_data['keywords'] . "\n\n";
         }
 
-        // Add source content
+        // Add source content (compact version)
         if (!empty($source_content)) {
             $prompt .= "QUELL-CONTENT:\n";
 
-            // Feed items
+            // Feed items (compact)
             if (isset($source_content['feed_items']) && !empty($source_content['feed_items'])) {
-                $prompt .= "Feed-Artikel:\n";
+                $prompt .= 'Feed-Artikel (' . count($source_content['feed_items']) . " Items):\n";
                 foreach ($source_content['feed_items'] as $item) {
-                    $prompt .= '- Titel: ' . ($item['title'] ?? 'Unbekannt') . "\n";
-                    $prompt .= '  Quelle: ' . ($item['feed_title'] ?? 'Unbekannte Quelle') . "\n";
-                    if (!empty($item['link'])) {
-                        $prompt .= '  Link: ' . $item['link'] . "\n";
+                    $prompt .= '• ' . ($item['title'] ?? 'Untitled');
+                    if (!empty($item['feed_title'])) {
+                        $prompt .= ' [' . $item['feed_title'] . ']';
                     }
-                    if (!empty($item['description'])) {
-                        $prompt .=
-                            '  Beschreibung: ' . substr($item['description'], 0, 300) . "...\n";
-                    }
+                    $prompt .= "\n";
+
+                    // Add just the first 150 characters of content/description
+                    $content_preview = '';
                     if (!empty($item['content'])) {
-                        $prompt .= '  Volltext: ' . substr($item['content'], 0, 500) . "...\n";
+                        $content_preview = $item['content'];
+                    } elseif (!empty($item['description'])) {
+                        $content_preview = strip_tags($item['description']);
+                    }
+
+                    if (!empty($content_preview)) {
+                        $prompt .= '  ' . substr($content_preview, 0, 150) . "...\n";
                     }
                     $prompt .= "\n";
                 }
             }
 
-            // Pages
+            // Pages (compact)
             if (isset($source_content['pages']) && !empty($source_content['pages'])) {
-                $prompt .= "WordPress-Seiten:\n";
+                $prompt .= 'WordPress-Seiten (' . count($source_content['pages']) . " Items):\n";
                 foreach ($source_content['pages'] as $page) {
-                    $prompt .= '- Titel: ' . ($page['title'] ?? 'Unbekannt') . "\n";
+                    $prompt .= '• ' . ($page['title'] ?? 'Untitled') . "\n";
                     if (!empty($page['content'])) {
-                        $prompt .=
-                            '  Inhalt: ' . substr(strip_tags($page['content']), 0, 500) . "...\n";
+                        $prompt .= '  ' . substr(strip_tags($page['content']), 0, 150) . "...\n";
                     }
                     $prompt .= "\n";
                 }
             }
 
-            // Posts
+            // Posts (compact)
             if (isset($source_content['posts']) && !empty($source_content['posts'])) {
-                $prompt .= "WordPress-Beiträge:\n";
+                $prompt .= 'WordPress-Beiträge (' . count($source_content['posts']) . " Items):\n";
                 foreach ($source_content['posts'] as $post) {
-                    $prompt .= '- Titel: ' . ($post['title'] ?? 'Unbekannt') . "\n";
+                    $prompt .= '• ' . ($post['title'] ?? 'Untitled') . "\n";
                     if (!empty($post['content'])) {
-                        $prompt .=
-                            '  Inhalt: ' . substr(strip_tags($post['content']), 0, 500) . "...\n";
+                        $prompt .= '  ' . substr(strip_tags($post['content']), 0, 150) . "...\n";
                     }
                     $prompt .= "\n";
                 }
@@ -380,7 +392,7 @@ class PromptManager {
                 $prompt .= "Custom Topic:\n" . $source_content['custom_topic'] . "\n\n";
             }
         } else {
-            $prompt .= "QUELL-CONTENT:\nKeine Quell-Inhalte ausgewählt.\n\n";
+            $prompt .= "QUELL-CONTENT: Keine spezifischen Inhalte ausgewählt.\n\n";
         }
 
         // Add additional instructions

@@ -715,84 +715,22 @@ class AIPostController {
                 $debug_output .= "No profile data configured\n";
             }
 
-            $debug_output .= "\n=== SOURCE CONTENT ===\n";
-            if (!empty($source_content)) {
-                if (isset($source_content['custom_topic'])) {
-                    $debug_output .= 'Custom Topic: ' . $source_content['custom_topic'] . "\n";
-                }
-
-                if (isset($source_content['feed_items']) && !empty($source_content['feed_items'])) {
-                    $debug_output .=
-                        'Feed Items loaded: ' . count($source_content['feed_items']) . "\n\n";
-                    foreach ($source_content['feed_items'] as $index => $item) {
-                        $debug_output .= 'Feed Item ' . ($index + 1) . ":\n";
-                        $debug_output .= '  Title: ' . ($item['title'] ?? 'No title') . "\n";
-                        $debug_output .=
-                            '  Feed Source: ' . ($item['feed_title'] ?? 'Unknown') . "\n";
-                        $debug_output .= '  Link: ' . ($item['link'] ?? 'No link') . "\n";
-                        if (!empty($item['description'])) {
-                            $debug_output .=
-                                '  Description: ' . substr($item['description'], 0, 200) . "...\n";
-                        }
-                        if (!empty($item['content'])) {
-                            $debug_output .=
-                                '  Content: ' . substr($item['content'], 0, 300) . "...\n";
-                        }
-                        if (!empty($item['pub_date'])) {
-                            $debug_output .= '  Published: ' . $item['pub_date'] . "\n";
-                        }
-                        $debug_output .= "\n";
-                    }
-                }
-
-                if (isset($source_content['pages']) && !empty($source_content['pages'])) {
-                    $debug_output .=
-                        'WordPress Pages loaded: ' . count($source_content['pages']) . "\n\n";
-                    foreach ($source_content['pages'] as $index => $page) {
-                        $debug_output .= 'Page ' . ($index + 1) . ":\n";
-                        $debug_output .= '  Title: ' . ($page['title'] ?? 'No title') . "\n";
-                        if (!empty($page['content'])) {
-                            $debug_output .=
-                                '  Content: ' .
-                                substr(strip_tags($page['content']), 0, 300) .
-                                "...\n";
-                        }
-                        $debug_output .= "\n";
-                    }
-                }
-
-                if (isset($source_content['posts']) && !empty($source_content['posts'])) {
-                    $debug_output .=
-                        'WordPress Posts loaded: ' . count($source_content['posts']) . "\n\n";
-                    foreach ($source_content['posts'] as $index => $post) {
-                        $debug_output .= 'Post ' . ($index + 1) . ":\n";
-                        $debug_output .= '  Title: ' . ($post['title'] ?? 'No title') . "\n";
-                        if (!empty($post['content'])) {
-                            $debug_output .=
-                                '  Content: ' .
-                                substr(strip_tags($post['content']), 0, 300) .
-                                "...\n";
-                        }
-                        $debug_output .= "\n";
-                    }
-                }
-            } else {
-                $debug_output .= "No source content loaded\n";
-            }
-
             $debug_output .= "\n=== AI PROMPT THAT WOULD BE SENT ===\n";
             $debug_output .= $prompt;
 
             $debug_output .= "\n\n=== CONFIGURATION INFO ===\n";
             $debug_output .= 'AI Provider: ' . \get_option('athena_ai_provider', 'openai') . "\n";
+
+            // Check API Keys with proper decryption
+            $openai_encrypted = \get_option('athena_ai_openai_api_key', '');
+            $openai_configured = !empty($openai_encrypted);
             $debug_output .=
-                'OpenAI API Key: ' .
-                (empty(\get_option('athena_openai_api_key')) ? 'Not configured' : 'Configured') .
-                "\n";
+                'OpenAI API Key: ' . ($openai_configured ? 'Configured' : 'Not configured') . "\n";
+
+            $gemini_encrypted = \get_option('athena_ai_gemini_api_key', '');
+            $gemini_configured = !empty($gemini_encrypted);
             $debug_output .=
-                'Gemini API Key: ' .
-                (empty(\get_option('athena_gemini_api_key')) ? 'Not configured' : 'Configured') .
-                "\n";
+                'Gemini API Key: ' . ($gemini_configured ? 'Configured' : 'Not configured') . "\n";
 
             \wp_send_json_success([
                 'message' => \__('Output preview generated successfully', 'athena-ai'),
