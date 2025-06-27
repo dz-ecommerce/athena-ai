@@ -71,7 +71,84 @@ ai_post_generation:
 
     content_types:
         blog_post:
-            intro: 'Erstelle einen professionellen Blog-Artikel mit folgender Struktur: Einleitung, Hauptteil mit Zwischenüberschriften, Fazit/Call-to-Action.'
+            intro: 'Create a German-language, original blog article (1,500–2,500 words) for the website of {{Company Description}} considering the latest SEO standards (as of June 2025). The article should be based on the provided **Feed Content**, creatively rephrasing or summarizing without using direct quotes.
+
+Include your own analyses, practical examples, statistics, and quotes to create real value and avoid duplicate content. The article must meet set structure, quality, and technical guidelines and reflect the brand's writing style.
+
+# Schritte
+
+1. **Meta-Daten Erstellen**:
+   - Formulate a concise Title Tag (50–60 characters) with the primary keyword first.
+   - Develop an appealing Meta Description (150–160 characters) including a keyword and a call to action.
+   - Generate an SEO slug with a maximum of 5–7 words, without Umlauts.
+
+2. **Artikel-Body Verfassen**:
+   - Start with an H1 that matches the Title Tag.
+   - Structure the article into 3–8 H2 sections with a maximum of 350 words per section.
+   - Use H3 for detailed questions or FAQs.
+   - Ensure paragraphs are 50–80 words; sparingly use bullet points and bold text.
+   - Conclude the article with a CTA tailored to {{Main Products}}.
+
+3. **Medien Einbinden**:
+   - Add at least one image per 300–500 words, with a file size under 100 KB.
+   - Create descriptive alt texts with a maximum of 125 characters, including a keyword.
+   - Name image files relevant to the keyword and topic (keyword-theme-2025.jpg).
+
+4. **Schema (JSON-LD) Implementieren**:
+   - Implement the `Article` schema; add `FAQ`, `HowTo`, or `Review` as needed.
+
+5. **Interne Links Eingliedern**:
+   - Include 2–5 internal links to relevant topics with clear anchor texts.
+
+# Inhaltrichtlinien
+
+- Develop helpful, user-centered content that addresses an acute problem of the {{Target Audience}}.
+- Demonstrate experience, expertise, authority, and trust signals.
+- Naturally integrate long-tail keywords.
+- Add an update note “Last updated: {{CURRENT_DATE}}”.
+- Mention Core Web Vitals when relevant.
+
+# Vermeidung
+
+- Avoid keyword stuffing, duplicate content, clickbait, and excessive ads.
+- No use of unverifiable AI jargon or mass-produced AI texts.
+- For YMYL topics, include additional expert sources and reviews.
+
+# Ausgabeformat
+
+```
+<TITLE>
+<META-DESCRIPTION>
+
+# H1 …
+
+## H2 Einleitung
+Kurzer Hook, Problemstellung, Mehrwert-Versprechen.  
+*Canonical-Hinweis:* Basierend auf {{Feed_Link}} (paraphrasiert).
+
+## H2 {Unterthema 1}
+…
+
+### H3 FAQ-Frage 1
+Antwort …
+
+![Alt-Text](bild-url.webp)
+
+—  
+**FAQ**  
+**Q1:** …  
+**A1:** …
+```
+
+# Beispiele
+
+### Beispiel 1:
+**Input:** Feed content about the latest trends in the tech industry.
+**Output:** An article analyzing these trends, supported by current statistics and enhanced with case studies of companies adapting to these trends.
+
+### Beispiel 2:
+**Input:** Feed content about sustainable practices in agriculture.
+**Output:** An article providing an overview of the best sustainable methods, complemented by quotes from experts and success stories from farmers.'
             requirements: |
                 - WordPress-optimiert mit H2/H3-Überschriften
                 - SEO-freundliche Meta-Description möglich
